@@ -1,0 +1,168 @@
+import { Router, Request, Response } from "express";
+import { eq, and, inArray } from "drizzle-orm";
+import { createDb, pgs, rooms, beds, tenants, owners, rentPayments, tenantHistory } from "../db";
+
+const router = Router();
+
+function currentMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// GET /api/dashboard?pgId=xxx
+router.get("/", async (req: Request, res: Response) => {
+  try {
+    const { pgId } = req.query as { pgId: string };
+    if (!pgId) { res.status(400).json({ error: "pgId required" }); return; }
+
+    const db = createDb(process.env.DATABASE_URL!);
+    const month = currentMonth();
+
+    // Fetch PG
+    const pgResult = await db.select().from(pgs).where(eq(pgs.id, pgId)).limit(1);
+    if (!pgResult[0]) { res.status(404).json({ error: "PG not found" }); return; }
+    const pg = pgResult[0];
+
+    // Fetch owner
+    const ownerResult = await db.select({ name: owners.name, phone: owners.phone })
+      .from(owners).where(eq(owners.id, pg.ownerId)).limit(1);
+
+    // Fetch all rooms
+    const roomList = await db.select().from(rooms).where(eq(rooms.pgId, pgId));
+
+    // Fetch all beds
+    let bedList: typeof beds.$inferSelect[] = [];
+    if (roomList.length > 0) {
+      bedList = await db.select().from(beds)
+        .where(inArray(beds.roomId, roomList.map((r) => r.id)));
+    }
+
+    // Fetch all active tenants
+    const tenantList = await db.select().from(tenants)
+      .where(and(eq(tenants.pgId, pgId), eq(tenants.status, "active")));
+
+    // Auto-generate pending rent records for any tenant missing one this month
+    if (tenantList.length > 0) {
+      const tenantIds = tenantList.map((t) => t.id);
+      const existing = await db.select({ tenantId: rentPayments.tenantId }).from(rentPayments)
+        .where(and(
+          eq(rentPayments.pgId, pgId),
+          eq(rentPayments.month, month),
+          inArray(rentPayments.tenantId, tenantIds)
+        ));
+      const existingSet = new Set(existing.map((r) => r.tenantId));
+      const missing = tenantList.filter((t) => !existingSet.has(t.id) && t.bedId);
+      if (missing.length > 0) {
+        await db.insert(rentPayments).values(
+          missing.map((t) => ({
+            tenantId: t.id, pgId, bedId: t.bedId!,
+            month, amount: t.rentAmount || 0, status: "pending",
+          }))
+        );
+      }
+    }
+
+    // Fetch current month rent statuses
+    const rentRecords = tenantList.length > 0
+      ? await db.select().from(rentPayments).where(
+          and(eq(rentPayments.pgId, pgId), eq(rentPayments.month, month),
+            inArray(rentPayments.tenantId, tenantList.map((t) => t.id)))
+        )
+      : [];
+
+    const rentByTenantId = new Map(rentRecords.map((r) => [r.tenantId, r]));
+
+    // Assemble rooms → beds → tenants
+    const roomsWithData = roomList.map((room) => {
+      const roomBeds = bedList
+        .filter((b) => b.roomId === room.id)
+        .sort((a, b) => a.bedNumber - b.bedNumber)
+        .map((bed) => {
+          const tenant = tenantList.find((t) => t.bedId === bed.id);
+          const rent = tenant ? rentByTenantId.get(tenant.id) : undefined;
+          return {
+            ...bed,
+            tenant: tenant
+              ? {
+                  id: tenant.id,
+                  name: tenant.name,
+                  phone: tenant.phone,
+                  joiningDate: tenant.joiningDate,
+                  photoUrl: tenant.photoUrl,
+                  idPhotoUrl: tenant.idPhotoUrl,
+                  advanceAmount: tenant.advanceAmount,
+                  rentAmount: tenant.rentAmount,
+                  rent: rent
+                    ? { id: rent.id, status: rent.status, amount: rent.amount, paymentMode: rent.paymentMode, paidAt: rent.paidAt }
+                    : null,
+                }
+              : null,
+          };
+        });
+      return { ...room, beds: roomBeds };
+    });
+
+    res.json({
+      pg: { ...pg, sharings: JSON.parse(pg.sharings), owner: ownerResult[0] || null },
+      rooms: roomsWithData,
+      currentMonth: month,
+    });
+  } catch (error) {
+    console.error("Dashboard error:", error);
+    res.status(500).json({ error: "Failed to load dashboard" });
+  }
+});
+
+// PATCH /api/dashboard/beds/:bedId/checkout
+router.patch("/beds/:bedId/checkout", async (req: Request, res: Response) => {
+  try {
+    const db = createDb(process.env.DATABASE_URL!);
+    const { bedId } = req.params;
+    const { depositDeduction = 0, refundMode = "cash" } = req.body as {
+      depositDeduction?: number;
+      refundMode?: string;
+    };
+
+    const tenantResult = await db.select().from(tenants)
+      .where(and(eq(tenants.bedId, bedId), eq(tenants.status, "active"))).limit(1);
+
+    if (tenantResult[0]) {
+      const tenant = tenantResult[0];
+
+      // Get room info for history label
+      const roomResult = await db.select({ roomNumber: rooms.roomNumber, floor: rooms.floor })
+        .from(rooms).innerJoin(beds, eq(beds.roomId, rooms.id))
+        .where(eq(beds.id, bedId)).limit(1);
+      const roomLabel = roomResult[0]
+        ? `Room ${roomResult[0].roomNumber} (Floor ${roomResult[0].floor})`
+        : "Unknown Room";
+
+      // Archive tenant with checkout details
+      await db.update(tenants).set({
+        status: "inactive",
+        leavingDate: new Date(),
+        depositDeduction: depositDeduction || 0,
+        refundMode,
+      }).where(eq(tenants.id, tenant.id));
+
+      // Log check_out history
+      await db.insert(tenantHistory).values({
+        tenantId: tenant.id,
+        eventType: "check_out",
+        fromBedId: bedId,
+        fromRoom: roomLabel,
+        note: `Checked out from ${roomLabel}. Deposit: ₹${tenant.advanceAmount ?? 0}, Deduction: ₹${depositDeduction}, Refund: ₹${(tenant.advanceAmount ?? 0) - depositDeduction}. Refund via ${refundMode.toUpperCase()}.`,
+      });
+    }
+
+    await db.update(beds).set({ isOccupied: false }).where(eq(beds.id, bedId));
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Checkout error:", error);
+    res.status(500).json({ error: "Checkout failed" });
+  }
+});
+
+
+
+export default router;

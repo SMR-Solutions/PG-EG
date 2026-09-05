@@ -1,0 +1,21 @@
+{
+  "name": "@pg-eg/db",
+  "version": "1.0.0",
+  "description": "Shared database schema and client for PG-EG",
+  "main": "./src/index.ts",
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "push": "drizzle-kit push",
+    "studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "drizzle-orm": "^0.44.2"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.0",
+    "dotenv": "^16.4.5",
+    "typescript": "^5.4.5"
+  }
+}

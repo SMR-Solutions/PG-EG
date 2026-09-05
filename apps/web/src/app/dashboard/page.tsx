@@ -1,0 +1,933 @@
+"use client";
+
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
+import styles from "./page.module.css";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
+/* ─── Types ─── */
+interface RentRecord { id: string; status: string; amount: number; paymentMode: string | null; paidAt: string | null; }
+interface Tenant {
+  id: string; name: string; phone: string; joiningDate: string;
+  photoUrl?: string | null; idPhotoUrl?: string | null;
+  advanceAmount?: number; rentAmount?: number;
+  depositDeduction?: number; refundMode?: string | null;
+  leavingDate?: string | null;
+  rent: RentRecord | null;
+}
+interface HistoryEvent { id: string; eventType: string; fromRoom?: string | null; toRoom?: string | null; note?: string | null; createdAt: string; }
+interface TenantWithHistory extends Omit<Tenant, 'rent'> { status: string; history: HistoryEvent[]; }
+interface Bed { id: string; bedNumber: number; isOccupied: boolean; tenant: Tenant | null; }
+interface Room { id: string; roomNumber: string; floor: number; sharingType: number; beds: Bed[]; }
+interface PGData {
+  id: string; name: string; type: string; totalFloors: number;
+  sharings: number[]; owner: { name: string; phone: string } | null;
+}
+interface DashboardData { pg: PGData; rooms: Room[]; currentMonth: string; }
+
+/* ─── Helpers ─── */
+const BED_LETTERS = "ABCDEFGHIJKLMNOP";
+const TYPE_EMOJI: Record<string, string> = { gents: "🚹", ladies: "🚺", "co-living": "🧑‍🤝‍🧑" };
+const SHARE_ICONS = ["", "👤", "👥", "👥", "👨‍👩‍👧‍👦", "🏠"];
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function monthLabel(m: string) {
+  const [y, mo] = m.split("-");
+  return `${MONTH_NAMES[parseInt(mo) - 1]} ${y}`;
+}
+
+function sharingStats(rooms: Room[], type: number) {
+  const matching = rooms.filter((r) => r.sharingType === type);
+  const totalBeds = matching.reduce((s, r) => s + r.beds.length, 0);
+  const occupied = matching.reduce((s, r) => s + r.beds.filter((b) => b.isOccupied).length, 0);
+  return { totalBeds, occupied, free: totalBeds - occupied, pct: totalBeds > 0 ? (occupied / totalBeds) * 100 : 0 };
+}
+
+function floorStats(rooms: Room[], floor: number) {
+  const floorRooms = rooms.filter((r) => r.floor === floor);
+  const totalBeds = floorRooms.reduce((s, r) => s + r.beds.length, 0);
+  const occupied = floorRooms.reduce((s, r) => s + r.beds.filter((b) => b.isOccupied).length, 0);
+  const pendingRent = floorRooms.some((r) =>
+    r.beds.some((b) => b.tenant?.rent?.status === "pending")
+  );
+  return { rooms: floorRooms, totalBeds, occupied, free: totalBeds - occupied, pendingRent };
+}
+
+function floorColor(free: number, total: number) {
+  if (total === 0) return "empty";
+  if (free === 0) return "full";
+  if (free / total <= 0.3) return "almost";
+  return "available";
+}
+
+function roomHasPendingRent(room: Room) {
+  return room.beds.some((b) => b.tenant?.rent?.status === "pending");
+}
+
+/* ─── Donut Ring ─── */
+function DonutRing({ pct, free, total }: { pct: number; free: number; total: number }) {
+  const r = 38, circ = 2 * Math.PI * r;
+  const offset = circ - (Math.min(pct, 100) / 100) * circ;
+  const color = pct >= 100 ? "#e63946" : pct >= 80 ? "#f4a261" : "#2dc653";
+  return (
+    <svg viewBox="0 0 100 100" width="80" height="80" className={styles.ring}>
+      <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="9" />
+      <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="9"
+        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+        transform="rotate(-90 50 50)"
+        style={{ transition: "stroke-dashoffset 0.6s ease", filter: `drop-shadow(0 0 4px ${color}66)` }} />
+      <text x="50" y="45" textAnchor="middle" fill="white" fontSize="17" fontWeight="800" fontFamily="inherit">
+        {total === 0 ? "—" : free}
+      </text>
+      <text x="50" y="60" textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="9" fontFamily="inherit">
+        {total === 0 ? "no rooms" : "free"}
+      </text>
+    </svg>
+  );
+}
+
+/* ─── Main ─── */
+export default function DashboardPage() {
+  const router = useRouter();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // UI state
+  const [filterType, setFilterType] = useState<number | null>(null);
+  const [activeFloor, setActiveFloor] = useState<number | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [detailTenant, setDetailTenant] = useState<{ tenant: Tenant; bed: Bed; room: Room } | null>(null);
+
+  // Rent state
+  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
+  const [rentPayMode, setRentPayMode] = useState<"cash" | "upi">("cash");
+
+  // Move tenant state
+  const [movingTenant, setMovingTenant] = useState<{ tenant: Tenant; bed: Bed; room: Room } | null>(null);
+  const [moveFloor, setMoveFloor] = useState<number | null>(null);
+  const [moveTargetRoom, setMoveTargetRoom] = useState<Room | null>(null);
+  const [moveTargetBed, setMoveTargetBed] = useState<Bed | null>(null);
+  const [moveInProgress, setMoveInProgress] = useState(false);
+  const [moveFilterType, setMoveFilterType] = useState<number | null>(null);
+
+  // Checkout modal state
+  const [checkoutModal, setCheckoutModal] = useState<{ tenant: Tenant; bed: Bed; room: Room } | null>(null);
+  const [deduction, setDeduction] = useState("");
+  const [checkoutRefundMode, setCheckoutRefundMode] = useState<"cash" | "upi">("cash");
+  const [checkingOut, setCheckingOut] = useState(false);
+
+  // Search state
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<TenantWithHistory[]>([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Room history state
+  const [roomHistoryRoom, setRoomHistoryRoom] = useState<Room | null>(null);
+  const [roomHistoryData, setRoomHistoryData] = useState<{ past: TenantWithHistory[]; moveHistory: HistoryEvent[] } | null>(null);
+  const [loadingRoomHistory, setLoadingRoomHistory] = useState(false);
+
+  const load = useCallback(async () => {
+    const pgId = localStorage.getItem("pg_eg_pg_id");
+    if (!pgId) { setError("No PG found. Please complete setup first."); setLoading(false); return; }
+    try {
+      const res = await fetch(`${API_URL}/api/dashboard?pgId=${pgId}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setData(json);
+    } catch { setError("Failed to load dashboard."); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Open checkout modal instead of confirm dialog
+  function openCheckout(bed: Bed, room: Room) {
+    if (!bed.tenant) return;
+    setCheckoutModal({ tenant: bed.tenant, bed, room });
+    setDeduction("");
+    setCheckoutRefundMode("cash");
+  }
+
+  async function handleCheckout() {
+    if (!checkoutModal) return;
+    setCheckingOut(true);
+    const dep = parseInt(deduction) || 0;
+    try {
+      await fetch(`${API_URL}/api/dashboard/beds/${checkoutModal.bed.id}/checkout`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ depositDeduction: dep, refundMode: checkoutRefundMode }),
+      });
+      setCheckoutModal(null);
+      setSelectedRoom(null);
+      setDetailTenant(null);
+      await load();
+    } finally { setCheckingOut(false); }
+  }
+
+  // Search handler with debounce
+  function handleSearchInput(q: string) {
+    setSearchQuery(q);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (!q.trim()) { setSearchResults([]); return; }
+    setSearching(true);
+    searchTimer.current = setTimeout(async () => {
+      const pgId = localStorage.getItem("pg_eg_pg_id") || "";
+      const res = await fetch(`${API_URL}/api/tenants/search?pgId=${pgId}&q=${encodeURIComponent(q)}`);
+      const json = await res.json();
+      setSearchResults(json.tenants || []);
+      setSearching(false);
+    }, 350);
+  }
+
+  async function loadRoomHistory(room: Room) {
+    setRoomHistoryRoom(room);
+    setLoadingRoomHistory(true);
+    setRoomHistoryData(null);
+    const res = await fetch(`${API_URL}/api/tenants/room-history/${room.id}`);
+    const json = await res.json();
+    setRoomHistoryData(json);
+    setLoadingRoomHistory(false);
+  }
+
+  async function handleMove(tenantId: string, targetBedId: string) {
+    setMoveInProgress(true);
+    try {
+      const res = await fetch(`${API_URL}/api/tenants/${tenantId}/move`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetBedId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Move failed");
+      // Reset all move state and refresh
+      setMovingTenant(null);
+      setMoveFloor(null);
+      setMoveTargetRoom(null);
+      setMoveTargetBed(null);
+      setMoveFilterType(null);
+      setSelectedRoom(null);
+      setDetailTenant(null);
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Move failed");
+    } finally {
+      setMoveInProgress(false);
+    }
+  }
+
+  async function handleMarkPaid(rentId: string, amount: number) {
+    setMarkingPaid(rentId);
+    try {
+      await fetch(`${API_URL}/api/rent/${rentId}/pay`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentMode: rentPayMode, amount }),
+      });
+      await load();
+      // Refresh detail view
+      if (detailTenant && data) {
+        const updRoom = data.rooms.find((r) => r.id === detailTenant.room.id);
+        if (updRoom) {
+          const updBed = updRoom.beds.find((b) => b.id === detailTenant.bed.id);
+          if (updBed?.tenant) setDetailTenant({ tenant: updBed.tenant, bed: updBed, room: updRoom });
+        }
+      }
+    } finally { setMarkingPaid(null); }
+  }
+
+  /* ─── Derived ─── */
+  const totalBeds = data?.rooms.reduce((s, r) => s + r.beds.length, 0) ?? 0;
+  const occupiedBeds = data?.rooms.reduce((s, r) => s + r.beds.filter((b) => b.isOccupied).length, 0) ?? 0;
+  const pendingRentCount = data?.rooms.reduce((s, r) =>
+    s + r.beds.filter((b) => b.tenant?.rent?.status === "pending").length, 0) ?? 0;
+
+  const visibleRooms = filterType ? (data?.rooms.filter((r) => r.sharingType === filterType) ?? []) : (data?.rooms ?? []);
+  const floorNums = data ? Array.from({ length: data.pg.totalFloors }, (_, i) => data.pg.totalFloors - i) : [];
+
+  // Only show sharing cards for types that actually have rooms
+  const activeShareTypes = data
+    ? data.pg.sharings.sort((a, b) => a - b).filter((t) => sharingStats(data.rooms, t).totalBeds > 0)
+    : [];
+
+  if (loading) return (
+    <main className={styles.main}><div className={styles.centered}><span className={styles.spinner} /></div></main>
+  );
+  if (error || !data) return (
+    <main className={styles.main}><div className={styles.centered}>
+      <p className={styles.errorText}>{error || "Something went wrong"}</p>
+      <button className={styles.retryBtn} onClick={() => router.push("/add-pg")}>Go to Setup</button>
+    </div></main>
+  );
+
+  const { pg } = data;
+
+  return (
+    <main className={styles.main}>
+      <div className={styles.orb1} /><div className={styles.orb2} />
+      <div className={styles.content}>
+
+        {/* ─── Header ─── */}
+        <header className={styles.header}>
+          <div className={styles.headerLeft}>
+            <div className={styles.pgName}>{pg.name}</div>
+            <div className={styles.pgMeta}>{TYPE_EMOJI[pg.type]} {pg.type.charAt(0).toUpperCase() + pg.type.slice(1)} · {pg.totalFloors} Floors</div>
+          </div>
+          <div className={styles.headerRight}>
+            <div className={styles.overallStat}>
+              <span className={styles.overallNum} style={{ color: (totalBeds - occupiedBeds) > 0 ? "var(--brand-green)" : "#e63946" }}>{totalBeds - occupiedBeds}</span>
+              <span className={styles.overallLabel}>beds free</span>
+            </div>
+            <div className={styles.overallStat}>
+              <span className={styles.overallNum}>{occupiedBeds}</span>
+              <span className={styles.overallLabel}>occupied</span>
+            </div>
+            {pendingRentCount > 0 && (
+              <div className={styles.overallStat}>
+                <span className={styles.overallNum} style={{ color: "#f4a261" }}>⚠️ {pendingRentCount}</span>
+                <span className={styles.overallLabel}>rent due</span>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* ─── Sharing Cards — only show types with rooms ─── */}
+        {activeShareTypes.length > 0 && (
+          <section className={styles.sharingSection}>
+            <p className={styles.sectionLabel}>AVAILABILITY BY SHARING TYPE</p>
+            <div className={styles.sharingScroll}>
+              {activeShareTypes.map((type) => {
+                const stats = sharingStats(data.rooms, type);
+                const isActive = filterType === type;
+                return (
+                  <button key={type}
+                    className={`${styles.sharingCard} ${isActive ? styles.sharingCardActive : ""}`}
+                    onClick={() => setFilterType(isActive ? null : type)} id={`sharing-card-${type}`}>
+                    <DonutRing pct={stats.pct} free={stats.free} total={stats.totalBeds} />
+                    <div className={styles.sharingInfo}>
+                      <span className={styles.sharingIcon}>{SHARE_ICONS[Math.min(type, 5)] || "🏠"}</span>
+                      <span className={styles.sharingLabel}>{type}-Share</span>
+                      <span className={styles.sharingDetail}>{stats.free} of {stats.totalBeds} free</span>
+                    </div>
+                    {isActive && <div className={styles.filterPill}>Filtering ✕</div>}
+                  </button>
+                );
+              })}
+            </div>
+            {filterType && (
+              <p className={styles.filterNote}>
+                Showing {filterType}-sharing · <button className={styles.clearFilter} onClick={() => setFilterType(null)}>Clear</button>
+              </p>
+            )}
+          </section>
+        )}
+
+        {/* ─── Iron Man Building ─── */}
+        <section className={styles.buildingSection}>
+          <p className={styles.sectionLabel}>🏢 {pg.name.toUpperCase()} — LIVE MAP</p>
+          <div className={styles.building}>
+            <div className={styles.buildingRoof}><span className={styles.roofEmoji}>🏗️</span></div>
+
+            {floorNums.map((floor) => {
+              const all = floorStats(data.rooms, floor);
+              const vis = floorStats(visibleRooms, floor);
+              const colorKey = filterType
+                ? (vis.rooms.length > 0 ? floorColor(all.free, all.totalBeds) : "dimmed")
+                : floorColor(all.free, all.totalBeds);
+              const isActive = activeFloor === floor;
+
+              return (
+                <div key={floor} className={styles.floorWrap}>
+                  <button
+                    className={`${styles.floorBlock} ${styles[`floor_${colorKey}`]} ${isActive ? styles.floorBlockActive : ""}`}
+                    onClick={() => setActiveFloor(isActive ? null : floor)} id={`dashboard-floor-${floor}`}>
+                    <div className={`${styles.floorIndicator} ${styles[`indicator_${colorKey}`]}`} />
+                    <div className={styles.floorBlockContent}>
+                      <div className={styles.floorBlockLabelRow}>
+                        <span className={styles.floorBlockLabel}>Floor {floor}</span>
+                        {all.pendingRent && <span className={styles.rentDot} title="Rent pending">⚠️</span>}
+                      </div>
+                      <span className={styles.floorBlockMeta}>
+                        {colorKey === "full" ? "🟥 100% FULL"
+                          : colorKey === "almost" ? `🟧 ${all.free} Bed${all.free > 1 ? "s" : ""} Free`
+                          : colorKey === "dimmed" ? "No matching rooms"
+                          : `🟩 ${all.free} Bed${all.free > 1 ? "s" : ""} Free`}
+                      </span>
+                    </div>
+                    <div className={styles.floorBlockRight}>
+                      <span className={styles.floorRoomCount}>{all.rooms.length} rooms</span>
+                      <span className={`${styles.floorChevron} ${isActive ? styles.floorChevronUp : ""}`}>›</span>
+                    </div>
+                  </button>
+
+                  {isActive && (
+                    <div className={styles.roomsGrid}>
+                      {all.rooms.length === 0 ? (
+                        <p className={styles.noRoomsNote}>No rooms on this floor.</p>
+                      ) : all.rooms.map((room) => {
+                        const isDimmed = filterType && room.sharingType !== filterType;
+                        const roomFree = room.beds.filter((b) => !b.isOccupied).length;
+                        const hasPending = roomHasPendingRent(room);
+                        return (
+                          <button key={room.id}
+                            className={`${styles.roomCard} ${isDimmed ? styles.roomCardDimmed : ""}`}
+                            onClick={() => !isDimmed && setSelectedRoom(room)} id={`room-card-${room.id}`}>
+                            <div className={styles.roomCardHeader}>
+                              <span className={styles.roomCardName}>{room.roomNumber}</span>
+                              {hasPending && <span className={styles.roomRentDot}>⚠️</span>}
+                            </div>
+                            <div className={styles.roomBedDots}>
+                              {room.beds.map((bed) => (
+                                <span key={bed.id}
+                                  className={`${styles.bedDot} ${bed.isOccupied
+                                    ? (bed.tenant?.rent?.status === "pending" ? styles.bedDotOrange : styles.bedDotRed)
+                                    : styles.bedDotGreen}`} />
+                              ))}
+                            </div>
+                            <span className={styles.roomCardSub}>{roomFree === 0 ? "Full" : `${roomFree} free`}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            <div className={styles.buildingGround}>
+              <div className={styles.groundDoor} />
+              <span className={styles.groundLabel}>ENTRANCE</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* ─── Room Bottom Sheet ─── */}
+      {selectedRoom && !detailTenant && (
+        <>
+          <div className={styles.backdrop} onClick={() => setSelectedRoom(null)} />
+          <div className={styles.sheet}>
+            <div className={styles.sheetHandle} />
+            <div className={styles.sheetHeader}>
+              <div>
+                <p className={styles.sheetFloor}>Floor {selectedRoom.floor}</p>
+                <h3 className={styles.sheetTitle}>🚪 Room {selectedRoom.roomNumber}</h3>
+                <p className={styles.sheetSub}>{selectedRoom.sharingType}-Sharing · {selectedRoom.beds.length} Beds</p>
+              </div>
+              <button className={styles.sheetClose} onClick={() => setSelectedRoom(null)}>✕</button>
+            </div>
+
+            <div className={styles.bedsList}>
+              {selectedRoom.beds.map((bed) => {
+                const letter = BED_LETTERS[bed.bedNumber - 1] || String(bed.bedNumber);
+                const isPending = bed.tenant?.rent?.status === "pending";
+                return (
+                  <div key={bed.id} className={`${styles.bedRow} ${bed.isOccupied ? styles.bedRowOccupied : styles.bedRowFree}`}>
+                    <div className={`${styles.bedBadge} ${bed.isOccupied ? (isPending ? styles.bedBadgeOrange : styles.bedBadgeRed) : styles.bedBadgeGreen}`}>
+                      Bed {letter}
+                    </div>
+                    <div className={styles.bedContent}>
+                      {bed.isOccupied && bed.tenant ? (
+                        <>
+                          <p className={styles.tenantName}>👤 {bed.tenant.name}</p>
+                          <p className={styles.tenantPhone}>📞 {bed.tenant.phone}</p>
+                          {isPending && (
+                            <p className={styles.rentPendingTag}>⚠️ Rent pending · {data.currentMonth && monthLabel(data.currentMonth)}</p>
+                          )}
+                          {bed.tenant.rent?.status === "paid" && (
+                            <p className={styles.rentPaidTag}>✅ Rent paid</p>
+                          )}
+                        </>
+                      ) : (
+                        <><p className={styles.emptyBedLabel}>🌟 EMPTY BED</p><p className={styles.emptyBedSub}>Ready for a new tenant</p></>
+                      )}
+                    </div>
+                    <div className={styles.bedActionGroup}>
+                      {bed.isOccupied && bed.tenant ? (
+                        <>
+                          <button className={styles.detailsBtn}
+                            onClick={() => setDetailTenant({ tenant: bed.tenant!, bed, room: selectedRoom })}
+                            id={`details-${bed.id}`}>Details</button>
+                          <button className={styles.moveBtn}
+                            onClick={() => {
+                              setMovingTenant({ tenant: bed.tenant!, bed, room: selectedRoom });
+                              setMoveFloor(null); setMoveTargetRoom(null); setMoveTargetBed(null); setMoveFilterType(null);
+                            }}
+                            id={`move-${bed.id}`}>🔁 Move</button>
+                          <button className={styles.checkoutBtn}
+                            onClick={() => openCheckout(bed, selectedRoom)}
+                            id={`checkout-${bed.id}`}>
+                            Check Out
+                          </button>
+                        </>
+                      ) : (
+                        <button className={styles.checkInBtn}
+                          onClick={() => router.push(`/tenants/add?bedId=${bed.id}&roomId=${selectedRoom.id}`)}
+                          id={`checkin-${bed.id}`}>+ Check In</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className={styles.roomHistoryLinkRow}>
+              <button className={styles.roomHistoryLink}
+                onClick={() => loadRoomHistory(selectedRoom)}
+                id="btn-room-history">📜 View Room History</button>
+            </div>
+          </div>
+        </>
+      )}
+
+
+      {/* ─── Tenant Details Overlay ─── */}
+      {detailTenant && (
+        <>
+          <div className={styles.backdrop} onClick={() => setDetailTenant(null)} />
+          <div className={styles.detailSheet}>
+            <div className={styles.sheetHandle} />
+
+            {/* Detail header */}
+            <div className={styles.detailHeader}>
+              <button className={styles.detailBack} onClick={() => setDetailTenant(null)}>← Back</button>
+              <button className={styles.sheetClose} onClick={() => { setDetailTenant(null); setSelectedRoom(null); }}>✕</button>
+            </div>
+
+            {/* Selfie photo */}
+            {detailTenant.tenant.photoUrl ? (
+              <div className={styles.tenantPhotoWrap}>
+                <img src={detailTenant.tenant.photoUrl} alt={detailTenant.tenant.name} className={styles.tenantPhoto} />
+              </div>
+            ) : (
+              <div className={styles.tenantPhotoPlaceholder}>
+                <span>👤</span>
+              </div>
+            )}
+
+            {/* Name + phone */}
+            <div className={styles.detailBody}>
+              <h2 className={styles.detailName}>{detailTenant.tenant.name}</h2>
+              <p className={styles.detailPhone}>📞 +91 {detailTenant.tenant.phone}</p>
+
+              {/* Room info */}
+              <div className={styles.detailInfoRow}>
+                <div className={styles.detailInfoItem}>
+                  <span className={styles.detailInfoLabel}>Room</span>
+                  <span className={styles.detailInfoValue}>
+                    {detailTenant.room.roomNumber} · Bed {BED_LETTERS[detailTenant.bed.bedNumber - 1]}
+                  </span>
+                </div>
+                <div className={styles.detailInfoItem}>
+                  <span className={styles.detailInfoLabel}>Floor</span>
+                  <span className={styles.detailInfoValue}>{detailTenant.room.floor}</span>
+                </div>
+                <div className={styles.detailInfoItem}>
+                  <span className={styles.detailInfoLabel}>Sharing</span>
+                  <span className={styles.detailInfoValue}>{detailTenant.room.sharingType}-Bed</span>
+                </div>
+              </div>
+
+              <div className={styles.detailInfoRow}>
+                <div className={styles.detailInfoItem}>
+                  <span className={styles.detailInfoLabel}>Joined</span>
+                  <span className={styles.detailInfoValue}>
+                    {new Date(detailTenant.tenant.joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                  </span>
+                </div>
+                <div className={styles.detailInfoItem}>
+                  <span className={styles.detailInfoLabel}>Deposit</span>
+                  <span className={styles.detailInfoValue}>
+                    {detailTenant.tenant.advanceAmount
+                      ? `₹${detailTenant.tenant.advanceAmount.toLocaleString()}`
+                      : "—"}
+                  </span>
+                </div>
+              </div>
+
+              {/* ─── Rent Status ─── */}
+              <div className={styles.detailDivider} />
+              <p className={styles.detailSectionLabel}>
+                📅 {data.currentMonth && monthLabel(data.currentMonth)} RENT
+              </p>
+
+              {detailTenant.tenant.rent?.status === "paid" ? (
+                <div className={styles.rentPaidCard}>
+                  <span>✅ PAID</span>
+                  <span>₹{detailTenant.tenant.rent.amount?.toLocaleString()}</span>
+                  <span style={{ textTransform: "uppercase", fontSize: 11 }}>{detailTenant.tenant.rent.paymentMode || ""}</span>
+                </div>
+              ) : (
+                <>
+                  <div className={styles.rentPendingCard}>
+                    <span>⚠️ RENT PENDING</span>
+                    <span>₹{(detailTenant.tenant.rentAmount || 0).toLocaleString()} / month</span>
+                  </div>
+                  {detailTenant.tenant.rent && (
+                    <>
+                      <p className={styles.paymentLabel}>Payment received via</p>
+                      <div className={styles.paymentRow}>
+                        <button className={`${styles.payBtn} ${rentPayMode === "cash" ? styles.payBtnActive : ""}`}
+                          onClick={() => setRentPayMode("cash")}>💵 CASH</button>
+                        <button className={`${styles.payBtn} ${rentPayMode === "upi" ? styles.payBtnActive : ""}`}
+                          onClick={() => setRentPayMode("upi")}>📱 UPI</button>
+                      </div>
+                      <button className={styles.markPaidBtn}
+                        onClick={() => handleMarkPaid(detailTenant.tenant.rent!.id, detailTenant.tenant.rentAmount || 0)}
+                        disabled={markingPaid === detailTenant.tenant.rent.id}
+                        id="btn-mark-paid">
+                        {markingPaid === detailTenant.tenant.rent.id
+                          ? <><span className={styles.spinnerDark} /> Marking…</>
+                          : `💵 MARK AS PAID · ₹${(detailTenant.tenant.rentAmount || 0).toLocaleString()}`}
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* ID Card photo */}
+              {detailTenant.tenant.idPhotoUrl && (
+                <>
+                  <div className={styles.detailDivider} />
+                  <p className={styles.detailSectionLabel}>🪪 ID CARD</p>
+                  <img src={detailTenant.tenant.idPhotoUrl} alt="ID Card" className={styles.idCardThumb} />
+                </>
+              )}
+
+              {/* Checkout */}
+              <div className={styles.detailDivider} />
+              <button className={styles.checkoutBtnFull}
+                onClick={() => openCheckout(detailTenant.bed, detailTenant.room)}
+                disabled={checkingOut} id="btn-checkout-detail">
+                🚪 Check Out Tenant
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+      {/* ─── Move Tenant Overlay ─── */}
+      {movingTenant && (
+        <>
+          <div className={styles.backdrop} onClick={() => { setMovingTenant(null); setMoveTargetBed(null); setMoveTargetRoom(null); }} />
+          <div className={styles.moveSheet}>
+            <div className={styles.sheetHandle} />
+
+            {/* Move header */}
+            <div className={styles.moveHeader}>
+              <button className={styles.detailBack} onClick={() => {
+                if (moveTargetBed) { setMoveTargetBed(null); setMoveTargetRoom(null); }
+                else setMovingTenant(null);
+              }}>← Back</button>
+              <span className={styles.moveTitle}>🔁 MOVE TENANT</span>
+              <button className={styles.sheetClose} onClick={() => setMovingTenant(null)}>✕</button>
+            </div>
+
+            {/* Who is moving */}
+            <div className={styles.moveBanner}>
+              <p className={styles.moveBannerName}>{movingTenant.tenant.name}</p>
+              <p className={styles.moveBannerFrom}>
+                From: Room {movingTenant.room.roomNumber} · Bed {BED_LETTERS[movingTenant.bed.bedNumber - 1]} · Floor {movingTenant.room.floor}
+              </p>
+            </div>
+
+            {/* ─── Step 1: Pick target bed ─── */}
+            {!moveTargetBed && (
+              <div className={styles.moveBody}>
+                {/* Sharing type filter */}
+                {activeShareTypes.length > 1 && (
+                  <div className={styles.moveFilterRow}>
+                    <button className={`${styles.moveFilterChip} ${moveFilterType === null ? styles.moveFilterChipActive : ""}`}
+                      onClick={() => { setMoveFilterType(null); setMoveFloor(null); }}>All</button>
+                    {activeShareTypes.map(t => (
+                      <button key={t}
+                        className={`${styles.moveFilterChip} ${moveFilterType === t ? styles.moveFilterChipActive : ""}`}
+                        onClick={() => { setMoveFilterType(t); setMoveFloor(null); }}>
+                        {t}-Share
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <p className={styles.moveSectionLabel}>SELECT AN EMPTY BED</p>
+
+                {/* Floors with empty beds */}
+                {floorNums.map(floor => {
+                  const floorRooms = (data?.rooms ?? []).filter(r => {
+                    if (r.floor !== floor) return false;
+                    if (moveFilterType && r.sharingType !== moveFilterType) return false;
+                    // Has empty beds and it's not the current bed's room (can still move within same floor)
+                    return r.beds.some(b => !b.isOccupied);
+                  });
+                  if (floorRooms.length === 0) return null;
+                  const totalEmpty = floorRooms.reduce((s, r) => s + r.beds.filter(b => !b.isOccupied).length, 0);
+                  const isOpen = moveFloor === floor;
+                  return (
+                    <div key={floor} className={styles.moveFloorWrap}>
+                      <button className={`${styles.moveFloorBtn} ${isOpen ? styles.moveFloorBtnOpen : ""}`}
+                        onClick={() => setMoveFloor(isOpen ? null : floor)}>
+                        <div className={styles.moveFloorLeft}>
+                          <span className={styles.moveFloorLabel}>Floor {floor}</span>
+                          <span className={styles.moveFloorMeta}>🟢 {totalEmpty} empty bed{totalEmpty > 1 ? "s" : ""}</span>
+                        </div>
+                        <span className={`${styles.floorChevron} ${isOpen ? styles.floorChevronUp : ""}`}>›</span>
+                      </button>
+
+                      {isOpen && (
+                        <div className={styles.moveRoomGrid}>
+                          {floorRooms.map(room => {
+                            const emptyBeds = room.beds.filter(b => !b.isOccupied);
+                            return (
+                              <div key={room.id} className={styles.moveRoomCard}>
+                                <p className={styles.moveRoomName}>{room.roomNumber}</p>
+                                <p className={styles.moveRoomSub}>{room.sharingType}-Sharing</p>
+                                <div className={styles.moveBedRow}>
+                                  {room.beds.map(bed => (
+                                    <button key={bed.id}
+                                      disabled={bed.isOccupied}
+                                      className={`${styles.moveBedBtn} ${bed.isOccupied ? styles.moveBedBtnOcc : styles.moveBedBtnFree}`}
+                                      onClick={() => { setMoveTargetRoom(room); setMoveTargetBed(bed); }}
+                                      id={`moveto-${bed.id}`}>
+                                      {BED_LETTERS[bed.bedNumber - 1]}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {(data?.rooms ?? []).every(r =>
+                  !r.beds.some(b => !b.isOccupied && b.id !== movingTenant.bed.id)
+                ) && (
+                  <p className={styles.moveNoEmpty}>No empty beds available in the PG right now.</p>
+                )}
+              </div>
+            )}
+
+            {/* ─── Step 2: Confirm ─── */}
+            {moveTargetBed && moveTargetRoom && (
+              <div className={styles.moveConfirmBody}>
+                <div className={styles.moveConfirmCard}>
+                  <div className={styles.moveConfirmRow}>
+                    <span className={styles.moveConfirmLabel}>FROM</span>
+                    <span className={styles.moveConfirmValue}>
+                      Room {movingTenant.room.roomNumber} · Bed {BED_LETTERS[movingTenant.bed.bedNumber - 1]} · Floor {movingTenant.room.floor}
+                    </span>
+                  </div>
+                  <div className={styles.moveArrow}>↓</div>
+                  <div className={styles.moveConfirmRow}>
+                    <span className={styles.moveConfirmLabel}>TO</span>
+                    <span className={styles.moveConfirmValue} style={{ color: "var(--brand-green)" }}>
+                      Room {moveTargetRoom.roomNumber} · Bed {BED_LETTERS[moveTargetBed.bedNumber - 1]} · Floor {moveTargetRoom.floor}
+                    </span>
+                  </div>
+                </div>
+
+                <p className={styles.moveConfirmNote}>
+                  This move is recorded in {movingTenant.tenant.name}&apos;s history. No data is lost.
+                </p>
+
+                <button className={styles.confirmMoveBtn}
+                  onClick={() => handleMove(movingTenant.tenant.id, moveTargetBed.id)}
+                  disabled={moveInProgress} id="btn-confirm-move">
+                  {moveInProgress
+                    ? <><span className={styles.spinnerDark} /> Moving…</>
+                    : `🎉 CONFIRM TRANSFER`}
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+      {/* ─── Checkout Modal ─── */}
+      {checkoutModal && (
+        <>
+          <div className={styles.backdrop} onClick={() => setCheckoutModal(null)} />
+          <div className={styles.checkoutSheet}>
+            <div className={styles.sheetHandle} />
+            <div className={styles.checkoutHeader}>
+              <span className={styles.checkoutHeaderTitle}>🚪 TENANT CHECK-OUT</span>
+              <button className={styles.sheetClose} onClick={() => setCheckoutModal(null)}>✕</button>
+            </div>
+
+            <div className={styles.checkoutBody}>
+              <p className={styles.checkoutTenantName}>{checkoutModal.tenant.name}</p>
+              <p className={styles.checkoutTenantRoom}>
+                Room {checkoutModal.room.roomNumber} · Bed {BED_LETTERS[checkoutModal.bed.bedNumber - 1]} · Floor {checkoutModal.room.floor}
+              </p>
+
+              <div className={styles.depositCard}>
+                <p className={styles.depositTitle}>💰 DEPOSIT CLOSURE</p>
+                <div className={styles.depositRow}>
+                  <span className={styles.depositLabel}>Initial Deposit</span>
+                  <span className={styles.depositValue}>₹{(checkoutModal.tenant.advanceAmount || 0).toLocaleString()}</span>
+                </div>
+                <div className={styles.depositRow}>
+                  <span className={styles.depositLabel}>Deductions (Damage/Bills)</span>
+                  <div className={styles.deductionInput}>
+                    <span className={styles.rupeePrefix}>₹</span>
+                    <input type="number" className={styles.deductionField}
+                      placeholder="0" value={deduction}
+                      onChange={(e) => setDeduction(e.target.value)}
+                      inputMode="numeric" id="input-deduction" />
+                  </div>
+                </div>
+                <div className={styles.depositDivider} />
+                <div className={`${styles.depositRow} ${styles.depositRefundRow}`}>
+                  <span className={styles.depositLabel}>Final Refund to Tenant</span>
+                  <span className={styles.depositRefundAmount}>
+                    ₹{Math.max(0, (checkoutModal.tenant.advanceAmount || 0) - (parseInt(deduction) || 0)).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              <p className={styles.paymentLabel}>💳 REFUND MODE</p>
+              <div className={styles.paymentRow}>
+                <button className={`${styles.payBtn} ${checkoutRefundMode === "cash" ? styles.payBtnActive : ""}`}
+                  onClick={() => setCheckoutRefundMode("cash")}>💵 CASH</button>
+                <button className={`${styles.payBtn} ${checkoutRefundMode === "upi" ? styles.payBtnActive : ""}`}
+                  onClick={() => setCheckoutRefundMode("upi")}>📱 UPI</button>
+              </div>
+
+              <button className={styles.permanentExitBtn}
+                onClick={handleCheckout} disabled={checkingOut} id="btn-permanent-exit">
+                {checkingOut
+                  ? <><span className={styles.spinnerDark} /> Processing…</>
+                  : "🚨 PERMANENT EXIT"}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ─── Search Overlay ─── */}
+      {searchOpen && (
+        <>
+          <div className={styles.backdrop} onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }} />
+          <div className={styles.searchSheet}>
+            <div className={styles.sheetHandle} />
+            <div className={styles.searchHeader}>
+              <span className={styles.searchTitle}>🔍 TENANT SEARCH</span>
+              <button className={styles.sheetClose} onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }}>✕</button>
+            </div>
+            <div className={styles.searchInputWrap}>
+              <span className={styles.searchIcon}>🔍</span>
+              <input type="text" className={styles.searchInput}
+                placeholder="Name or phone number…"
+                value={searchQuery}
+                onChange={(e) => handleSearchInput(e.target.value)}
+                autoFocus id="input-search" />
+            </div>
+            <div className={styles.searchResults}>
+              {searching && <div className={styles.searchLoading}><span className={styles.spinner} /></div>}
+              {!searching && searchResults.length === 0 && searchQuery.trim() && (
+                <p className={styles.searchEmpty}>No tenants found for &ldquo;{searchQuery}&rdquo;</p>
+              )}
+              {searchResults.map((t) => (
+                <div key={t.id} className={styles.searchCard}>
+                  <div className={styles.searchCardTop}>
+                    {t.photoUrl
+                      ? <img src={t.photoUrl} alt={t.name} className={styles.searchAvatar} />
+                      : <div className={styles.searchAvatarPlaceholder}>👤</div>}
+                    <div className={styles.searchCardInfo}>
+                      <p className={styles.searchCardName}>{t.name}</p>
+                      <p className={styles.searchCardPhone}>📞 {t.phone}</p>
+                      <span className={`${styles.searchCardStatus} ${t.status === "active" ? styles.searchStatusActive : styles.searchStatusInactive}`}>
+                        {t.status === "active" ? "● ACTIVE" : "● CHECKED OUT"}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Timeline */}
+                  {t.history.length > 0 && (
+                    <div className={styles.searchTimeline}>
+                      {t.history.map((h) => (
+                        <div key={h.id} className={styles.timelineEvent}>
+                          <div className={`${styles.timelineDot} ${h.eventType === "check_out" ? styles.dotRed : h.eventType === "move" ? styles.dotPurple : styles.dotGreen}`} />
+                          <div className={styles.timelineText}>
+                            <span className={styles.timelineType}>
+                              {h.eventType === "check_in" ? "✅ Checked In" : h.eventType === "move" ? "🔁 Moved" : "🚪 Checked Out"}
+                            </span>
+                            <span className={styles.timelineNote}>{h.note || (h.toRoom || h.fromRoom || "")}</span>
+                            <span className={styles.timelineDate}>
+                              {new Date(h.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {t.joiningDate && (
+                    <p className={styles.searchJoined}>
+                      Joined: {new Date(t.joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                      {t.leavingDate && ` · Left: ${new Date(t.leavingDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ─── Room History Overlay ─── */}
+      {roomHistoryRoom && (
+        <>
+          <div className={styles.backdrop} onClick={() => { setRoomHistoryRoom(null); setRoomHistoryData(null); }} />
+          <div className={styles.roomHistorySheet}>
+            <div className={styles.sheetHandle} />
+            <div className={styles.checkoutHeader}>
+              <span className={styles.checkoutHeaderTitle}>📜 PAST TENANTS · Room {roomHistoryRoom.roomNumber}</span>
+              <button className={styles.sheetClose} onClick={() => { setRoomHistoryRoom(null); setRoomHistoryData(null); }}>✕</button>
+            </div>
+            <div className={styles.checkoutBody}>
+              {loadingRoomHistory && <div className={styles.searchLoading}><span className={styles.spinner} /></div>}
+              {!loadingRoomHistory && roomHistoryData && roomHistoryData.past.length === 0 && (
+                <p className={styles.searchEmpty}>No past tenants for this room yet.</p>
+              )}
+              {!loadingRoomHistory && roomHistoryData?.past.map((t) => (
+                <div key={t.id} className={styles.historyTenantRow}>
+                  <div className={styles.historyAvatarWrap}>
+                    {t.photoUrl
+                      ? <img src={t.photoUrl} alt={t.name} className={styles.historyAvatar} />
+                      : <div className={styles.historyAvatarPlaceholder}>👤</div>}
+                  </div>
+                  <div className={styles.historyTenantInfo}>
+                    <p className={styles.historyTenantName}>{t.name}</p>
+                    <p className={styles.historyTenantPhone}>📞 {t.phone}</p>
+                    <p className={styles.historyTenantDates}>
+                      {t.joiningDate && new Date(t.joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                      {" ➔ "}
+                      {t.leavingDate ? new Date(t.leavingDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Present"}
+                    </p>
+                    {typeof t.advanceAmount === "number" && t.advanceAmount > 0 && (
+                      <p className={styles.historyDeposit}>
+                        Deposit: ₹{t.advanceAmount.toLocaleString()}
+                        {typeof t.depositDeduction === "number" && t.depositDeduction > 0
+                          ? ` · Deducted: ₹${t.depositDeduction.toLocaleString()} · Refund: ₹${Math.max(0, t.advanceAmount - t.depositDeduction).toLocaleString()}`
+                          : " · Fully refunded"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ─── Search FAB ─── */}
+      {!searchOpen && !checkoutModal && !roomHistoryRoom && (
+        <button className={styles.searchFab} onClick={() => setSearchOpen(true)} id="btn-search-fab">
+          🔍
+        </button>
+      )}
+    </main>
+  );
+}

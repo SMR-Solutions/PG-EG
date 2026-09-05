@@ -1,0 +1,257 @@
+/* ─── Layout ─── */
+.main {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 24px 20px;
+}
+
+/* ─── Background orbs ─── */
+.orb1 {
+  position: absolute;
+  width: 450px;
+  height: 450px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(45, 198, 83, 0.07) 0%, transparent 70%);
+  top: -120px;
+  right: -120px;
+  pointer-events: none;
+}
+
+.orb2 {
+  position: absolute;
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(230, 57, 70, 0.06) 0%, transparent 70%);
+  bottom: -80px;
+  left: -80px;
+  pointer-events: none;
+}
+
+/* ─── Content wrapper ─── */
+.content {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── Header row ─── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.backBtn {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  transition: var(--transition);
+}
+
+.backBtn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+
+.logoPG { color: var(--brand-red); }
+.logoDash { color: var(--text-muted); }
+.logoEG { color: var(--brand-green); }
+
+/* ─── Title block ─── */
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title {
+  font-size: clamp(22px, 5vw, 28px);
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+/* ─── Step Cards ─── */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stepCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  text-decoration: none;
+  color: var(--text-primary);
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition);
+  /* button reset */
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+
+.stepCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.02), transparent);
+  pointer-events: none;
+}
+
+.stepCard:hover {
+  border-color: var(--brand-green);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(45, 198, 83, 0.15);
+  transform: translateY(-2px);
+  background: var(--bg-card-hover);
+}
+
+.stepCardDone {
+  border-color: rgba(45, 198, 83, 0.35);
+  background: rgba(45, 198, 83, 0.04);
+}
+
+.stepCardDone:hover {
+  border-color: rgba(45, 198, 83, 0.6);
+}
+
+.stepCardLocked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.stepCardLocked:hover {
+  border-color: var(--border);
+  transform: none;
+  box-shadow: var(--shadow-card);
+  background: var(--bg-card);
+}
+
+
+.stepNumber {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  position: absolute;
+  top: 14px;
+  right: 44px;
+}
+
+.stepIcon {
+  font-size: 26px;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.04);
+  border-radius: var(--radius-sm);
+}
+
+.stepInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.stepTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.2px;
+}
+
+.stepDesc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.stepArrow {
+  font-size: 18px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+
+.stepCard:hover .stepArrow {
+  color: var(--brand-green);
+  transform: translateX(4px);
+}
+
+/* ─── Note ─── */
+.note {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* ─── Responsive ─── */
+@media (min-width: 768px) {
+  .steps {
+    flex-direction: row;
+  }
+
+  .stepCard {
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 28px 24px;
+    min-height: 200px;
+  }
+
+  .stepNumber {
+    top: 20px;
+    right: 20px;
+  }
+
+  .stepArrow {
+    margin-top: auto;
+  }
+
+  .content {
+    max-width: 640px;
+  }
+}

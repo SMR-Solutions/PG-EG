@@ -1,0 +1,229 @@
+/* ─── Layout ─── */
+.main {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+}
+
+/* ─── Background orbs ─── */
+.orb1 {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(230, 57, 70, 0.08) 0%, transparent 70%);
+  top: -150px;
+  left: -150px;
+  pointer-events: none;
+}
+
+.orb2 {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(45, 198, 83, 0.07) 0%, transparent 70%);
+  bottom: -100px;
+  right: -100px;
+  pointer-events: none;
+}
+
+/* ─── Content wrapper ─── */
+.content {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── Logo ─── */
+.logo {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.logoText {
+  font-size: clamp(52px, 14vw, 80px);
+  font-weight: 900;
+  letter-spacing: -3px;
+  line-height: 1;
+}
+
+.logoPG {
+  color: var(--brand-red);
+  text-shadow: 0 0 60px rgba(230, 57, 70, 0.4);
+}
+
+.logoDash {
+  color: var(--text-muted);
+}
+
+.logoEG {
+  color: var(--brand-green);
+  text-shadow: 0 0 60px rgba(45, 198, 83, 0.4);
+}
+
+.tagline {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+}
+
+/* ─── Divider ─── */
+.divider {
+  width: 48px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--brand-red), var(--brand-green));
+  border-radius: 2px;
+  opacity: 0.5;
+}
+
+/* ─── Action Cards ─── */
+.cards {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.actionCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  transition: var(--transition);
+  text-decoration: none;
+  color: var(--text-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.actionCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.02), transparent);
+  pointer-events: none;
+}
+
+.actionCard:hover {
+  border-color: var(--brand-green);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(45, 198, 83, 0.2);
+  transform: translateY(-2px);
+  background: var(--bg-card-hover);
+}
+
+.actionCardDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.cardIcon {
+  font-size: 28px;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.04);
+  border-radius: var(--radius-sm);
+}
+
+.cardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.cardTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cardDesc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.cardArrow {
+  font-size: 18px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+
+.actionCard:hover .cardArrow {
+  color: var(--brand-green);
+  transform: translateX(4px);
+}
+
+/* ─── Coming Soon Badge ─── */
+.comingSoonBadge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 100px;
+  background: rgba(107, 114, 128, 0.15);
+  color: var(--text-muted);
+  border: 1px solid rgba(107, 114, 128, 0.2);
+}
+
+/* ─── Footer ─── */
+.footer {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ─── Responsive ─── */
+@media (min-width: 768px) {
+  .cards {
+    flex-direction: row;
+  }
+
+  .actionCard {
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 28px 24px;
+  }
+
+  .cardArrow {
+    position: absolute;
+    top: 22px;
+    right: 22px;
+  }
+
+  .content {
+    max-width: 640px;
+  }
+}
