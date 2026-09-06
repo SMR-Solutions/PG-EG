@@ -13,18 +13,20 @@ interface Owner {
   id: string;
   name: string;
   phone: string;
+  email?: string | null;
 }
 
 interface AuthState {
   owner: Owner | null;
   token: string | null;
+  pgId: string | null;       // ← persisted here, no more localStorage for pgId
   hasPG: boolean;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
 
 interface AuthContextType extends AuthState {
-  signIn: (token: string, owner: Owner, hasPG: boolean) => void;
+  signIn: (token: string, owner: Owner, hasPG: boolean, pgId?: string | null) => void;
   signOut: () => void;
   refreshAuth: () => Promise<void>;
 }
@@ -38,27 +40,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     owner: null,
     token: null,
+    pgId: null,
     hasPG: false,
     isLoading: true,
     isAuthenticated: false,
   });
 
-  const signIn = useCallback((token: string, owner: Owner, hasPG: boolean) => {
-    localStorage.setItem(TOKEN_KEY, token);
-    setState({
-      owner,
-      token,
-      hasPG,
-      isLoading: false,
-      isAuthenticated: true,
-    });
-  }, []);
+  const signIn = useCallback(
+    (token: string, owner: Owner, hasPG: boolean, pgId?: string | null) => {
+      localStorage.setItem(TOKEN_KEY, token);
+      // Also persist pgId so it survives refresh (secondary to /me call)
+      if (pgId) localStorage.setItem("pg_eg_pg_id", pgId);
+      setState({
+        owner,
+        token,
+        pgId: pgId || null,
+        hasPG,
+        isLoading: false,
+        isAuthenticated: true,
+      });
+    },
+    []
+  );
 
   const signOut = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem("pg_eg_pg_id");
     setState({
       owner: null,
       token: null,
+      pgId: null,
       hasPG: false,
       isLoading: false,
       isAuthenticated: false,
@@ -78,16 +89,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (!res.ok) {
-        // Token invalid — clear it
         localStorage.removeItem(TOKEN_KEY);
-        setState({ owner: null, token: null, hasPG: false, isLoading: false, isAuthenticated: false });
+        localStorage.removeItem("pg_eg_pg_id");
+        setState({ owner: null, token: null, pgId: null, hasPG: false, isLoading: false, isAuthenticated: false });
         return;
       }
 
       const data = await res.json();
+      const pgId = data.pgId || null;
+      if (pgId) localStorage.setItem("pg_eg_pg_id", pgId);
+
       setState({
         owner: data.owner,
         token,
+        pgId,
         hasPG: data.hasPG,
         isLoading: false,
         isAuthenticated: true,
@@ -97,7 +112,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // On mount — check for saved token
   useEffect(() => {
     refreshAuth();
   }, [refreshAuth]);

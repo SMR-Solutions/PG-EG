@@ -3,41 +3,36 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default function OwnerDetailsPage() {
   const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading, owner, token, refreshAuth } = useAuth();
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [alreadySaved, setAlreadySaved] = useState(false);
 
-  // On mount: check localStorage → pre-fill saved owner data
+  // Redirect to sign-in if not logged in
   useEffect(() => {
-    const ownerId = localStorage.getItem("pg_eg_owner_id");
-    if (!ownerId) {
-      setLoading(false);
-      return;
+    if (!authLoading && !isAuthenticated) router.replace("/sign-in?from=/add-pg/owner-details");
+  }, [authLoading, isAuthenticated, router]);
+
+  // Pre-fill from auth context
+  useEffect(() => {
+    if (owner) {
+      setName(owner.name || "");
+      // Phone stored as email for Google users — show blank if it looks like email
+      const p = owner.phone || "";
+      if (!p.includes("@")) setPhone(p.replace("+91", ""));
+      setAlreadySaved(true);
     }
-    // Fetch from backend and pre-fill
-    fetch(`${API_URL}/api/owners/${ownerId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.owner) {
-          setName(data.owner.name);
-          // Phone stored as +91XXXXXXXXXX → show just the 10 digits
-          setPhone(data.owner.phone.replace("+91", ""));
-          setAlreadySaved(true);
-        }
-      })
-      .catch(() => {/* no-op: just show empty form */})
-      .finally(() => setLoading(false));
-  }, []);
+  }, [owner]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -55,19 +50,23 @@ export default function OwnerDetailsPage() {
 
     setSaving(true);
     try {
-      const res = await fetch(`${API_URL}/api/owners`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const ownerId = owner?.id;
+      if (!ownerId) throw new Error("Not signed in");
+
+      // Update existing owner record
+      const res = await fetch(`${API_URL}/api/owners/${ownerId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ name: name.trim(), phone: `+91${digits}` }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save");
 
-      localStorage.setItem("pg_eg_owner_id", data.owner.id);
-      localStorage.setItem("pg_eg_owner_name", data.owner.name);
-      localStorage.setItem("pg_eg_owner_phone", data.owner.phone);
-
+      await refreshAuth(); // Sync updated name back to context
       router.push("/add-pg");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -76,7 +75,7 @@ export default function OwnerDetailsPage() {
     }
   }
 
-  if (loading) {
+  if (authLoading) {
     return (
       <main className={styles.main}>
         <div className={styles.loadingScreen}>

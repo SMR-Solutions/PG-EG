@@ -1,21 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 import styles from "./page.module.css";
 
 export default function AddPGPage() {
-  const [ownerSaved, setOwnerSaved] = useState(false);
-  const [pgSaved, setPgSaved] = useState(false);
-  const [ownerName, setOwnerName] = useState("");
+  const router = useRouter();
+  const { isAuthenticated, isLoading, owner, pgId, hasPG, refreshAuth } = useAuth();
 
+  // Redirect to sign-in if not logged in
   useEffect(() => {
-    const ownerId = localStorage.getItem("pg_eg_owner_id");
-    const name = localStorage.getItem("pg_eg_owner_name");
-    const pgId = localStorage.getItem("pg_eg_pg_id");
-    if (ownerId) { setOwnerSaved(true); setOwnerName(name || ""); }
-    if (pgId) setPgSaved(true);
-  }, []);
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/sign-in?from=/add-pg");
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  // If owner already has a PG, go straight to dashboard
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && hasPG) {
+      router.replace("/dashboard");
+    }
+  }, [isLoading, isAuthenticated, hasPG, router]);
+
+  if (isLoading || !isAuthenticated) return null;
+
+  const ownerSaved = !!owner;
+  const ownerName = owner?.name || "";
+  const pgSaved = !!pgId;
 
   return (
     <main className={styles.main}>
@@ -39,34 +52,30 @@ export default function AddPGPage() {
         <div className={`${styles.titleBlock} animate-fade-up delay-1`}>
           <h2 className={styles.title}>Let&apos;s set up your PG</h2>
           <p className={styles.subtitle}>
-            Start with your details, then tell us about your PG.
+            {ownerSaved
+              ? `Welcome back, ${ownerName}! Now add your PG details.`
+              : "Start with your details, then tell us about your PG."}
           </p>
         </div>
 
         {/* Step cards */}
         <div className={`${styles.steps} animate-fade-up delay-2`}>
-          {/* Owner Details */}
-          <Link
-            href="/add-pg/owner-details"
-            className={`${styles.stepCard} ${ownerSaved ? styles.stepCardDone : ""}`}
-            id="btn-owner-details"
-          >
+          {/* Owner Details — auto-filled from Google sign-in */}
+          <div className={`${styles.stepCard} ${ownerSaved ? styles.stepCardDone : ""}`}>
             <div className={styles.stepNumber}>01</div>
-            <div className={styles.stepIcon}>
-              {ownerSaved ? "✅" : "👤"}
-            </div>
+            <div className={styles.stepIcon}>{ownerSaved ? "✅" : "👤"}</div>
             <div className={styles.stepInfo}>
               <span className={styles.stepTitle}>
                 {ownerSaved ? ownerName || "Owner Details" : "Owner Details"}
               </span>
               <span className={styles.stepDesc}>
                 {ownerSaved
-                  ? "Saved — tap to update"
-                  : "Your name, mobile number, and contact info"}
+                  ? "Signed in via Google ✓"
+                  : "Your name and contact info"}
               </span>
             </div>
-            <div className={styles.stepArrow}>→</div>
-          </Link>
+            {ownerSaved && <div className={styles.stepDone}>✓</div>}
+          </div>
 
           {/* PG Details */}
           <Link
@@ -87,7 +96,7 @@ export default function AddPGPage() {
                   ? "Saved — tap to update"
                   : ownerSaved
                   ? "PG name, address, rooms, and sharing type"
-                  : "Complete Owner Details first"}
+                  : "Sign in first"}
               </span>
             </div>
             <div className={styles.stepArrow}>{ownerSaved ? "→" : "🔒"}</div>
@@ -99,8 +108,8 @@ export default function AddPGPage() {
           {ownerSaved && pgSaved
             ? "🎉 All set! Both steps are done."
             : ownerSaved
-            ? "✅ Owner saved. Now fill in your PG details."
-            : "💡 Fill in Owner Details first, then PG Details."}
+            ? "✅ Signed in as " + ownerName + ". Now fill in your PG details."
+            : "💡 Sign in first to continue."}
         </p>
       </div>
     </main>

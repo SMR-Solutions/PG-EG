@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -17,6 +18,7 @@ const SHARING_OPTIONS = [1, 2, 3, 4, 5];
 
 export default function PGDetailsPage() {
   const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading, owner, pgId: authPgId, token, refreshAuth } = useAuth();
 
   const [pgName, setPgName] = useState("");
   const [pgType, setPgType] = useState("gents");
@@ -31,9 +33,14 @@ export default function PGDetailsPage() {
   const [error, setError] = useState("");
   const [alreadySaved, setAlreadySaved] = useState(false);
 
-  // Load saved PG data on mount
+  // Redirect to sign-in if not logged in
   useEffect(() => {
-    const pgId = localStorage.getItem("pg_eg_pg_id");
+    if (!authLoading && !isAuthenticated) router.replace("/sign-in?from=/add-pg/pg-details");
+  }, [authLoading, isAuthenticated, router]);
+
+  // Load saved PG data — use pgId from auth context
+  useEffect(() => {
+    const pgId = authPgId || localStorage.getItem("pg_eg_pg_id");
     if (!pgId) { setLoading(false); return; }
 
     fetch(`${API_URL}/api/pgs/${pgId}`)
@@ -55,7 +62,7 @@ export default function PGDetailsPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [authPgId]);
 
   function toggleSharing(num: number) {
     setSelectedSharings((prev) =>
@@ -80,14 +87,21 @@ export default function PGDetailsPage() {
     }
     if (allSharings.length === 0) { setError("Select at least one sharing type"); return; }
 
-    const ownerId = localStorage.getItem("pg_eg_owner_id");
-    if (!ownerId) { setError("Owner details missing. Please go back and fill Owner Details first."); return; }
+    const ownerId = owner?.id;
+    if (!ownerId) { setError("Please sign in first."); return; }
 
     setSaving(true);
     try {
-      const res = await fetch(`${API_URL}/api/pgs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const existingPgId = authPgId || localStorage.getItem("pg_eg_pg_id");
+      const method = existingPgId ? "PATCH" : "POST";
+      const url = existingPgId ? `${API_URL}/api/pgs/${existingPgId}` : `${API_URL}/api/pgs`;
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           ownerId,
           name: pgName.trim(),
@@ -102,10 +116,9 @@ export default function PGDetailsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save");
 
-      localStorage.setItem("pg_eg_pg_id", data.pg.id);
-      localStorage.setItem("pg_eg_pg_name", data.pg.name);
-
-      router.push("/add-pg");
+      // Sync pgId into auth context (also updates localStorage backup)
+      await refreshAuth();
+      router.push("/add-pg/building");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

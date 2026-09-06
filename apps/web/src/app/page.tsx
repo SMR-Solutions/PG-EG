@@ -1,10 +1,23 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import styles from "./page.module.css";
-import Link from "next/link";
 
 export default function HomePage() {
+  const router = useRouter();
+  const { isAuthenticated, hasPG, isLoading } = useAuth();
+
+  // If already logged in, go straight to the right place
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace(hasPG ? "/dashboard" : "/add-pg");
+    }
+  }, [isLoading, isAuthenticated, hasPG, router]);
+
   return (
     <main className={styles.main}>
-      {/* Background gradient orbs */}
       <div className={styles.orb1} />
       <div className={styles.orb2} />
 
@@ -24,15 +37,19 @@ export default function HomePage() {
 
         {/* Action Cards */}
         <div className={`${styles.cards} animate-fade-up delay-2`}>
-          {/* ADD PG Card */}
-          <Link href="/add-pg" className={styles.actionCard} id="btn-add-pg">
+          {/* ADD PG Card — goes to sign-in first */}
+          <button
+            className={styles.actionCard}
+            id="btn-add-pg"
+            onClick={() => router.push("/sign-in?from=/add-pg")}
+          >
             <div className={styles.cardIcon}>🏠</div>
             <div className={styles.cardInfo}>
               <span className={styles.cardTitle}>ADD PG</span>
               <span className={styles.cardDesc}>I own a PG and want to manage it</span>
             </div>
             <div className={styles.cardArrow}>→</div>
-          </Link>
+          </button>
 
           {/* FIND PG Card — coming soon */}
           <div className={`${styles.actionCard} ${styles.actionCardDisabled}`} id="btn-find-pg">
@@ -42,7 +59,7 @@ export default function HomePage() {
                 FIND PG
                 <span className={styles.comingSoonBadge}>Coming Soon</span>
               </span>
-              <span className={styles.cardDesc}>I'm looking for a PG to stay in</span>
+              <span className={styles.cardDesc}>I&apos;m looking for a PG to stay in</span>
             </div>
             <div className={styles.cardArrow}>→</div>
           </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -90,9 +91,17 @@ function DonutRing({ pct, free, total }: { pct: number; free: number; total: num
 /* ─── Main ─── */
 export default function DashboardPage() {
   const router = useRouter();
+  const { pgId: authPgId, token, isAuthenticated, isLoading: authLoading, owner, signOut } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Redirect to sign-in if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace("/sign-in?from=/dashboard");
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   // UI state
   const [filterType, setFilterType] = useState<number | null>(null);
@@ -131,16 +140,19 @@ export default function DashboardPage() {
   const [loadingRoomHistory, setLoadingRoomHistory] = useState(false);
 
   const load = useCallback(async () => {
-    const pgId = localStorage.getItem("pg_eg_pg_id");
+    // Use pgId from auth context first, fall back to localStorage for backwards compat
+    const pgId = authPgId || localStorage.getItem("pg_eg_pg_id");
     if (!pgId) { setError("No PG found. Please complete setup first."); setLoading(false); return; }
     try {
-      const res = await fetch(`${API_URL}/api/dashboard?pgId=${pgId}`);
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`${API_URL}/api/dashboard?pgId=${pgId}`, { headers });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setData(json);
     } catch { setError("Failed to load dashboard."); }
     finally { setLoading(false); }
-  }, []);
+  }, [authPgId, token]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -254,7 +266,7 @@ export default function DashboardPage() {
     ? data.pg.sharings.sort((a, b) => a - b).filter((t) => sharingStats(data.rooms, t).totalBeds > 0)
     : [];
 
-  if (loading) return (
+  if (authLoading || loading) return (
     <main className={styles.main}><div className={styles.centered}><span className={styles.spinner} /></div></main>
   );
   if (error || !data) return (
@@ -292,6 +304,15 @@ export default function DashboardPage() {
                 <span className={styles.overallLabel}>rent due</span>
               </div>
             )}
+            {/* Owner avatar + sign out */}
+            <div className={styles.ownerMenu}>
+              <div className={styles.ownerAvatar} title={owner?.name || "Owner"}>
+                {(owner?.name || "O")[0].toUpperCase()}
+              </div>
+              <button className={styles.signOutBtn} onClick={async () => { signOut(); router.replace("/sign-in"); }} id="btn-sign-out" title="Sign out">
+                🚪Sign Out
+              </button>
+            </div>
           </div>
         </header>
 

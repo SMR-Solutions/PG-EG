@@ -1,6 +1,8 @@
+import dotenv from "dotenv";
+dotenv.config(); // ← MUST be first, before any imports that read process.env
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import authRouter from "./routes/auth";
 import ownersRouter from "./routes/owners";
 import pgsRouter from "./routes/pgs";
@@ -10,8 +12,6 @@ import uploadRouter from "./routes/upload";
 import tenantsRouter from "./routes/tenants";
 import rentRouter from "./routes/rent";
 
-dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT || 4000;
 
@@ -19,7 +19,7 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || "http://localhost:3000",
   credentials: true,
 }));
-app.use(express.json({ limit: "10mb" })); // large enough for base64 images
+app.use(express.json({ limit: "10mb" }));
 
 // ─── Routes ───────────────────────────────
 app.get("/api/health", (_req, res) => {
@@ -38,4 +38,5 @@ app.use("/api/rent", rentRouter);
 // ─── Start ────────────────────────────────
 app.listen(PORT, () => {
   console.log(`🚀 PG-EG Server running on http://localhost:${PORT}`);
+  console.log(`   Firebase Project: ${process.env.FIREBASE_PROJECT_ID}`);
 });
