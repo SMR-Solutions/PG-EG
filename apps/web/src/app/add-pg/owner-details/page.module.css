@@ -240,3 +240,55 @@
   padding: 10px 14px;
   border-radius: var(--radius-sm);
 }
+
+/* ─── Success ─── */
+.success {
+  font-size: 13px;
+  color: var(--brand-green);
+  background: rgba(45, 198, 83, 0.08);
+  border: 1px solid rgba(45, 198, 83, 0.2);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  text-align: center;
+  font-weight: 600;
+}
+
+/* ─── Form card wrapper ─── */
+.formCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+/* ─── Title block inside card ─── */
+.titleBlock { display: flex; flex-direction: column; gap: 6px; }
+
+/* ─── Google badge ─── */
+.googleBadge {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; padding: 10px 14px;
+  font-size: 13px; color: rgba(255,255,255,0.55);
+}
+.googleBadge strong { color: rgba(255,255,255,0.8); }
+
+/* ─── Required badge ─── */
+.required {
+  font-size: 11px; font-weight: 600;
+  color: #f4a261; margin-left: 6px;
+  background: rgba(244,162,97,0.12);
+  padding: 2px 6px; border-radius: 4px;
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
+
+/* ─── Phone hint ─── */
+.phoneHint {
+  font-size: 12px; color: rgba(255,255,255,0.35);
+  margin-top: 4px; line-height: 1.5;
+}

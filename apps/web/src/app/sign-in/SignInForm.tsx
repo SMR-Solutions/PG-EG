@@ -73,12 +73,14 @@ export default function SignInForm() {
       }
 
       const data = await res.json();
-      signIn(data.token, data.owner, data.hasPG, data.pgId);
+      signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs);
 
-      if (data.hasPG) {
-        router.replace("/dashboard");
-      } else {
+      if (!data.hasPG) {
         router.replace("/add-pg");
+      } else if ((data.pgs || []).length > 1) {
+        router.replace("/select-pg");
+      } else {
+        router.replace("/dashboard");
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
@@ -171,12 +173,14 @@ export default function SignInForm() {
       }
 
       const data = await res.json();
-      signIn(data.token, data.owner, data.hasPG, data.pgId);
+      signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs);
 
-      if (data.hasPG) {
-        router.replace("/dashboard");
-      } else {
+      if (!data.hasPG) {
         router.replace(searchParams.get("from") || "/add-pg");
+      } else if ((data.pgs || []).length > 1) {
+        router.replace("/select-pg");
+      } else {
+        router.replace("/dashboard");
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";

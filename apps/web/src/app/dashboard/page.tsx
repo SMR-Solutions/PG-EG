@@ -24,6 +24,7 @@ interface Room { id: string; roomNumber: string; floor: number; sharingType: num
 interface PGData {
   id: string; name: string; type: string; totalFloors: number;
   sharings: number[]; owner: { name: string; phone: string } | null;
+  managerName: string | null; managerPhone: string | null;
 }
 interface DashboardData { pg: PGData; rooms: Room[]; currentMonth: string; }
 
@@ -91,7 +92,7 @@ function DonutRing({ pct, free, total }: { pct: number; free: number; total: num
 /* ─── Main ─── */
 export default function DashboardPage() {
   const router = useRouter();
-  const { pgId: authPgId, token, isAuthenticated, isLoading: authLoading, owner, signOut } = useAuth();
+  const { activePgId, allPgs, setActivePg, token, isAuthenticated, isLoading: authLoading, owner, signOut } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -139,10 +140,15 @@ export default function DashboardPage() {
   const [roomHistoryData, setRoomHistoryData] = useState<{ past: TenantWithHistory[]; moveHistory: HistoryEvent[] } | null>(null);
   const [loadingRoomHistory, setLoadingRoomHistory] = useState(false);
 
+  // Profile sidebar state
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [changingPg, setChangingPg] = useState(false);
+
   const load = useCallback(async () => {
-    // Use pgId from auth context first, fall back to localStorage for backwards compat
-    const pgId = authPgId || localStorage.getItem("pg_eg_pg_id");
+    // Use activePgId (selected PG) first, fall back to localStorage
+    const pgId = activePgId || localStorage.getItem("pg_eg_active_pg_id") || localStorage.getItem("pg_eg_pg_id");
     if (!pgId) { setError("No PG found. Please complete setup first."); setLoading(false); return; }
+    setLoading(true);
     try {
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -152,7 +158,7 @@ export default function DashboardPage() {
       setData(json);
     } catch { setError("Failed to load dashboard."); }
     finally { setLoading(false); }
-  }, [authPgId, token]);
+  }, [activePgId, token]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -188,7 +194,7 @@ export default function DashboardPage() {
     if (!q.trim()) { setSearchResults([]); return; }
     setSearching(true);
     searchTimer.current = setTimeout(async () => {
-      const pgId = localStorage.getItem("pg_eg_pg_id") || "";
+      const pgId = localStorage.getItem("pg_eg_active_pg_id") || localStorage.getItem("pg_eg_pg_id") || "";
       const res = await fetch(`${API_URL}/api/tenants/search?pgId=${pgId}&q=${encodeURIComponent(q)}`);
       const json = await res.json();
       setSearchResults(json.tenants || []);
@@ -304,17 +310,107 @@ export default function DashboardPage() {
                 <span className={styles.overallLabel}>rent due</span>
               </div>
             )}
-            {/* Owner avatar + sign out */}
-            <div className={styles.ownerMenu}>
-              <div className={styles.ownerAvatar} title={owner?.name || "Owner"}>
-                {(owner?.name || "O")[0].toUpperCase()}
+            {/* Manager avatar — opens profile sidebar */}
+            <button
+              className={styles.ownerAvatar}
+              onClick={() => setProfileOpen(true)}
+              id="btn-open-profile"
+              title={(data?.pg.managerName || owner?.name || "Profile")}
+            >
+              {(data?.pg.managerName || owner?.name || "O")[0].toUpperCase()}
+            </button>
+          </div>
+        </header>
+
+        {/* ─── Profile Sidebar ─── */}
+        {profileOpen && (
+          <div className={styles.sidebarBackdrop} onClick={() => setProfileOpen(false)}>
+            <div className={styles.profileSidebar} onClick={(e) => e.stopPropagation()}>
+              {/* PG Manager info + Google account */}
+              <div className={styles.sidebarOwner}>
+                <div className={styles.sidebarAvatar}>
+                  {(data?.pg.managerName || owner?.name || "O")[0].toUpperCase()}
+                </div>
+                <div>
+                  <div className={styles.sidebarOwnerName}>
+                    {data?.pg.managerName || owner?.name || "Manager"}
+                  </div>
+                  <div className={styles.sidebarOwnerEmail}>
+                    {data?.pg.managerPhone || owner?.phone || ""}
+                  </div>
+                  {/* Google account email — always shown as login identity */}
+                  {owner?.email && (
+                    <div className={styles.sidebarOwnerEmail} style={{ fontSize: 10, opacity: 0.5, marginTop: 2 }}>
+                      {owner.email}
+                    </div>
+                  )}
+                </div>
               </div>
-              <button className={styles.signOutBtn} onClick={async () => { signOut(); router.replace("/sign-in"); }} id="btn-sign-out" title="Sign out">
-                🚪Sign Out
+
+              <div className={styles.sidebarDivider} />
+
+              {/* Actions */}
+              <button
+                className={styles.sidebarAction}
+                id="btn-add-another-pg"
+                onClick={() => { setProfileOpen(false); router.push("/add-pg?new=true"); }}
+              >
+                <span className={styles.sidebarActionIcon}>➕</span>
+                <div>
+                  <div className={styles.sidebarActionTitle}>Add Another PG</div>
+                  <div className={styles.sidebarActionDesc}>Register a new property</div>
+                </div>
+              </button>
+
+              <button
+                className={styles.sidebarAction}
+                id="btn-edit-pg"
+                onClick={() => { setProfileOpen(false); router.push("/edit-pg"); }}
+              >
+                <span className={styles.sidebarActionIcon}>✏️</span>
+                <div>
+                  <div className={styles.sidebarActionTitle}>Edit PG</div>
+                  <div className={styles.sidebarActionDesc}>Change PG details or rooms</div>
+                </div>
+              </button>
+
+              {/* Change PG — only when owner has 2+ PGs */}
+              {allPgs.length > 1 && (
+                <button
+                  className={styles.sidebarAction}
+                  id="btn-change-pg"
+                  onClick={() => { setProfileOpen(false); router.push("/select-pg"); }}
+                >
+                  <span className={styles.sidebarActionIcon}>🔄</span>
+                  <div>
+                    <div className={styles.sidebarActionTitle}>Change PG</div>
+                    <div className={styles.sidebarActionDesc}>
+                      {allPgs.length} properties — switch here
+                    </div>
+                  </div>
+                </button>
+              )}
+
+              <div className={styles.sidebarDivider} />
+
+              <button
+                className={`${styles.sidebarAction} ${styles.sidebarActionDanger}`}
+                id="btn-sign-out"
+                onClick={() => { signOut(); router.replace("/sign-in"); }}
+              >
+                <span className={styles.sidebarActionIcon}>🚪</span>
+                <div>
+                  <div className={styles.sidebarActionTitle}>Sign Out</div>
+                  <div className={styles.sidebarActionDesc}>Log out of your account</div>
+                </div>
+              </button>
+
+              <button className={styles.sidebarClose} onClick={() => setProfileOpen(false)} id="btn-close-sidebar">
+                ✕
               </button>
             </div>
           </div>
-        </header>
+        )}
 
         {/* ─── Sharing Cards — only show types with rooms ─── */}
         {activeShareTypes.length > 0 && (

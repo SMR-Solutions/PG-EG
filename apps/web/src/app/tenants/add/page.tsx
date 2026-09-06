@@ -55,7 +55,11 @@ function CheckInForm() {
 
   useEffect(() => {
     if (!bedId || !roomId) { setLoading(false); return; }
-    const pgId = localStorage.getItem("pg_eg_pg_id") || "";
+    // Always use the active PG key — pg_eg_pg_id is the old single-PG key
+    const pgId = localStorage.getItem("pg_eg_active_pg_id")
+      || localStorage.getItem("pg_eg_pg_id")
+      || "";
+    if (!pgId) { setLoading(false); return; }
     fetch(`${API_URL}/api/dashboard?pgId=${pgId}`)
       .then((r) => r.json())
       .then((data) => {

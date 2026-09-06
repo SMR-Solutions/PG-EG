@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import styles from "./page.module.css";
+import styles from "../../add-pg/building/page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -21,11 +20,11 @@ const PG_TYPE_LABEL: Record<string, string> = {
   "co-living": "Co-Living 🧑‍🤝‍🧑",
 };
 
-function BuildingInner() {
+function EditBuildingInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const urlPgId = searchParams.get("pgId");
-  const { activePgId, token, refreshAuth } = useAuth();
+  const pgId = searchParams.get("pgId");
+  const { token } = useAuth();
 
   const [pgName, setPgName] = useState("My PG");
   const [pgType, setPgType] = useState("gents");
@@ -39,9 +38,11 @@ function BuildingInner() {
   const [savingError, setSavingError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const loadRooms = useCallback(async (pgId: string) => {
+  const loadRooms = useCallback(async (id: string) => {
     try {
-      const res = await fetch(`${API_URL}/api/rooms?pgId=${pgId}`);
+      const res = await fetch(`${API_URL}/api/rooms?pgId=${id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const data = await res.json();
       if (data.rooms) {
         const grouped: Record<number, Room[]> = {};
@@ -52,18 +53,12 @@ function BuildingInner() {
         setRoomsByFloor(grouped);
       }
     } catch { /* no-op */ }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
-    // Priority: URL param > activePgId > localStorage fallbacks
-    const pgId = urlPgId || activePgId
-      || localStorage.getItem("pg_eg_active_pg_id")
-      || localStorage.getItem("pg_eg_pg_id");
     if (!pgId) { setLoading(false); return; }
 
-    fetch(`${API_URL}/api/pgs/${pgId}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
+    fetch(`${API_URL}/api/pgs/${pgId}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.pg) {
@@ -76,30 +71,21 @@ function BuildingInner() {
       .finally(() => setLoading(false));
 
     loadRooms(pgId);
-  }, [urlPgId, activePgId, token, loadRooms]);
+  }, [pgId, loadRooms]);
 
   function openFloor(floor: number) {
     if (activeFloor === floor) {
-      setActiveFloor(null);
-      setAddingRoom(false);
+      setActiveFloor(null); setAddingRoom(false);
     } else {
-      setActiveFloor(floor);
-      setAddingRoom(false);
-      setRoomName("");
-      setBedsCount(1);
-      setSavingError("");
+      setActiveFloor(floor); setAddingRoom(false);
+      setRoomName(""); setBedsCount(1); setSavingError("");
     }
   }
 
   async function handleSaveRoom() {
     setSavingError("");
     if (!roomName.trim()) { setSavingError("Enter a room name"); return; }
-    if (activeFloor === null) return;
-
-    const pgId = urlPgId || activePgId
-      || localStorage.getItem("pg_eg_active_pg_id")
-      || localStorage.getItem("pg_eg_pg_id");
-    if (!pgId) { setSavingError("PG not found. Go back and fill PG Details."); return; }
+    if (activeFloor === null || !pgId) return;
 
     setSaving(true);
     try {
@@ -128,7 +114,10 @@ function BuildingInner() {
 
   async function handleDeleteRoom(roomId: string, floor: number) {
     try {
-      await fetch(`${API_URL}/api/rooms/${roomId}`, { method: "DELETE" });
+      await fetch(`${API_URL}/api/rooms/${roomId}`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       setRoomsByFloor((prev) => ({
         ...prev,
         [floor]: (prev[floor] || []).filter((r) => r.id !== roomId),
@@ -140,8 +129,6 @@ function BuildingInner() {
   const totalBeds = Object.values(roomsByFloor).reduce(
     (s, r) => s + r.reduce((bs, room) => bs + room.sharingType, 0), 0
   );
-
-  // Floors top→bottom (Floor N at top, Floor 1 at bottom)
   const floorNums = Array.from({ length: totalFloors }, (_, i) => totalFloors - i);
 
   if (loading) {
@@ -160,9 +147,9 @@ function BuildingInner() {
       <div className={styles.content}>
         {/* Header */}
         <div className={`${styles.header} animate-fade-up`}>
-          <Link href="/add-pg/pg-details" className={styles.backBtn} id="btn-back">
+          <button className={styles.backBtn} onClick={() => router.back()} id="btn-back">
             ← Back
-          </Link>
+          </button>
           <div className={styles.logo}>
             <span className={styles.logoPG}>PG</span>
             <span className={styles.logoDash}>-</span>
@@ -194,17 +181,14 @@ function BuildingInner() {
           </div>
         </div>
 
-        {/* ─── Building visual ─── */}
+        {/* Building visual */}
         <div className={`${styles.building} animate-fade-up delay-2`}>
-
-          {/* Roof */}
           <div className={styles.roofWrap}>
             <div className={styles.roofLeft} />
             <div className={styles.roofMiddle}>🏗️</div>
             <div className={styles.roofRight} />
           </div>
 
-          {/* Floors */}
           <div className={styles.floors}>
             {floorNums.map((floor) => {
               const floorRooms = roomsByFloor[floor] || [];
@@ -213,23 +197,16 @@ function BuildingInner() {
 
               return (
                 <div key={floor} className={styles.floorWrap}>
-                  {/* Clickable floor bar */}
                   <button
                     className={`${styles.floorBar} ${isActive ? styles.floorBarActive : ""}`}
                     onClick={() => openFloor(floor)}
                     id={`floor-btn-${floor}`}
                   >
-                    {/* Windows */}
                     <div className={styles.windows}>
-                      {[0, 1, 2, 3, 4].map((wi) => (
-                        <div
-                          key={wi}
-                          className={`${styles.win} ${wi < litWindows ? styles.winLit : ""}`}
-                        />
+                      {[0,1,2,3,4].map((wi) => (
+                        <div key={wi} className={`${styles.win} ${wi < litWindows ? styles.winLit : ""}`} />
                       ))}
                     </div>
-
-                    {/* Floor label */}
                     <div className={styles.floorLabel}>
                       <span className={styles.floorNum}>Floor {floor}</span>
                       <span className={styles.floorCount}>
@@ -238,14 +215,11 @@ function BuildingInner() {
                           : `${floorRooms.length} room${floorRooms.length > 1 ? "s" : ""} · ${floorRooms.reduce((s, r) => s + r.sharingType, 0)} beds`}
                       </span>
                     </div>
-
                     <span className={`${styles.chevron} ${isActive ? styles.chevronUp : ""}`}>›</span>
                   </button>
 
-                  {/* Expanded panel */}
                   {isActive && (
                     <div className={styles.floorPanel}>
-                      {/* Rooms grid */}
                       {floorRooms.length > 0 && (
                         <div className={styles.roomGrid}>
                           {floorRooms.map((room) => (
@@ -271,70 +245,43 @@ function BuildingInner() {
                         </div>
                       )}
 
-                      {/* Add Room form */}
                       {addingRoom ? (
                         <div className={styles.addForm}>
                           <div className={styles.addFormHeader}>
                             <span className={styles.addFormTitle}>New Room — Floor {floor}</span>
                           </div>
-
                           <div className={styles.addFields}>
                             <div className={styles.addField}>
-                              <label className={styles.addLabel} htmlFor="room-name-input">
-                                Room Name
-                              </label>
+                              <label className={styles.addLabel} htmlFor="room-name-input">Room Name</label>
                               <input
-                                id="room-name-input"
-                                type="text"
-                                className={styles.addInput}
-                                placeholder='e.g. A1, 101, Ground Room'
-                                value={roomName}
-                                onChange={(e) => setRoomName(e.target.value)}
+                                id="room-name-input" type="text" className={styles.addInput}
+                                placeholder="e.g. A1, 101, Ground Room"
+                                value={roomName} onChange={(e) => setRoomName(e.target.value)}
                                 onKeyDown={(e) => e.key === "Enter" && handleSaveRoom()}
-                                autoFocus
-                                disabled={saving}
+                                autoFocus disabled={saving}
                               />
                             </div>
-
                             <div className={styles.addField}>
                               <label className={styles.addLabel}>Beds in this room</label>
                               <div className={styles.bedCounter}>
-                                <button
-                                  type="button"
-                                  className={styles.bedBtn}
-                                  onClick={() => setBedsCount((b) => Math.max(1, b - 1))}
-                                  disabled={bedsCount <= 1 || saving}
-                                >−</button>
+                                <button type="button" className={styles.bedBtn}
+                                  onClick={() => setBedsCount((b) => Math.max(1, b - 1))} disabled={bedsCount <= 1 || saving}>−</button>
                                 <div className={styles.bedCountDisplay}>
                                   <span className={styles.bedCountNum}>{bedsCount}</span>
                                   <span className={styles.bedCountLabel}>bed{bedsCount > 1 ? "s" : ""}</span>
                                 </div>
-                                <button
-                                  type="button"
-                                  className={styles.bedBtn}
-                                  onClick={() => setBedsCount((b) => Math.min(10, b + 1))}
-                                  disabled={bedsCount >= 10 || saving}
-                                >+</button>
+                                <button type="button" className={styles.bedBtn}
+                                  onClick={() => setBedsCount((b) => Math.min(10, b + 1))} disabled={bedsCount >= 10 || saving}>+</button>
                               </div>
                             </div>
                           </div>
-
                           {savingError && <p className={styles.addError}>{savingError}</p>}
-
                           <div className={styles.addActions}>
-                            <button
-                              className={styles.saveBtn}
-                              onClick={handleSaveRoom}
-                              disabled={saving}
-                              id="btn-save-room"
-                            >
+                            <button className={styles.saveBtn} onClick={handleSaveRoom} disabled={saving} id="btn-save-room">
                               {saving ? <><span className={styles.spinner} /> Saving…</> : "✓ Save Room"}
                             </button>
-                            <button
-                              className={styles.cancelBtn}
-                              onClick={() => { setAddingRoom(false); setSavingError(""); }}
-                              disabled={saving}
-                            >Cancel</button>
+                            <button className={styles.cancelBtn}
+                              onClick={() => { setAddingRoom(false); setSavingError(""); }} disabled={saving}>Cancel</button>
                           </div>
                         </div>
                       ) : (
@@ -342,9 +289,7 @@ function BuildingInner() {
                           className={styles.addRoomBtn}
                           onClick={() => { setAddingRoom(true); setRoomName(""); setBedsCount(1); setSavingError(""); }}
                           id={`btn-add-room-${floor}`}
-                        >
-                          + Add Room
-                        </button>
+                        >+ Add Room</button>
                       )}
                     </div>
                   )}
@@ -353,26 +298,17 @@ function BuildingInner() {
             })}
           </div>
 
-          {/* Ground */}
           <div className={styles.ground}>
-            <div className={styles.entrance}>
-              <div className={styles.entranceDoor} />
-            </div>
+            <div className={styles.entrance}><div className={styles.entranceDoor} /></div>
           </div>
         </div>
 
-        {/* Prev / Done navigation */}
+        {/* Done navigation */}
         <div className={`${styles.navRow} animate-fade-up delay-3`}>
-          <Link
-            href={urlPgId ? `/add-pg/pg-details?pgId=${urlPgId}&new=true` : "/add-pg/pg-details"}
-            className={styles.prevBtn}
-            id="btn-prev"
-          >
-            ← Prev
-          </Link>
+          <button className={styles.prevBtn} onClick={() => router.back()} id="btn-prev">← Back</button>
           <button
             className={styles.nextBtn}
-            onClick={async () => { await refreshAuth(); router.push("/dashboard"); }}
+            onClick={() => router.push("/dashboard")}
             id="btn-done"
           >
             {totalRooms > 0 ? `Done (${totalRooms} rooms) →` : "Done →"}
@@ -383,10 +319,6 @@ function BuildingInner() {
   );
 }
 
-export default function BuildingPage() {
-  return (
-    <Suspense fallback={null}>
-      <BuildingInner />
-    </Suspense>
-  );
+export default function EditBuildingPage() {
+  return <Suspense fallback={null}><EditBuildingInner /></Suspense>;
 }

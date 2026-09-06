@@ -1,0 +1,36 @@
+.main { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; position: relative; padding: 24px 16px 80px; overflow: hidden; }
+.orb1 { position: fixed; width: 600px; height: 600px; border-radius: 50%; background: radial-gradient(circle, rgba(45,198,83,0.06) 0%, transparent 70%); top: -200px; right: -200px; pointer-events: none; z-index: 0; }
+.orb2 { position: fixed; width: 500px; height: 500px; border-radius: 50%; background: radial-gradient(circle, rgba(230,57,70,0.04) 0%, transparent 70%); bottom: -150px; left: -150px; pointer-events: none; z-index: 0; }
+.centered { min-height: 80vh; display: flex; align-items: center; justify-content: center; }
+.spinner { width: 32px; height: 32px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.1); border-top-color: #2dc653; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.content { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 20px; position: relative; z-index: 1; }
+.header { display: flex; align-items: center; justify-content: space-between; }
+.backBtn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); padding: 8px 14px; border-radius: 10px; cursor: pointer; font-size: 13px; font-family: inherit; transition: background 0.15s; }
+.backBtn:hover { background: rgba(255,255,255,0.1); }
+.logo { display: flex; gap: 2px; font-size: 20px; font-weight: 900; letter-spacing: -1px; }
+.logoPG { color: #e63946; } .logoDash { color: rgba(255,255,255,0.3); } .logoEG { color: #2dc653; }
+.titleBlock { display: flex; flex-direction: column; gap: 4px; }
+.title { font-size: 26px; font-weight: 800; color: #fff; letter-spacing: -0.5px; margin: 0; }
+.subtitle { font-size: 14px; color: rgba(255,255,255,0.45); margin: 0; }
+.form { display: flex; flex-direction: column; gap: 18px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 20px; padding: 24px; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.label { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.5); letter-spacing: 0.5px; text-transform: uppercase; }
+.optional { font-weight: 400; color: rgba(255,255,255,0.3); text-transform: none; letter-spacing: 0; }
+.input { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #fff; font-size: 15px; font-family: inherit; padding: 14px 16px; outline: none; transition: border-color 0.15s; }
+.input:focus { border-color: rgba(45,198,83,0.5); }
+.typeRow { display: flex; gap: 8px; }
+.typeBtn { flex: 1; padding: 12px 8px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); font-size: 13px; font-family: inherit; cursor: pointer; transition: all 0.15s; }
+.typeBtnActive { background: rgba(45,198,83,0.15); border-color: #2dc653; color: #fff; }
+.stepper { display: flex; align-items: center; gap: 16px; }
+.stepBtn { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+.stepBtn:hover { background: rgba(255,255,255,0.14); }
+.stepValue { font-size: 28px; font-weight: 800; color: #fff; min-width: 40px; text-align: center; }
+.sharingRow { display: flex; gap: 8px; flex-wrap: wrap; }
+.sharingBtn { padding: 10px 16px; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); font-size: 13px; font-family: inherit; cursor: pointer; transition: all 0.15s; }
+.sharingBtnActive { background: rgba(45,198,83,0.15); border-color: #2dc653; color: #fff; font-weight: 600; }
+.error { color: #e63946; font-size: 13px; text-align: center; }
+.success { color: #2dc653; font-size: 13px; text-align: center; font-weight: 600; }
+.saveBtn { width: 100%; padding: 16px; border-radius: 14px; background: linear-gradient(135deg, #2dc653, #16a34a); border: none; color: #000; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: opacity 0.15s, transform 0.15s; }
+.saveBtn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+.saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }

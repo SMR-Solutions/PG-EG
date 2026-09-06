@@ -83,4 +83,40 @@ router.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
+// ─── PATCH /api/owners/:id ────────────────
+router.patch("/:id", async (req: Request, res: Response) => {
+  try {
+    const { name, phone } = req.body as { name?: string; phone?: string };
+    const db = createDb(process.env.DATABASE_URL!);
+
+    const existing = await db.select().from(owners).where(eq(owners.id, req.params.id)).limit(1);
+    if (!existing[0]) { res.status(404).json({ error: "Owner not found" }); return; }
+
+    const updates: Partial<typeof existing[0]> = { updatedAt: new Date() };
+
+    if (name !== undefined) {
+      if (name.trim().length < 2) { res.status(400).json({ error: "Name must be at least 2 characters" }); return; }
+      updates.name = name.trim();
+    }
+
+    if (phone !== undefined) {
+      if (!/^\+91\d{10}$/.test(phone)) {
+        res.status(400).json({ error: "Valid phone required (e.g. +91XXXXXXXXXX)" }); return;
+      }
+      // Check phone uniqueness (skip if same owner)
+      const phoneConflict = await db.select({ id: owners.id }).from(owners).where(eq(owners.phone, phone)).limit(1);
+      if (phoneConflict[0] && phoneConflict[0].id !== req.params.id) {
+        res.status(409).json({ error: "This phone number is already registered" }); return;
+      }
+      updates.phone = phone;
+    }
+
+    const [updated] = await db.update(owners).set(updates).where(eq(owners.id, req.params.id)).returning();
+    res.json({ owner: { id: updated.id, name: updated.name, phone: updated.phone, email: updated.email } });
+  } catch (error) {
+    console.error("Update owner error:", error);
+    res.status(500).json({ error: "Failed to update owner" });
+  }
+});
+
 export default router;

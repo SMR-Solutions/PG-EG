@@ -34,6 +34,9 @@ export const pgs = pgTable("pgs", {
   description: text("description"),
   coverImageUrl: text("cover_image_url"),
   rules: text("rules"),
+  // Per-PG manager contact — can differ from the Google account holder
+  managerName: text("manager_name"),
+  managerPhone: text("manager_phone"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

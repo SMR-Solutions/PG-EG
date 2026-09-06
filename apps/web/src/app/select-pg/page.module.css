@@ -1,0 +1,118 @@
+/* ─── Layout ─── */
+.main {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 32px 20px;
+}
+
+.orb1 {
+  position: absolute;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(45,198,83,0.07) 0%, transparent 70%);
+  top: -150px; right: -100px; pointer-events: none;
+}
+.orb2 {
+  position: absolute;
+  width: 400px; height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(230,57,70,0.05) 0%, transparent 70%);
+  bottom: -100px; left: -100px; pointer-events: none;
+}
+
+.content {
+  width: 100%; max-width: 480px;
+  display: flex; flex-direction: column; gap: 28px;
+  position: relative; z-index: 1;
+}
+
+/* ─── Header ─── */
+.header { display: flex; justify-content: center; }
+.logo { font-size: 22px; font-weight: 900; letter-spacing: -1px; }
+.logoPG  { color: var(--brand-red); }
+.logoDash { color: var(--text-muted); }
+.logoEG  { color: var(--brand-green); }
+
+/* ─── Title ─── */
+.titleBlock { text-align: center; }
+.welcome {
+  font-size: 13px; font-weight: 600;
+  color: var(--brand-green); letter-spacing: 0.3px;
+  margin-bottom: 8px;
+}
+.title {
+  font-size: clamp(24px, 6vw, 32px); font-weight: 800;
+  color: var(--text-primary); letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+.subtitle { font-size: 14px; color: var(--text-secondary); }
+
+/* ─── PG List ─── */
+.pgList { display: flex; flex-direction: column; gap: 12px; }
+
+.pgCard {
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px 22px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  cursor: pointer; text-align: left; width: 100%;
+  font-family: inherit;
+  transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s, background 0.18s;
+  position: relative;
+}
+.pgCard:hover {
+  border-color: var(--brand-green);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(45,198,83,0.15);
+}
+.pgCardActive {
+  border-color: rgba(45,198,83,0.4);
+  background: rgba(45,198,83,0.04);
+}
+
+.pgIndex {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  border: 1.5px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 800; color: var(--text-primary);
+  flex-shrink: 0;
+}
+.pgCardActive .pgIndex {
+  background: rgba(45,198,83,0.12);
+  border-color: rgba(45,198,83,0.35);
+  color: var(--brand-green);
+}
+
+.pgInfo { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.pgName { font-size: 17px; font-weight: 700; color: var(--text-primary); }
+.pgLastBadge {
+  font-size: 11px; font-weight: 600;
+  color: var(--brand-green);
+  background: rgba(45,198,83,0.1);
+  padding: 2px 8px; border-radius: 6px;
+  width: fit-content;
+}
+
+.pgArrow {
+  font-size: 18px; color: var(--text-muted);
+  transition: transform 0.15s, color 0.15s;
+}
+.pgCard:hover .pgArrow { color: var(--brand-green); transform: translateX(4px); }
+
+/* ─── Note ─── */
+.note {
+  font-size: 12px; color: var(--text-muted);
+  text-align: center;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}

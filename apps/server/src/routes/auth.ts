@@ -1,6 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import jwt from "jsonwebtoken";
-import { eq } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { Router, Request, Response } from "express";
 import { createDb, owners, pgs } from "../db";
 
@@ -83,7 +83,8 @@ router.post("/verify", async (req: Request, res: Response) => {
       await db.update(owners).set({ firebaseUid, updatedAt: new Date() }).where(eq(owners.id, owner.id));
     }
 
-    const ownerPGs = await db.select({ id: pgs.id }).from(pgs).where(eq(pgs.ownerId, owner.id)).limit(1);
+    const ownerPGs = await db.select({ id: pgs.id, name: pgs.name }).from(pgs)
+      .where(eq(pgs.ownerId, owner.id)).orderBy(asc(pgs.createdAt));
     const hasPG = ownerPGs.length > 0;
     const token = makeJwt(owner.id, owner.phone);
 
@@ -93,6 +94,7 @@ router.post("/verify", async (req: Request, res: Response) => {
       isNewUser,
       hasPG,
       pgId: ownerPGs[0]?.id || null,
+      pgs: ownerPGs,
     });
   } catch (error) {
     console.error("Auth verify error:", error);
@@ -143,7 +145,7 @@ router.post("/google", async (req: Request, res: Response) => {
     }
 
     const ownerPGs = await db.select({ id: pgs.id, name: pgs.name }).from(pgs)
-      .where(eq(pgs.ownerId, owner.id)).limit(1);
+      .where(eq(pgs.ownerId, owner.id)).orderBy(asc(pgs.createdAt));
     const hasPG = ownerPGs.length > 0;
     const token = makeJwt(owner.id, owner.phone);
 
@@ -153,6 +155,7 @@ router.post("/google", async (req: Request, res: Response) => {
       isNewUser,
       hasPG,
       pgId: ownerPGs[0]?.id || null,
+      pgs: ownerPGs,
     });
   } catch (error) {
     console.error("Google auth error:", error);
@@ -177,7 +180,7 @@ router.get("/me", async (req: Request, res: Response) => {
 
     const owner = result[0];
     const ownerPGs = await db.select({ id: pgs.id, name: pgs.name }).from(pgs)
-      .where(eq(pgs.ownerId, owner.id));
+      .where(eq(pgs.ownerId, owner.id)).orderBy(asc(pgs.createdAt));
 
     res.json({
       owner: { id: owner.id, name: owner.name, phone: owner.phone, email: owner.email, createdAt: owner.createdAt },

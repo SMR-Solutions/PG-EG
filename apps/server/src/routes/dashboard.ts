@@ -103,7 +103,13 @@ router.get("/", async (req: Request, res: Response) => {
     });
 
     res.json({
-      pg: { ...pg, sharings: JSON.parse(pg.sharings), owner: ownerResult[0] || null },
+      pg: {
+        ...pg,
+        sharings: JSON.parse(pg.sharings),
+        managerName: pg.managerName || null,
+        managerPhone: pg.managerPhone || null,
+        owner: ownerResult[0] || null,
+      },
       rooms: roomsWithData,
       currentMonth: month,
     });
