@@ -98,10 +98,89 @@ router.post("/", async (req: Request, res: Response) => {
 router.delete("/:id", async (req: Request, res: Response) => {
   try {
     const db = createDb(process.env.DATABASE_URL!);
+    // Get pgId before deleting (for totalBeds recalculation)
+    const room = await db.select().from(rooms).where(eq(rooms.id, req.params.id)).limit(1);
+    const pgId = room[0]?.pgId;
     await db.delete(rooms).where(eq(rooms.id, req.params.id));
+    // Recalculate totalBeds
+    if (pgId) {
+      const allRooms = await db.select({ sharingType: rooms.sharingType }).from(rooms).where(eq(rooms.pgId, pgId));
+      const totalBeds = allRooms.reduce((sum, r) => sum + r.sharingType, 0);
+      await db.update(pgs).set({ totalBeds, updatedAt: new Date() }).where(eq(pgs.id, pgId));
+    }
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: "Failed to delete room" });
+  }
+});
+
+// ─── POST /api/beds — add one bed to a room ─
+router.post("/beds", async (req: Request, res: Response) => {
+  try {
+    const { roomId } = req.body as { roomId: string };
+    if (!roomId) { res.status(400).json({ error: "roomId required" }); return; }
+
+    const db = createDb(process.env.DATABASE_URL!);
+    const roomResult = await db.select().from(rooms).where(eq(rooms.id, roomId)).limit(1);
+    if (!roomResult[0]) { res.status(404).json({ error: "Room not found" }); return; }
+    const room = roomResult[0];
+
+    // Find next bed number
+    const existingBeds = await db.select({ bedNumber: beds.bedNumber }).from(beds).where(eq(beds.roomId, roomId));
+    const maxBedNum = existingBeds.reduce((max, b) => Math.max(max, b.bedNumber), 0);
+    const newBedNumber = maxBedNum + 1;
+
+    const [bed] = await db.insert(beds).values({ roomId, bedNumber: newBedNumber, isOccupied: false }).returning();
+
+    // Update room sharingType to actual bed count
+    const newSharingType = existingBeds.length + 1;
+    await db.update(rooms).set({ sharingType: newSharingType }).where(eq(rooms.id, roomId));
+
+    // Recalculate PG totalBeds
+    const allRooms = await db.select({ sharingType: rooms.sharingType }).from(rooms).where(eq(rooms.pgId, room.pgId));
+    const totalBeds = allRooms.reduce((sum, r) => sum + r.sharingType, 0) + 1; // +1 for the just-updated room
+    await db.update(pgs).set({ totalBeds: totalBeds - room.sharingType + newSharingType, updatedAt: new Date() }).where(eq(pgs.id, room.pgId));
+
+    res.status(201).json({ bed: { id: bed.id, bedNumber: bed.bedNumber, isOccupied: false } });
+  } catch (error) {
+    console.error("Add bed error:", error);
+    res.status(500).json({ error: "Failed to add bed" });
+  }
+});
+
+// ─── DELETE /api/beds/:id — remove one bed ─
+router.delete("/beds/:id", async (req: Request, res: Response) => {
+  try {
+    const db = createDb(process.env.DATABASE_URL!);
+
+    const bedResult = await db.select().from(beds).where(eq(beds.id, req.params.id)).limit(1);
+    if (!bedResult[0]) { res.status(404).json({ error: "Bed not found" }); return; }
+    const bed = bedResult[0];
+
+    if (bed.isOccupied) {
+      res.status(409).json({ error: "Cannot remove an occupied bed. Check out the tenant first." });
+      return;
+    }
+
+    await db.delete(beds).where(eq(beds.id, req.params.id));
+
+    // Update room sharingType to remaining bed count
+    const remainingBeds = await db.select({ id: beds.id }).from(beds).where(eq(beds.roomId, bed.roomId));
+    const newSharingType = remainingBeds.length;
+    await db.update(rooms).set({ sharingType: newSharingType }).where(eq(rooms.id, bed.roomId));
+
+    // Recalculate PG totalBeds
+    const room = await db.select({ pgId: rooms.pgId }).from(rooms).where(eq(rooms.id, bed.roomId)).limit(1);
+    if (room[0]) {
+      const allRooms = await db.select({ sharingType: rooms.sharingType }).from(rooms).where(eq(rooms.pgId, room[0].pgId));
+      const totalBeds = allRooms.reduce((sum, r) => sum + r.sharingType, 0);
+      await db.update(pgs).set({ totalBeds, updatedAt: new Date() }).where(eq(pgs.id, room[0].pgId));
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Delete bed error:", error);
+    res.status(500).json({ error: "Failed to delete bed" });
   }
 });
 
