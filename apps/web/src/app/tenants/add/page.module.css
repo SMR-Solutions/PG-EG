@@ -217,7 +217,42 @@
   100% { transform: scale(1); }
 }
 
-/* ─── Spinner ─── */
+/* ─── Field group label ─── */
+.fieldGroupLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 12px 0 6px;
+}
+
+/* ─── Emergency relation tags ─── */
+.relationRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.relTag {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.relTag:hover { border-color: rgba(45, 198, 83, 0.4); color: var(--text-primary); }
+.relTagActive {
+  background: rgba(45, 198, 83, 0.15);
+  border-color: rgba(45, 198, 83, 0.6);
+  color: #2dc653;
+}
+
 .spinner {
   width: 22px; height: 22px;
   border: 3px solid rgba(255,255,255,0.15);

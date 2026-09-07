@@ -12,6 +12,9 @@ router.post("/", async (req: Request, res: Response) => {
       pgId,
       name,
       phone,
+      altPhone,
+      emergencyContact,
+      emergencyRelation,
       joiningDate,
       rentAmount,
       advanceAmount,
@@ -23,6 +26,9 @@ router.post("/", async (req: Request, res: Response) => {
       pgId: string;
       name: string;
       phone: string;
+      altPhone?: string;
+      emergencyContact?: string;
+      emergencyRelation?: string;
       joiningDate: string;
       rentAmount: number;
       advanceAmount: number;
@@ -49,9 +55,13 @@ router.post("/", async (req: Request, res: Response) => {
       bedId,
       name: name.trim(),
       phone: phone.trim(),
+      altPhone: altPhone?.trim() || null,
+      emergencyContact: emergencyContact?.trim() || null,
+      emergencyRelation: emergencyRelation?.trim() || null,
       joiningDate: new Date(joiningDate || Date.now()),
       rentAmount: rentAmount || 0,
       advanceAmount: advanceAmount || 0,
+      paymentMode: paymentMode || "cash",
       photoUrl: photoUrl || null,
       idPhotoUrl: idPhotoUrl || null,
       status: "active",

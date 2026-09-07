@@ -65,6 +65,9 @@ export const tenants = pgTable("tenants", {
   bedId: uuid("bed_id").references(() => beds.id),
   name: text("name").notNull(),
   phone: text("phone").notNull(),
+  altPhone: text("alt_phone"),                       // optional alternate number
+  emergencyContact: text("emergency_contact"),        // emergency contact number
+  emergencyRelation: text("emergency_relation"),      // Father | Mother | Friend | Other
   email: text("email"),
   photoUrl: text("photo_url"),
   idPhotoUrl: text("id_photo_url"),
@@ -72,8 +75,9 @@ export const tenants = pgTable("tenants", {
   leavingDate: timestamp("leaving_date"),
   rentAmount: integer("rent_amount").notNull(),
   advanceAmount: integer("advance_amount").default(0),
+  paymentMode: text("payment_mode"),                  // cash | upi (for deposit)
   depositDeduction: integer("deposit_deduction").default(0),
-  refundMode: text("refund_mode"), // cash | upi
+  refundMode: text("refund_mode"),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

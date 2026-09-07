@@ -44,7 +44,11 @@ function CheckInForm() {
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [altPhone, setAltPhone] = useState("");
+  const [emergencyContact, setEmergencyContact] = useState("");
+  const [emergencyRelation, setEmergencyRelation] = useState("Father");
   const [joiningDate, setJoiningDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [monthlyRent, setMonthlyRent] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
   const [paymentMode, setPaymentMode] = useState<"cash" | "upi">("cash");
 
@@ -121,8 +125,11 @@ function CheckInForm() {
           pgId: bedInfo.pgId,
           name: name.trim(),
           phone: phone.replace(/\D/g, "").slice(-10),
+          altPhone: altPhone.replace(/\D/g, "").slice(-10) || undefined,
+          emergencyContact: emergencyContact.replace(/\D/g, "").slice(-10) || undefined,
+          emergencyRelation: emergencyContact ? emergencyRelation : undefined,
           joiningDate,
-          rentAmount: 0,
+          rentAmount: parseInt(monthlyRent) || 0,
           advanceAmount: parseInt(depositAmount) || 0,
           paymentMode,
           photoUrl: selfieUrl || null,
@@ -221,12 +228,45 @@ function CheckInForm() {
           </div>
           <input type="text" className={styles.input} placeholder="Full Name"
             value={name} onChange={(e) => setName(e.target.value)} id="input-name" disabled={submitting} />
+
+          {/* Primary phone */}
           <div className={styles.phoneRow}>
             <span className={styles.phonePrefix}>+91</span>
             <input type="tel" className={styles.input} placeholder="Mobile Number"
               value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
               id="input-phone" maxLength={10} inputMode="numeric" disabled={submitting} />
           </div>
+
+          {/* Alt phone — optional */}
+          <div className={styles.phoneRow}>
+            <span className={styles.phonePrefix}>+91</span>
+            <input type="tel" className={styles.input} placeholder="Alt. Number (optional)"
+              value={altPhone} onChange={(e) => setAltPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              id="input-alt-phone" maxLength={10} inputMode="numeric" disabled={submitting} />
+          </div>
+
+          {/* Emergency contact */}
+          <p className={styles.fieldGroupLabel}>Emergency Contact</p>
+          <div className={styles.phoneRow}>
+            <span className={styles.phonePrefix}>+91</span>
+            <input type="tel" className={styles.input} placeholder="Emergency Number"
+              value={emergencyContact} onChange={(e) => setEmergencyContact(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              id="input-emergency" maxLength={10} inputMode="numeric" disabled={submitting} />
+          </div>
+          {/* Relation tags */}
+          <div className={styles.relationRow}>
+            {["Father", "Mother", "Sibling", "Friend", "Other"].map((rel) => (
+              <button
+                key={rel}
+                type="button"
+                className={`${styles.relTag} ${emergencyRelation === rel ? styles.relTagActive : ""}`}
+                onClick={() => setEmergencyRelation(rel)}
+                disabled={submitting}
+              >{rel}</button>
+            ))}
+          </div>
+
+          {/* Joining date */}
           <div className={styles.dateRow}>
             <label className={styles.dateLabel}>Joining Date</label>
             <input type="date" className={styles.input} value={joiningDate}
@@ -240,6 +280,19 @@ function CheckInForm() {
             <span className={styles.sectionNum}>3</span>
             <span className={styles.sectionTitle}>Money Received</span>
           </div>
+
+          {/* Monthly Rent */}
+          <p className={styles.fieldGroupLabel}>Monthly Rent</p>
+          <div className={styles.depositRow}>
+            <span className={styles.rupeeSign}>₹</span>
+            <input type="number" className={`${styles.input} ${styles.depositInput}`}
+              placeholder="Monthly Rent Amount" value={monthlyRent}
+              onChange={(e) => setMonthlyRent(e.target.value)}
+              id="input-rent" inputMode="numeric" disabled={submitting} />
+          </div>
+
+          {/* Deposit */}
+          <p className={styles.fieldGroupLabel} style={{ marginTop: 14 }}>Deposit (Advance)</p>
           <div className={styles.depositRow}>
             <span className={styles.rupeeSign}>₹</span>
             <input type="number" className={`${styles.input} ${styles.depositInput}`}
