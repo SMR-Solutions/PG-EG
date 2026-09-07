@@ -1,4 +1,5 @@
 "use client";
+import AppLogo from "@/components/AppLogo";
 
 import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -54,11 +55,7 @@ function AddPGInner() {
           <Link href={isNew ? "/dashboard" : "/"} className={styles.backBtn} id="btn-back-home">
             ← Back
           </Link>
-          <div className={styles.logo}>
-            <span className={styles.logoPG}>PG</span>
-            <span className={styles.logoDash}>-</span>
-            <span className={styles.logoEG}>EG</span>
-          </div>
+          <AppLogo />
         </div>
 
         {/* Title */}

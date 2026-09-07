@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import styles from "./page.module.css";
+import AppLogo from "@/components/AppLogo";
 
 export default function HomePage() {
   const router = useRouter();
@@ -23,12 +24,8 @@ export default function HomePage() {
 
       <div className={styles.content}>
         {/* Logo */}
-        <div className={`${styles.logo} animate-fade-up`}>
-          <h1 className={styles.logoText}>
-            <span className={styles.logoPG}>PG</span>
-            <span className={styles.logoDash}>-</span>
-            <span className={styles.logoEG}>EG</span>
-          </h1>
+        <div className={`${styles.logo} animate-fade-up`} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+          <AppLogo size="lg" />
           <p className={styles.tagline}>Making PG maintenance Easy</p>
         </div>
 

@@ -1,4 +1,5 @@
 "use client";
+import AppLogo from "@/components/AppLogo";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -195,11 +196,7 @@ function PGDetailsInner() {
         {/* Header */}
         <div className={`${styles.header} animate-fade-up`}>
           <Link href="/add-pg" className={styles.backBtn} id="btn-back">← Back</Link>
-          <div className={styles.logo}>
-            <span className={styles.logoPG}>PG</span>
-            <span className={styles.logoDash}>-</span>
-            <span className={styles.logoEG}>EG</span>
-          </div>
+          <AppLogo />
         </div>
 
         {/* Step label */}

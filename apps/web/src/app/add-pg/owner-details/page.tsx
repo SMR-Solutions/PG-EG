@@ -1,4 +1,5 @@
 "use client";
+import AppLogo from "@/components/AppLogo";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -97,11 +98,7 @@ function OwnerDetailsInner() {
           <Link href={isNew ? "/add-pg?new=true" : "/add-pg"} className={styles.backBtn} id="btn-back">
             ← Back
           </Link>
-          <div className={styles.logo}>
-            <span className={styles.logoPG}>PG</span>
-            <span className={styles.logoDash}>-</span>
-            <span className={styles.logoEG}>EG</span>
-          </div>
+          <AppLogo />
         </div>
 
         <div className={`${styles.formCard} animate-fade-up delay-1`}>

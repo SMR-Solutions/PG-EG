@@ -1,4 +1,5 @@
 "use client";
+import AppLogo from "@/components/AppLogo";
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -219,11 +220,7 @@ export default function SignInForm() {
       <div className={styles.content}>
         {/* Logo */}
         <div className={`${styles.header} animate-fade-up`}>
-          <div className={styles.logo}>
-            <span className={styles.logoPG}>PG</span>
-            <span className={styles.logoDash}>-</span>
-            <span className={styles.logoEG}>EG</span>
-          </div>
+          <AppLogo />
           <p className={styles.logoTagline}>PG Management, simplified.</p>
         </div>
 

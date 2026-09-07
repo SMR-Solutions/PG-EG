@@ -1,4 +1,5 @@
 "use client";
+import AppLogo from "@/components/AppLogo";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -96,11 +97,7 @@ function EditDetailsInner() {
       <div className={styles.content}>
         <div className={styles.header}>
           <button className={styles.backBtn} onClick={() => router.back()}>← Back</button>
-          <div className={styles.logo}>
-            <span className={styles.logoPG}>PG</span>
-            <span className={styles.logoDash}>-</span>
-            <span className={styles.logoEG}>EG</span>
-          </div>
+          <AppLogo />
         </div>
 
         <div className={styles.titleBlock}>

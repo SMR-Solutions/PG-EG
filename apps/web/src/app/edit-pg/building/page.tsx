@@ -1,4 +1,5 @@
 "use client";
+import AppLogo from "@/components/AppLogo";
 
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -12,6 +13,12 @@ interface Room {
   roomNumber: string;
   floor: number;
   sharingType: number;
+}
+
+interface BedDetail {
+  id: string;
+  bedNumber: number;
+  isOccupied: boolean;
 }
 
 const PG_TYPE_LABEL: Record<string, string> = {
@@ -37,6 +44,12 @@ function EditBuildingInner() {
   const [saving, setSaving] = useState(false);
   const [savingError, setSavingError] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // ── Bed editor state ─────────────────────
+  const [editingRoom, setEditingRoom] = useState<Room | null>(null);
+  const [editingBeds, setEditingBeds] = useState<BedDetail[]>([]);
+  const [loadingBeds, setLoadingBeds] = useState(false);
+  const [bedOpError, setBedOpError] = useState("");
 
   const loadRooms = useCallback(async (id: string) => {
     try {
@@ -76,9 +89,11 @@ function EditBuildingInner() {
   function openFloor(floor: number) {
     if (activeFloor === floor) {
       setActiveFloor(null); setAddingRoom(false);
+      setEditingRoom(null); setEditingBeds([]);
     } else {
       setActiveFloor(floor); setAddingRoom(false);
       setRoomName(""); setBedsCount(1); setSavingError("");
+      setEditingRoom(null); setEditingBeds([]);
     }
   }
 
@@ -113,6 +128,7 @@ function EditBuildingInner() {
   }
 
   async function handleDeleteRoom(roomId: string, floor: number) {
+    if (editingRoom?.id === roomId) { setEditingRoom(null); setEditingBeds([]); }
     try {
       await fetch(`${API_URL}/api/rooms/${roomId}`, {
         method: "DELETE",
@@ -123,6 +139,65 @@ function EditBuildingInner() {
         [floor]: (prev[floor] || []).filter((r) => r.id !== roomId),
       }));
     } catch { /* no-op */ }
+  }
+
+  // ── Bed editor functions ─────────────────
+  async function openRoomEditor(room: Room) {
+    if (editingRoom?.id === room.id) { setEditingRoom(null); setEditingBeds([]); return; }
+    setEditingRoom(room);
+    setEditingBeds([]);
+    setBedOpError("");
+    setLoadingBeds(true);
+    try {
+      const res = await fetch(`${API_URL}/api/dashboard?pgId=${pgId}`);
+      const data = await res.json();
+      const found = data.rooms?.find((r: { id: string }) => r.id === room.id);
+      if (found?.beds) setEditingBeds(found.beds);
+    } catch { /* no-op */ }
+    finally { setLoadingBeds(false); }
+  }
+
+  async function handleAddBed(room: Room) {
+    setBedOpError("");
+    try {
+      const res = await fetch(`${API_URL}/api/rooms/beds`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ roomId: room.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setBedOpError(data.error || "Failed to add bed"); return; }
+      setEditingBeds((prev) => [...prev, { id: data.bed.id, bedNumber: data.bed.bedNumber, isOccupied: false }]);
+      setRoomsByFloor((prev) => ({
+        ...prev,
+        [room.floor]: (prev[room.floor] || []).map((r) =>
+          r.id === room.id ? { ...r, sharingType: r.sharingType + 1 } : r
+        ),
+      }));
+      if (editingRoom?.id === room.id) setEditingRoom((r) => r ? { ...r, sharingType: r.sharingType + 1 } : r);
+    } catch { setBedOpError("Network error. Try again."); }
+  }
+
+  async function handleDeleteBed(bedId: string, room: Room) {
+    setBedOpError("");
+    const bed = editingBeds.find((b) => b.id === bedId);
+    if (bed?.isOccupied) { setBedOpError("This bed has a tenant. Check them out first."); return; }
+    try {
+      const res = await fetch(`${API_URL}/api/rooms/beds/${bedId}`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = await res.json();
+      if (!res.ok) { setBedOpError(data.error || "Failed to remove bed"); return; }
+      setEditingBeds((prev) => prev.filter((b) => b.id !== bedId));
+      setRoomsByFloor((prev) => ({
+        ...prev,
+        [room.floor]: (prev[room.floor] || []).map((r) =>
+          r.id === room.id ? { ...r, sharingType: Math.max(0, r.sharingType - 1) } : r
+        ),
+      }));
+      if (editingRoom?.id === room.id) setEditingRoom((r) => r ? { ...r, sharingType: Math.max(0, r.sharingType - 1) } : r);
+    } catch { setBedOpError("Network error. Try again."); }
   }
 
   const totalRooms = Object.values(roomsByFloor).reduce((s, r) => s + r.length, 0);
@@ -150,11 +225,7 @@ function EditBuildingInner() {
           <button className={styles.backBtn} onClick={() => router.back()} id="btn-back">
             ← Back
           </button>
-          <div className={styles.logo}>
-            <span className={styles.logoPG}>PG</span>
-            <span className={styles.logoDash}>-</span>
-            <span className={styles.logoEG}>EG</span>
-          </div>
+          <AppLogo />
         </div>
 
         {/* Building name + stats */}
@@ -220,31 +291,104 @@ function EditBuildingInner() {
 
                   {isActive && (
                     <div className={styles.floorPanel}>
+                      {/* Rooms */}
                       {floorRooms.length > 0 && (
                         <div className={styles.roomGrid}>
-                          {floorRooms.map((room) => (
-                            <div key={room.id} className={styles.roomCard}>
-                              <button
-                                className={styles.roomDelete}
-                                onClick={() => handleDeleteRoom(room.id, floor)}
-                                title="Remove room"
-                              >×</button>
-                              <span className={styles.roomIcon}>🚪</span>
-                              <span className={styles.roomName}>{room.roomNumber}</span>
-                              <div className={styles.roomBeds}>
-                                {Array.from({ length: Math.min(room.sharingType, 4) }).map((_, i) => (
-                                  <span key={i} className={styles.bedIcon}>🛏️</span>
-                                ))}
-                                {room.sharingType > 4 && (
-                                  <span className={styles.bedExtra}>+{room.sharingType - 4}</span>
+                          {floorRooms.map((room) => {
+                            const isEditing = editingRoom?.id === room.id;
+                            return (
+                              <div key={room.id} style={{ width: "100%" }}>
+                                {/* Room row card */}
+                                <div
+                                  className={`${styles.roomCard} ${isEditing ? styles.roomCardActive : ""}`}
+                                  style={{ cursor: "pointer", width: "100%", position: "relative" }}
+                                >
+                                  {/* Delete whole room */}
+                                  <button
+                                    className={styles.roomDelete}
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteRoom(room.id, floor); }}
+                                    title="Delete entire room"
+                                  >×</button>
+                                  {/* Clickable body → open bed editor */}
+                                  <button
+                                    style={{ background: "none", border: "none", cursor: "pointer", width: "100%", padding: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
+                                    onClick={() => openRoomEditor(room)}
+                                    id={`room-edit-${room.id}`}
+                                    title="Click to edit beds"
+                                  >
+                                    <span className={styles.roomIcon}>🚪</span>
+                                    <span className={styles.roomName}>{room.roomNumber}</span>
+                                    <div className={styles.roomBeds}>
+                                      {Array.from({ length: Math.min(room.sharingType, 4) }).map((_, i) => (
+                                        <span key={i} className={styles.bedIcon}>🛏️</span>
+                                      ))}
+                                      {room.sharingType > 4 && (
+                                        <span className={styles.bedExtra}>+{room.sharingType - 4}</span>
+                                      )}
+                                    </div>
+                                    <span className={styles.roomBedsLabel}>
+                                      {room.sharingType} bed{room.sharingType > 1 ? "s" : ""} {isEditing ? "▲" : "▼"}
+                                    </span>
+                                  </button>
+                                </div>
+
+                                {/* Inline Bed Editor */}
+                                {isEditing && (
+                                  <div className={styles.bedEditor}>
+                                    <div className={styles.bedEditorTitle}>
+                                      Edit Beds — Room {room.roomNumber}
+                                    </div>
+                                    {loadingBeds ? (
+                                      <div style={{ padding: "8px 0", color: "rgba(255,255,255,0.4)", fontSize: 12 }}>
+                                        Loading beds…
+                                      </div>
+                                    ) : (
+                                      <div className={styles.bedList}>
+                                        {editingBeds.map((bed) => (
+                                          <div key={bed.id} className={styles.bedRow}>
+                                            <span className={styles.bedRowLabel}>
+                                              {bed.isOccupied ? "🔒" : "🛏️"} Bed {bed.bedNumber}
+                                            </span>
+                                            <span className={styles.bedRowStatus}>
+                                              {bed.isOccupied ? (
+                                                <span style={{ color: "#e63946", fontSize: 11 }}>Occupied</span>
+                                              ) : (
+                                                <span style={{ color: "#2dc653", fontSize: 11 }}>Free</span>
+                                              )}
+                                            </span>
+                                            <button
+                                              className={styles.bedDeleteBtn}
+                                              onClick={() => handleDeleteBed(bed.id, room)}
+                                              disabled={bed.isOccupied}
+                                              title={bed.isOccupied ? "Check out tenant first" : "Remove this bed"}
+                                            >
+                                              {bed.isOccupied ? "🔒" : "🗑️"}
+                                            </button>
+                                          </div>
+                                        ))}
+                                        <button
+                                          className={styles.addBedBtn}
+                                          onClick={() => handleAddBed(room)}
+                                          id={`btn-add-bed-${room.id}`}
+                                        >
+                                          + Add Bed
+                                        </button>
+                                      </div>
+                                    )}
+                                    {bedOpError && (
+                                      <p className={styles.addError} style={{ marginTop: 6 }}>
+                                        ⚠️ {bedOpError}
+                                      </p>
+                                    )}
+                                  </div>
                                 )}
                               </div>
-                              <span className={styles.roomBedsLabel}>{room.sharingType} bed{room.sharingType > 1 ? "s" : ""}</span>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
 
+                      {/* Add Room form */}
                       {addingRoom ? (
                         <div className={styles.addForm}>
                           <div className={styles.addFormHeader}>
