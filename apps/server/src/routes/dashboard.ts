@@ -87,13 +87,23 @@ router.get("/", async (req: Request, res: Response) => {
                   id: tenant.id,
                   name: tenant.name,
                   phone: tenant.phone,
+                  altPhone: tenant.altPhone,
+                  emergencyContact: tenant.emergencyContact,
+                  emergencyRelation: tenant.emergencyRelation,
                   joiningDate: tenant.joiningDate,
                   photoUrl: tenant.photoUrl,
                   idPhotoUrl: tenant.idPhotoUrl,
                   advanceAmount: tenant.advanceAmount,
                   rentAmount: tenant.rentAmount,
                   rent: rent
-                    ? { id: rent.id, status: rent.status, amount: rent.amount, paymentMode: rent.paymentMode, paidAt: rent.paidAt }
+                    ? {
+                        id: rent.id,
+                        status: rent.status,
+                        amount: rent.amount,
+                        paidAmount: rent.paidAmount ?? 0,
+                        paymentMode: rent.paymentMode,
+                        paidAt: rent.paidAt,
+                      }
                     : null,
                 }
               : null,

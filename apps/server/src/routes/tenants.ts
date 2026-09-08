@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
-import { eq, and, or, ilike } from "drizzle-orm";
-import { createDb, tenants, beds, rooms, tenantHistory } from "../db";
+import { eq, and, or, ilike, desc } from "drizzle-orm";
+import { createDb, tenants, beds, rooms, tenantHistory, rentPayments, rentPaymentTransactions } from "../db";
 
 const router = Router();
 
@@ -149,6 +149,63 @@ router.get("/search", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Search failed" });
   }
 });
+
+// GET /api/tenants/:id — full tenant profile (for dedicated tenant page)
+router.get("/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = createDb(process.env.DATABASE_URL!);
+
+    // Tenant record
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+    if (!tenant) { res.status(404).json({ error: "Tenant not found" }); return; }
+
+    // Bed + Room
+    let bed = null, room = null;
+    if (tenant.bedId) {
+      const [bedRow] = await db.select().from(beds).where(eq(beds.id, tenant.bedId)).limit(1);
+      if (bedRow) {
+        bed = bedRow;
+        const [roomRow] = await db.select().from(rooms).where(eq(rooms.id, bedRow.roomId)).limit(1);
+        room = roomRow || null;
+      }
+    }
+
+    // History events
+    const history = await db.select().from(tenantHistory)
+      .where(eq(tenantHistory.tenantId, id))
+      .orderBy(desc(tenantHistory.createdAt));
+
+    // All rent payment records with transactions
+    const rentRecords = await db.select().from(rentPayments)
+      .where(eq(rentPayments.tenantId, id))
+      .orderBy(desc(rentPayments.month));
+
+    const { inArray } = await import("drizzle-orm");
+    let txnsByRentId: Record<string, typeof rentPaymentTransactions.$inferSelect[]> = {};
+    if (rentRecords.length > 0) {
+      const rentIds = rentRecords.map((r) => r.id);
+      const txns = await db.select().from(rentPaymentTransactions)
+        .where(inArray(rentPaymentTransactions.rentPaymentId, rentIds))
+        .orderBy(desc(rentPaymentTransactions.createdAt));
+      for (const t of txns) {
+        if (!txnsByRentId[t.rentPaymentId]) txnsByRentId[t.rentPaymentId] = [];
+        txnsByRentId[t.rentPaymentId].push(t);
+      }
+    }
+
+    const rentWithTxns = rentRecords.map((r) => ({
+      ...r,
+      transactions: txnsByRentId[r.id] || [],
+    }));
+
+    res.json({ tenant, bed, room, history, rentRecords: rentWithTxns });
+  } catch (error) {
+    console.error("Tenant profile error:", error);
+    res.status(500).json({ error: "Failed to load tenant profile" });
+  }
+});
+
 
 // GET /api/tenants/room-history/:roomId — past tenants of a room
 router.get("/room-history/:roomId", async (req: Request, res: Response) => {

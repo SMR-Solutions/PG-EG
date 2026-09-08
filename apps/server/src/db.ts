@@ -87,11 +87,24 @@ export const rentPayments = pgTable("rent_payments", {
   tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   pgId: uuid("pg_id").notNull().references(() => pgs.id, { onDelete: "cascade" }),
   bedId: uuid("bed_id").notNull().references(() => beds.id),
-  month: text("month").notNull(), // "2026-09"
-  amount: integer("amount").notNull().default(0),
-  status: text("status").notNull().default("pending"), // pending | paid
-  paymentMode: text("payment_mode"),
-  paidAt: timestamp("paid_at"),
+  month: text("month").notNull(),                     // "2026-09"
+  amount: integer("amount").notNull().default(0),     // full rent due
+  paidAmount: integer("paid_amount").notNull().default(0), // cumulative paid so far
+  status: text("status").notNull().default("pending"), // pending | partial | paid
+  paymentMode: text("payment_mode"),                  // last payment mode
+  paidAt: timestamp("paid_at"),                       // when fully paid
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Individual payment transactions for a rent record (supports partial payments)
+export const rentPaymentTransactions = pgTable("rent_payment_transactions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  rentPaymentId: uuid("rent_payment_id").notNull().references(() => rentPayments.id, { onDelete: "cascade" }),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  pgId: uuid("pg_id").notNull().references(() => pgs.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(),
+  paymentMode: text("payment_mode").notNull().default("cash"),
+  note: text("note"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -114,7 +127,7 @@ export type PG = typeof pgs.$inferSelect;
 export type NewPG = typeof pgs.$inferInsert;
 
 // ─── DB Client ────────────────────────────
-const schema = { owners, pgs, rooms, beds, tenants, rentPayments, tenantHistory };
+const schema = { owners, pgs, rooms, beds, tenants, rentPayments, rentPaymentTransactions, tenantHistory };
 
 export function createDb(databaseUrl: string) {
   const sql = neon(databaseUrl);

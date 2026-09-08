@@ -11,6 +11,9 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 interface RentRecord { id: string; status: string; amount: number; paymentMode: string | null; paidAt: string | null; }
 interface Tenant {
   id: string; name: string; phone: string; joiningDate: string;
+  altPhone?: string | null;
+  emergencyContact?: string | null;
+  emergencyRelation?: string | null;
   photoUrl?: string | null; idPhotoUrl?: string | null;
   advanceAmount?: number; rentAmount?: number;
   depositDeduction?: number; refundMode?: string | null;
@@ -113,6 +116,7 @@ export default function DashboardPage() {
   // Rent state
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
   const [rentPayMode, setRentPayMode] = useState<"cash" | "upi">("cash");
+  const [rentPayAmount, setRentPayAmount] = useState<string>("");
 
   // Move tenant state
   const [movingTenant, setMovingTenant] = useState<{ tenant: Tenant; bed: Bed; room: Room } | null>(null);
@@ -238,14 +242,16 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleMarkPaid(rentId: string, amount: number) {
+  async function handleMarkPaid(rentId: string, fullAmount: number) {
+    const paidAmount = parseInt(rentPayAmount) || fullAmount;
     setMarkingPaid(rentId);
     try {
       await fetch(`${API_URL}/api/rent/${rentId}/pay`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentMode: rentPayMode, amount }),
+        body: JSON.stringify({ paymentMode: rentPayMode, amount: paidAmount }),
       });
+      setRentPayAmount("");
       await load();
       // Refresh detail view
       if (detailTenant && data) {
@@ -567,7 +573,7 @@ export default function DashboardPage() {
                       {bed.isOccupied && bed.tenant ? (
                         <>
                           <button className={styles.detailsBtn}
-                            onClick={() => setDetailTenant({ tenant: bed.tenant!, bed, room: selectedRoom })}
+                            onClick={() => router.push(`/tenants/profile?id=${bed.tenant!.id}`)}
                             id={`details-${bed.id}`}>Details</button>
                           <button className={styles.moveBtn}
                             onClick={() => {
@@ -629,13 +635,26 @@ export default function DashboardPage() {
             <div className={styles.detailBody}>
               <h2 className={styles.detailName}>{detailTenant.tenant.name}</h2>
               <p className={styles.detailPhone}>📞 +91 {detailTenant.tenant.phone}</p>
+              {detailTenant.tenant.altPhone && (
+                <p className={styles.detailPhone} style={{ fontSize: 13, opacity: 0.7 }}>📞 Alt: +91 {detailTenant.tenant.altPhone}</p>
+              )}
+              {detailTenant.tenant.emergencyContact && (
+                <p className={styles.detailPhone} style={{ fontSize: 13, color: "#f4a261" }}>
+                  🆘 +91 {detailTenant.tenant.emergencyContact}
+                  {detailTenant.tenant.emergencyRelation && (
+                    <span style={{ marginLeft: 6, fontSize: 11, background: "rgba(244,162,97,0.15)", border: "1px solid rgba(244,162,97,0.3)", borderRadius: 10, padding: "2px 7px" }}>
+                      {detailTenant.tenant.emergencyRelation}
+                    </span>
+                  )}
+                </p>
+              )}
 
               {/* Room info */}
               <div className={styles.detailInfoRow}>
                 <div className={styles.detailInfoItem}>
                   <span className={styles.detailInfoLabel}>Room</span>
                   <span className={styles.detailInfoValue}>
-                    {detailTenant.room.roomNumber} · Bed {BED_LETTERS[detailTenant.bed.bedNumber - 1]}
+                    {detailTenant.room.roomNumber} · Bed {detailTenant.bed.bedNumber}
                   </span>
                 </div>
                 <div className={styles.detailInfoItem}>
@@ -653,6 +672,14 @@ export default function DashboardPage() {
                   <span className={styles.detailInfoLabel}>Joined</span>
                   <span className={styles.detailInfoValue}>
                     {new Date(detailTenant.tenant.joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                  </span>
+                </div>
+                <div className={styles.detailInfoItem}>
+                  <span className={styles.detailInfoLabel}>Monthly Rent</span>
+                  <span className={styles.detailInfoValue}>
+                    {detailTenant.tenant.rentAmount
+                      ? `₹${detailTenant.tenant.rentAmount.toLocaleString()}`
+                      : "—"}
                   </span>
                 </div>
                 <div className={styles.detailInfoItem}>
@@ -685,7 +712,20 @@ export default function DashboardPage() {
                   </div>
                   {detailTenant.tenant.rent && (
                     <>
-                      <p className={styles.paymentLabel}>Payment received via</p>
+                      <p className={styles.paymentLabel}>Amount received</p>
+                      <div className={styles.rentAmountRow}>
+                        <span className={styles.rentAmountPrefix}>₹</span>
+                        <input
+                          type="number"
+                          className={styles.rentAmountInput}
+                          placeholder={`Full: ${(detailTenant.tenant.rentAmount || 0).toLocaleString()}`}
+                          value={rentPayAmount}
+                          onChange={(e) => setRentPayAmount(e.target.value)}
+                          inputMode="numeric"
+                          id="input-rent-pay-amount"
+                        />
+                      </div>
+                      <p className={styles.paymentLabel} style={{ marginTop: 10 }}>Payment received via</p>
                       <div className={styles.paymentRow}>
                         <button className={`${styles.payBtn} ${rentPayMode === "cash" ? styles.payBtnActive : ""}`}
                           onClick={() => setRentPayMode("cash")}>💵 CASH</button>
@@ -694,11 +734,11 @@ export default function DashboardPage() {
                       </div>
                       <button className={styles.markPaidBtn}
                         onClick={() => handleMarkPaid(detailTenant.tenant.rent!.id, detailTenant.tenant.rentAmount || 0)}
-                        disabled={markingPaid === detailTenant.tenant.rent.id}
+                        disabled={markingPaid === detailTenant.tenant.rent.id || (!rentPayAmount && !detailTenant.tenant.rentAmount)}
                         id="btn-mark-paid">
                         {markingPaid === detailTenant.tenant.rent.id
                           ? <><span className={styles.spinnerDark} /> Marking…</>
-                          : `💵 MARK AS PAID · ₹${(detailTenant.tenant.rentAmount || 0).toLocaleString()}`}
+                          : `💵 MARK AS PAID · ₹${(parseInt(rentPayAmount) || detailTenant.tenant.rentAmount || 0).toLocaleString()}`}
                       </button>
                     </>
                   )}
@@ -947,8 +987,19 @@ export default function DashboardPage() {
               {!searching && searchResults.length === 0 && searchQuery.trim() && (
                 <p className={styles.searchEmpty}>No tenants found for &ldquo;{searchQuery}&rdquo;</p>
               )}
-              {searchResults.map((t) => (
-                <div key={t.id} className={styles.searchCard}>
+              {searchResults.map((t) => {
+                // Find bed+room for this tenant so we can open Details
+                const tenantBed = data?.rooms.flatMap(r => r.beds.map(b => ({ bed: b, room: r }))).find(x => x.bed.tenant?.id === t.id);
+                return (
+                <div
+                  key={t.id}
+                  className={styles.searchCard}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => {
+                    router.push(`/tenants/profile?id=${t.id}`);
+                    setSearchOpen(false); setSearchQuery(""); setSearchResults([]);
+                  }}
+                >
                   <div className={styles.searchCardTop}>
                     {t.photoUrl
                       ? <img src={t.photoUrl} alt={t.name} className={styles.searchAvatar} />
@@ -986,8 +1037,10 @@ export default function DashboardPage() {
                       {t.leavingDate && ` · Left: ${new Date(t.leavingDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`}
                     </p>
                   )}
+                  {tenantBed && <p style={{ fontSize: 11, color: "var(--brand-green)", marginTop: 4 }}>Tap to view full profile →</p>}
                 </div>
-              ))}
+              );
+              })}
             </div>
           </div>
         </>
