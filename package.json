@@ -11,6 +11,14 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@11.24.0"
+  "packageManager": "pnpm@11.24.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@firebase/util",
+      "protobufjs",
+      "esbuild",
+      "sharp"
+    ]
+  }
 }
 
