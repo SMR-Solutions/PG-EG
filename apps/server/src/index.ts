@@ -16,7 +16,17 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    const allowed = (process.env.FRONTEND_URL || "http://localhost:3000")
+      .split(",")
+      .map((u) => u.trim());
+    if (allowed.includes(origin)) return callback(null, true);
+    // Also allow localhost in any port during dev
+    if (origin.startsWith("http://localhost")) return callback(null, true);
+    return callback(new Error(`CORS: ${origin} not allowed`));
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: "10mb" }));

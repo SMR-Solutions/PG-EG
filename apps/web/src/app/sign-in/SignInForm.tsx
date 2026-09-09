@@ -6,7 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   ConfirmationResult,
 } from "firebase/auth";
@@ -53,44 +54,54 @@ export default function SignInForm() {
     return () => clearTimeout(t);
   }, [countdown]);
 
-  // ─── Google Sign-In ────────────────────────────────────────────
+  // ─── Handle Google redirect result on mount ─────────────────────
+  useEffect(() => {
+    async function checkRedirect() {
+      try {
+        const result = await getRedirectResult(auth);
+        if (!result) return; // no pending redirect
+        setGoogleLoading(true);
+        const idToken = await result.user.getIdToken();
+        const res = await fetch(`${API_URL}/api/auth/google`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Google sign-in failed");
+        }
+        const data = await res.json();
+        signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs);
+        if (!data.hasPG) {
+          router.replace("/add-pg");
+        } else if ((data.pgs || []).length > 1) {
+          router.replace("/select-pg");
+        } else {
+          router.replace("/dashboard");
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "";
+        if (msg) setError(msg);
+      } finally {
+        setGoogleLoading(false);
+      }
+    }
+    checkRedirect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ─── Google Sign-In (redirect flow — no firebaseapp.com popup) ──
   async function handleGoogleSignIn() {
     setError("");
     setGoogleLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const idToken = await result.user.getIdToken();
-
-      const res = await fetch(`${API_URL}/api/auth/google`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Google sign-in failed");
-      }
-
-      const data = await res.json();
-      signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs);
-
-      if (!data.hasPG) {
-        router.replace("/add-pg");
-      } else if ((data.pgs || []).length > 1) {
-        router.replace("/select-pg");
-      } else {
-        router.replace("/dashboard");
-      }
+      await signInWithRedirect(auth, provider);
+      // Page will redirect to Google, then come back — result handled in useEffect above
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
-      if (msg.includes("popup-closed-by-user") || msg.includes("cancelled-popup-request")) {
-        // User closed popup — no error needed
-      } else {
-        setError(msg || "Google sign-in failed. Please try again.");
-      }
-    } finally {
+      setError(msg || "Google sign-in failed. Please try again.");
       setGoogleLoading(false);
     }
   }

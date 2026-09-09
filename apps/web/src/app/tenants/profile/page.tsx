@@ -153,20 +153,25 @@ function TenantProfileInner() {
               <span className={styles.infoLabel}>Primary</span>
               <span className={styles.infoValue}>+91 {tenant.phone}</span>
             </div>
-            {tenant.altPhone && (
-              <div className={styles.infoCard}>
-                <span className={styles.infoLabel}>Alternate</span>
-                <span className={styles.infoValue}>+91 {tenant.altPhone}</span>
-              </div>
-            )}
-            {tenant.emergencyContact && (
-              <div className={styles.infoCard} style={{ borderColor: "rgba(244,162,97,0.3)" }}>
-                <span className={styles.infoLabel}>
-                  🆘 Emergency {tenant.emergencyRelation ? `(${tenant.emergencyRelation})` : ""}
-                </span>
-                <span className={styles.infoValue} style={{ color: "#f4a261" }}>+91 {tenant.emergencyContact}</span>
-              </div>
-            )}
+            <div className={styles.infoCard}>
+              <span className={styles.infoLabel}>Alternate</span>
+              <span className={styles.infoValue} style={{ color: tenant.altPhone ? "var(--text-primary)" : "var(--text-muted)" }}>
+                {tenant.altPhone ? `+91 ${tenant.altPhone}` : "—"}
+              </span>
+            </div>
+            {/* Emergency contact — full width, always visible */}
+            <div className={styles.infoCard} style={{
+              gridColumn: "1 / -1",
+              borderColor: tenant.emergencyContact ? "rgba(244,162,97,0.4)" : "var(--border)",
+              background: tenant.emergencyContact ? "rgba(244,162,97,0.06)" : undefined,
+            }}>
+              <span className={styles.infoLabel}>
+                🆘 Emergency Contact{tenant.emergencyRelation ? ` · ${tenant.emergencyRelation}` : ""}
+              </span>
+              <span className={styles.infoValue} style={{ color: tenant.emergencyContact ? "#f4a261" : "var(--text-muted)", fontSize: 16 }}>
+                {tenant.emergencyContact ? `+91 ${tenant.emergencyContact}` : "Not provided"}
+              </span>
+            </div>
           </div>
         </section>
 
