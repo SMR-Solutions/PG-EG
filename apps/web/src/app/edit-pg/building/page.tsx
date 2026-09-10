@@ -31,7 +31,7 @@ function EditBuildingInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pgId = searchParams.get("pgId");
-  const { token } = useAuth();
+  const { token, isLoading: authLoading } = useAuth();
 
   const [pgName, setPgName] = useState("My PG");
   const [pgType, setPgType] = useState("gents");
@@ -69,9 +69,11 @@ function EditBuildingInner() {
   }, [token]);
 
   useEffect(() => {
-    if (!pgId) { setLoading(false); return; }
+    if (!pgId || authLoading) return; // wait for auth before fetching
 
-    fetch(`${API_URL}/api/pgs/${pgId}`)
+    fetch(`${API_URL}/api/pgs/${pgId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then((r) => r.json())
       .then((data) => {
         if (data.pg) {
@@ -84,7 +86,7 @@ function EditBuildingInner() {
       .finally(() => setLoading(false));
 
     loadRooms(pgId);
-  }, [pgId, loadRooms]);
+  }, [pgId, loadRooms, token, authLoading]);
 
   function openFloor(floor: number) {
     if (activeFloor === floor) {

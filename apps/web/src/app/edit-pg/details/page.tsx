@@ -18,7 +18,7 @@ function EditDetailsInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pgId = searchParams.get("pgId");
-  const { token } = useAuth();
+  const { token, isLoading: authLoading, isAuthenticated } = useAuth();
 
   const [pgName, setPgName] = useState("");
   const [pgType, setPgType] = useState("gents");
@@ -32,8 +32,10 @@ function EditDetailsInner() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (!pgId) return;
-    fetch(`${API_URL}/api/pgs/${pgId}`)
+    if (!pgId || authLoading) return; // wait for auth before fetching
+    fetch(`${API_URL}/api/pgs/${pgId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then((r) => r.json())
       .then((data) => {
         if (data.pg) {
@@ -48,7 +50,7 @@ function EditDetailsInner() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [pgId]);
+  }, [pgId, token, authLoading]);
 
   function toggleSharing(num: number) {
     setSelectedSharings((prev) =>
