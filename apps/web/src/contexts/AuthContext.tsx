@@ -6,11 +6,8 @@ import React, {
   useState,
   useEffect,
   useCallback,
-  useRef,
   ReactNode,
 } from "react";
-import { getRedirectResult } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 
 interface Owner {
   id: string;
@@ -152,42 +149,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshAuth();
   }, [refreshAuth]);
-
-  // ── On mount: capture Google redirect result (any page) ──────────
-  const handledRedirect = useRef(false);
-  useEffect(() => {
-    if (handledRedirect.current) return;
-    handledRedirect.current = true;
-
-    async function handleGoogleRedirect() {
-      try {
-        const result = await getRedirectResult(auth);
-        if (!result) return; // nothing pending
-        const idToken = await result.user.getIdToken();
-        const res = await fetch(`${API_URL}/api/auth/google`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs);
-        // Navigate after sign-in
-        const from = new URLSearchParams(window.location.search).get("from");
-        if (!data.hasPG) {
-          window.location.replace("/add-pg");
-        } else if ((data.pgs || []).length > 1) {
-          window.location.replace("/select-pg");
-        } else {
-          window.location.replace(from || "/dashboard");
-        }
-      } catch {
-        // silent — user just isn't signed in via redirect
-      }
-    }
-
-    handleGoogleRedirect();
-  }, [signIn]);
 
 
   return (
