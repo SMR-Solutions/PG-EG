@@ -97,6 +97,37 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// ─── PATCH /api/rooms/:id — rename room ───────────
+router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const db = createDb(process.env.DATABASE_URL!);
+    const { roomNumber } = req.body as { roomNumber: string };
+    if (!roomNumber?.trim()) { res.status(400).json({ error: "roomNumber is required" }); return; }
+
+    const room = await db.select().from(rooms).where(eq(rooms.id, req.params.id)).limit(1);
+    if (!room[0]) { res.status(404).json({ error: "Room not found" }); return; }
+    const pg = await verifyPgOwnership(room[0].pgId, req.owner!.ownerId, res);
+    if (!pg) return;
+
+    // Check for duplicate name on same floor (excluding this room)
+    const duplicate = await db.select({ id: rooms.id }).from(rooms)
+      .where(and(eq(rooms.pgId, room[0].pgId), eq(rooms.roomNumber, roomNumber.trim()), eq(rooms.floor, room[0].floor)))
+      .limit(1);
+    if (duplicate[0] && duplicate[0].id !== req.params.id) {
+      res.status(409).json({ error: `Room "${roomNumber}" already exists on Floor ${room[0].floor}` }); return;
+    }
+
+    const [updated] = await db.update(rooms)
+      .set({ roomNumber: roomNumber.trim() })
+      .where(eq(rooms.id, req.params.id))
+      .returning();
+    res.json({ room: { id: updated.id, roomNumber: updated.roomNumber, floor: updated.floor, sharingType: updated.sharingType } });
+  } catch (error) {
+    console.error("Rename room error:", error);
+    res.status(500).json({ error: "Failed to rename room" });
+  }
+});
+
 // ─── DELETE /api/rooms/:id ────────────────
 router.delete("/:id", requireAuth, async (req: Request, res: Response) => {
   try {
@@ -105,6 +136,18 @@ router.delete("/:id", requireAuth, async (req: Request, res: Response) => {
     if (!room[0]) { res.status(404).json({ error: "Room not found" }); return; }
     const pg = await verifyPgOwnership(room[0].pgId, req.owner!.ownerId, res);
     if (!pg) return;
+
+    // Block deletion if any bed is occupied
+    const roomBeds = await db.select().from(beds).where(eq(beds.roomId, req.params.id));
+    const occupiedCount = roomBeds.filter((b) => b.isOccupied).length;
+    if (occupiedCount > 0) {
+      res.status(409).json({
+        error: `Cannot delete room: ${occupiedCount} bed${occupiedCount > 1 ? "s are" : " is"} occupied. Check out all tenants first.`,
+        occupiedCount,
+      });
+      return;
+    }
+
     const pgId = room[0].pgId;
     await db.delete(rooms).where(eq(rooms.id, req.params.id));
     // Recalculate totalBeds

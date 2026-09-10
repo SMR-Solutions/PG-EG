@@ -50,6 +50,13 @@ function EditBuildingInner() {
   const [editingBeds, setEditingBeds] = useState<BedDetail[]>([]);
   const [loadingBeds, setLoadingBeds] = useState(false);
   const [bedOpError, setBedOpError] = useState("");
+  // ── Room rename state ─────────────────────
+  const [renameRoomId, setRenameRoomId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renameSaving, setRenameSaving] = useState(false);
+  const [renameError, setRenameError] = useState("");
+  // ── Delete room error ────────────────────
+  const [deleteRoomError, setDeleteRoomError] = useState<{roomId: string; msg: string} | null>(null);
 
   const loadRooms = useCallback(async (id: string) => {
     try {
@@ -130,20 +137,53 @@ function EditBuildingInner() {
   }
 
   async function handleDeleteRoom(roomId: string, floor: number) {
+    setDeleteRoomError(null);
     if (editingRoom?.id === roomId) { setEditingRoom(null); setEditingBeds([]); }
     try {
-      await fetch(`${API_URL}/api/rooms/${roomId}`, {
+      const res = await fetch(`${API_URL}/api/rooms/${roomId}`, {
         method: "DELETE",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
+      if (!res.ok) {
+        const data = await res.json();
+        // 409 = occupied beds; surface the error on that specific room
+        setDeleteRoomError({ roomId, msg: data.error || "Cannot delete room" });
+        return;
+      }
       setRoomsByFloor((prev) => ({
         ...prev,
         [floor]: (prev[floor] || []).filter((r) => r.id !== roomId),
       }));
-    } catch { /* no-op */ }
+    } catch { setDeleteRoomError({ roomId, msg: "Network error. Try again." }); }
   }
 
-  // ── Bed editor functions ─────────────────
+  async function handleRenameRoom(room: Room) {
+    if (!renameValue.trim() || renameValue.trim() === room.roomNumber) {
+      setRenameRoomId(null); setRenameError(""); return;
+    }
+    setRenameSaving(true); setRenameError("");
+    try {
+      const res = await fetch(`${API_URL}/api/rooms/${room.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ roomNumber: renameValue.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setRenameError(data.error || "Failed to rename"); return; }
+      // Update local state
+      setRoomsByFloor((prev) => ({
+        ...prev,
+        [room.floor]: (prev[room.floor] || []).map((r) =>
+          r.id === room.id ? { ...r, roomNumber: renameValue.trim() } : r
+        ),
+      }));
+      if (editingRoom?.id === room.id) setEditingRoom((r) => r ? { ...r, roomNumber: renameValue.trim() } : r);
+      setRenameRoomId(null);
+    } catch { setRenameError("Network error. Try again."); }
+    finally { setRenameSaving(false); }
+  }
+
+  // ── Bed editor functions ──────────────────
   async function openRoomEditor(room: Room) {
     if (editingRoom?.id === room.id) { setEditingRoom(null); setEditingBeds([]); return; }
     setEditingRoom(room);
@@ -151,9 +191,18 @@ function EditBuildingInner() {
     setBedOpError("");
     setLoadingBeds(true);
     try {
-      const res = await fetch(`${API_URL}/api/dashboard?pgId=${pgId}`);
+      // Fetch beds directly from the rooms endpoint (authenticated)
+      const res = await fetch(`${API_URL}/api/rooms?pgId=${pgId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const data = await res.json();
-      const found = data.rooms?.find((r: { id: string }) => r.id === room.id);
+      // rooms endpoint returns flat room list; get beds for this room via dashboard
+      // Use dashboard which returns beds per room
+      const dashRes = await fetch(`${API_URL}/api/dashboard?pgId=${pgId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const dashData = await dashRes.json();
+      const found = dashData.rooms?.find((r: { id: string }) => r.id === room.id);
       if (found?.beds) setEditingBeds(found.beds);
     } catch { /* no-op */ }
     finally { setLoadingBeds(false); }
@@ -298,20 +347,29 @@ function EditBuildingInner() {
                         <div className={styles.roomGrid}>
                           {floorRooms.map((room) => {
                             const isEditing = editingRoom?.id === room.id;
+                            const isRenaming = renameRoomId === room.id;
                             return (
                               <div key={room.id} style={{ width: "100%" }}>
-                                {/* Room row card */}
+                                {/* Room card */}
                                 <div
                                   className={`${styles.roomCard} ${isEditing ? styles.roomCardActive : ""}`}
                                   style={{ cursor: "pointer", width: "100%", position: "relative" }}
                                 >
-                                  {/* Delete whole room */}
+                                  {/* ── Pencil (rename) icon ── */}
+                                  <button
+                                    style={{ position: "absolute", top: 6, left: 6, background: "none", border: "none", cursor: "pointer", fontSize: 14, opacity: 0.7, zIndex: 2, padding: 2 }}
+                                    onClick={(e) => { e.stopPropagation(); setRenameRoomId(room.id); setRenameValue(room.roomNumber); setRenameError(""); }}
+                                    title="Rename room"
+                                  >✏️</button>
+
+                                  {/* ── Delete room ── */}
                                   <button
                                     className={styles.roomDelete}
                                     onClick={(e) => { e.stopPropagation(); handleDeleteRoom(room.id, floor); }}
                                     title="Delete entire room"
                                   >×</button>
-                                  {/* Clickable body → open bed editor */}
+
+                                  {/* ── Clickable body → open bed editor ── */}
                                   <button
                                     style={{ background: "none", border: "none", cursor: "pointer", width: "100%", padding: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
                                     onClick={() => openRoomEditor(room)}
@@ -334,7 +392,38 @@ function EditBuildingInner() {
                                   </button>
                                 </div>
 
-                                {/* Inline Bed Editor */}
+                                {/* ── Delete room error ── */}
+                                {deleteRoomError?.roomId === room.id && (
+                                  <p style={{ color: "#e63946", fontSize: 11, margin: "4px 0 0", textAlign: "center" }}>
+                                    ⚠️ {deleteRoomError.msg}
+                                  </p>
+                                )}
+
+                                {/* ── Inline Rename Editor ── */}
+                                {isRenaming && (
+                                  <div className={styles.bedEditor} style={{ marginTop: 6 }}>
+                                    <div className={styles.bedEditorTitle}>Rename Room</div>
+                                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                      <input
+                                        type="text"
+                                        className={styles.addInput}
+                                        value={renameValue}
+                                        onChange={(e) => setRenameValue(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === "Enter") handleRenameRoom(room); if (e.key === "Escape") { setRenameRoomId(null); setRenameError(""); } }}
+                                        autoFocus
+                                        placeholder="New room name"
+                                        style={{ flex: 1, padding: "6px 10px", fontSize: 13 }}
+                                      />
+                                      <button className={styles.saveBtn} onClick={() => handleRenameRoom(room)} disabled={renameSaving} style={{ padding: "6px 14px" }}>
+                                        {renameSaving ? "…" : "✓"}
+                                      </button>
+                                      <button className={styles.cancelBtn} onClick={() => { setRenameRoomId(null); setRenameError(""); }} style={{ padding: "6px 10px" }}>✕</button>
+                                    </div>
+                                    {renameError && <p style={{ color: "#e63946", fontSize: 11, marginTop: 4 }}>⚠️ {renameError}</p>}
+                                  </div>
+                                )}
+
+                                {/* ── Inline Bed Editor ── */}
                                 {isEditing && (
                                   <div className={styles.bedEditor}>
                                     <div className={styles.bedEditorTitle}>
@@ -346,6 +435,9 @@ function EditBuildingInner() {
                                       </div>
                                     ) : (
                                       <div className={styles.bedList}>
+                                        {editingBeds.length === 0 && (
+                                          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, margin: "4px 0" }}>No beds yet. Add one below.</p>
+                                        )}
                                         {editingBeds.map((bed) => (
                                           <div key={bed.id} className={styles.bedRow}>
                                             <span className={styles.bedRowLabel}>
@@ -362,7 +454,7 @@ function EditBuildingInner() {
                                               className={styles.bedDeleteBtn}
                                               onClick={() => handleDeleteBed(bed.id, room)}
                                               disabled={bed.isOccupied}
-                                              title={bed.isOccupied ? "Check out tenant first" : "Remove this bed"}
+                                              title={bed.isOccupied ? "Check out tenant first, then you can remove this bed" : "Remove this bed"}
                                             >
                                               {bed.isOccupied ? "🔒" : "🗑️"}
                                             </button>
