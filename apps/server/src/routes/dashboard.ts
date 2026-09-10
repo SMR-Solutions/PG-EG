@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { eq, and, inArray } from "drizzle-orm";
 import { createDb, pgs, rooms, beds, tenants, owners, rentPayments, tenantHistory } from "../db";
+import { requireAuth, verifyPgOwnership } from "../middleware/auth";
 
 const router = Router();
 
@@ -10,18 +11,19 @@ function currentMonth(): string {
 }
 
 // GET /api/dashboard?pgId=xxx
-router.get("/", async (req: Request, res: Response) => {
+// Requires: Authorization: Bearer <jwt>
+// Enforces: pg.ownerId === token.ownerId
+router.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
     const { pgId } = req.query as { pgId: string };
     if (!pgId) { res.status(400).json({ error: "pgId required" }); return; }
 
+    // ── Ownership check (single query, both id + ownerId) ──────────
+    const pg = await verifyPgOwnership(pgId, req.owner!.ownerId, res);
+    if (!pg) return; // verifyPgOwnership already sent 403
+
     const db = createDb(process.env.DATABASE_URL!);
     const month = currentMonth();
-
-    // Fetch PG
-    const pgResult = await db.select().from(pgs).where(eq(pgs.id, pgId)).limit(1);
-    if (!pgResult[0]) { res.status(404).json({ error: "PG not found" }); return; }
-    const pg = pgResult[0];
 
     // Fetch owner
     const ownerResult = await db.select({ name: owners.name, phone: owners.phone })
@@ -130,7 +132,8 @@ router.get("/", async (req: Request, res: Response) => {
 });
 
 // PATCH /api/dashboard/beds/:bedId/checkout
-router.patch("/beds/:bedId/checkout", async (req: Request, res: Response) => {
+// Requires auth; verifies the bed belongs to a PG owned by the caller
+router.patch("/beds/:bedId/checkout", requireAuth, async (req: Request, res: Response) => {
   try {
     const db = createDb(process.env.DATABASE_URL!);
     const { bedId } = req.params;
@@ -139,13 +142,22 @@ router.patch("/beds/:bedId/checkout", async (req: Request, res: Response) => {
       refundMode?: string;
     };
 
+    // Resolve bed → room → pg → ownership
+    const bedRow = await db.select().from(beds).where(eq(beds.id, bedId)).limit(1);
+    if (!bedRow[0]) { res.status(404).json({ error: "Bed not found" }); return; }
+
+    const roomRow = await db.select().from(rooms).where(eq(rooms.id, bedRow[0].roomId)).limit(1);
+    if (!roomRow[0]) { res.status(404).json({ error: "Room not found" }); return; }
+
+    const pg = await verifyPgOwnership(roomRow[0].pgId, req.owner!.ownerId, res);
+    if (!pg) return;
+
     const tenantResult = await db.select().from(tenants)
       .where(and(eq(tenants.bedId, bedId), eq(tenants.status, "active"))).limit(1);
 
     if (tenantResult[0]) {
       const tenant = tenantResult[0];
 
-      // Get room info for history label
       const roomResult = await db.select({ roomNumber: rooms.roomNumber, floor: rooms.floor })
         .from(rooms).innerJoin(beds, eq(beds.roomId, rooms.id))
         .where(eq(beds.id, bedId)).limit(1);
@@ -153,7 +165,6 @@ router.patch("/beds/:bedId/checkout", async (req: Request, res: Response) => {
         ? `Room ${roomResult[0].roomNumber} (Floor ${roomResult[0].floor})`
         : "Unknown Room";
 
-      // Archive tenant with checkout details
       await db.update(tenants).set({
         status: "inactive",
         leavingDate: new Date(),
@@ -161,7 +172,6 @@ router.patch("/beds/:bedId/checkout", async (req: Request, res: Response) => {
         refundMode,
       }).where(eq(tenants.id, tenant.id));
 
-      // Log check_out history
       await db.insert(tenantHistory).values({
         tenantId: tenant.id,
         eventType: "check_out",
@@ -178,7 +188,5 @@ router.patch("/beds/:bedId/checkout", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Checkout failed" });
   }
 });
-
-
 
 export default router;

@@ -1,43 +1,32 @@
 import { Router, Request, Response } from "express";
 import { eq, asc } from "drizzle-orm";
 import { createDb, pgs, owners } from "../db";
+import { requireAuth, verifyPgOwnership } from "../middleware/auth";
 
 const router = Router();
 
 function formatPg(pg: typeof pgs.$inferSelect) {
   return {
-    id: pg.id,
-    ownerId: pg.ownerId,
-    name: pg.name,
-    type: pg.type,
-    totalFloors: pg.totalFloors,
-    address: pg.address,
-    locationLink: pg.locationLink,
-    sharings: JSON.parse(pg.sharings),
-    managerName: pg.managerName || null,
-    managerPhone: pg.managerPhone || null,
-    createdAt: pg.createdAt,
-    updatedAt: pg.updatedAt,
+    id: pg.id, ownerId: pg.ownerId, name: pg.name, type: pg.type,
+    totalFloors: pg.totalFloors, address: pg.address, locationLink: pg.locationLink,
+    sharings: JSON.parse(pg.sharings), managerName: pg.managerName || null,
+    managerPhone: pg.managerPhone || null, createdAt: pg.createdAt, updatedAt: pg.updatedAt,
   };
 }
 
 // ─── POST /api/pgs ────────────────────────
-router.post("/", async (req: Request, res: Response) => {
+// Caller must be authenticated; ownerId is taken from the token (never from body)
+router.post("/", requireAuth, async (req: Request, res: Response) => {
   try {
-    const { ownerId, name, type, totalFloors, address, locationLink, sharings, managerName, managerPhone } =
+    const { name, type, totalFloors, address, locationLink, sharings, managerName, managerPhone } =
       req.body as {
-        ownerId: string;
-        name: string;
-        type: string;
-        totalFloors: number;
-        address: string;
-        locationLink?: string;
-        sharings: number[];
-        managerName?: string;
-        managerPhone?: string;
+        name: string; type: string; totalFloors: number; address: string;
+        locationLink?: string; sharings: number[]; managerName?: string; managerPhone?: string;
       };
 
-    if (!ownerId) { res.status(400).json({ error: "ownerId is required" }); return; }
+    // ownerId comes from the verified JWT, NOT from the request body
+    const ownerId = req.owner!.ownerId;
+
     if (!name || name.trim().length < 2) { res.status(400).json({ error: "PG name is required" }); return; }
     if (!["gents", "ladies", "co-living"].includes(type)) { res.status(400).json({ error: "Invalid PG type" }); return; }
     if (!sharings || sharings.length === 0) { res.status(400).json({ error: "Select at least one sharing type" }); return; }
@@ -50,19 +39,11 @@ router.post("/", async (req: Request, res: Response) => {
     const ownerResult = await db.select({ id: owners.id }).from(owners).where(eq(owners.id, ownerId)).limit(1);
     if (!ownerResult[0]) { res.status(404).json({ error: "Owner not found" }); return; }
 
-    // Always INSERT a new PG — never upsert.
-    // Use PATCH /api/pgs/:id to update an existing PG.
     const sharingJson = JSON.stringify(sharings.sort((a, b) => a - b));
     const [pg] = await db.insert(pgs).values({
-      ownerId,
-      name: name.trim(),
-      type,
-      totalFloors,
-      address: address.trim(),
-      locationLink: locationLink || null,
-      sharings: sharingJson,
-      managerName: managerName.trim(),
-      managerPhone: managerPhone.trim(),
+      ownerId, name: name.trim(), type, totalFloors,
+      address: address.trim(), locationLink: locationLink || null,
+      sharings: sharingJson, managerName: managerName.trim(), managerPhone: managerPhone.trim(),
     }).returning();
 
     res.status(201).json({ pg: formatPg(pg) });
@@ -73,11 +54,14 @@ router.post("/", async (req: Request, res: Response) => {
 });
 
 // ─── GET /api/pgs/owner/:ownerId ──────────
-router.get("/owner/:ownerId", async (req: Request, res: Response) => {
+// Only returns PGs owned by the authenticated caller
+router.get("/owner/:ownerId", requireAuth, async (req: Request, res: Response) => {
   try {
+    // Ignore the URL param — always use the token's ownerId to prevent IDOR
+    const ownerId = req.owner!.ownerId;
     const db = createDb(process.env.DATABASE_URL!);
     const result = await db.select().from(pgs)
-      .where(eq(pgs.ownerId, req.params.ownerId))
+      .where(eq(pgs.ownerId, ownerId))
       .orderBy(asc(pgs.createdAt));
     res.json({ pgs: result.map(formatPg) });
   } catch {
@@ -86,33 +70,31 @@ router.get("/owner/:ownerId", async (req: Request, res: Response) => {
 });
 
 // ─── GET /api/pgs/:id ─────────────────────
-router.get("/:id", async (req: Request, res: Response) => {
+router.get("/:id", requireAuth, async (req: Request, res: Response) => {
   try {
-    const db = createDb(process.env.DATABASE_URL!);
-    const result = await db.select().from(pgs).where(eq(pgs.id, req.params.id)).limit(1);
-    if (!result[0]) { res.status(404).json({ error: "PG not found" }); return; }
-    res.json({ pg: formatPg(result[0]) });
+    const pg = await verifyPgOwnership(req.params.id, req.owner!.ownerId, res);
+    if (!pg) return;
+    res.json({ pg: formatPg(pg) });
   } catch {
     res.status(500).json({ error: "Failed to fetch PG" });
   }
 });
 
 // ─── PATCH /api/pgs/:id ───────────────────
-router.patch("/:id", async (req: Request, res: Response) => {
+router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     const { name, type, totalFloors, address, locationLink, sharings, managerName, managerPhone } = req.body as {
       name?: string; type?: string; totalFloors?: number;
       address?: string; locationLink?: string | null;
-      sharings?: number[];
-      managerName?: string;
-      managerPhone?: string;
+      sharings?: number[]; managerName?: string; managerPhone?: string;
     };
 
-    const db = createDb(process.env.DATABASE_URL!);
-    const existing = await db.select().from(pgs).where(eq(pgs.id, req.params.id)).limit(1);
-    if (!existing[0]) { res.status(404).json({ error: "PG not found" }); return; }
+    // Verify caller owns this PG before allowing updates
+    const existing = await verifyPgOwnership(req.params.id, req.owner!.ownerId, res);
+    if (!existing) return;
 
-    const updates: Partial<typeof existing[0]> = { updatedAt: new Date() };
+    const db = createDb(process.env.DATABASE_URL!);
+    const updates: Partial<typeof existing> = { updatedAt: new Date() };
     if (name !== undefined) updates.name = name.trim();
     if (type !== undefined) updates.type = type;
     if (totalFloors !== undefined) updates.totalFloors = totalFloors;

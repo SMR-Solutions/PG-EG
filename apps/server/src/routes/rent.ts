@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { eq, and, inArray, desc } from "drizzle-orm";
-import { createDb, rentPayments, rentPaymentTransactions, tenants, beds } from "../db";
+import { createDb, rentPayments, rentPaymentTransactions, tenants, pgs } from "../db";
+import { requireAuth, verifyPgOwnership } from "../middleware/auth";
 
 const router = Router();
 
@@ -9,11 +10,29 @@ function currentMonth(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// ─── Helper: verify rent record belongs to an owned PG ────────────
+async function verifyRentOwnership(
+  rentId: string,
+  ownerId: string,
+  res: Response
+): Promise<typeof rentPayments.$inferSelect | null> {
+  const db = createDb(process.env.DATABASE_URL!);
+  const [record] = await db.select().from(rentPayments).where(eq(rentPayments.id, rentId)).limit(1);
+  if (!record) { res.status(404).json({ error: "Record not found" }); return null; }
+  const pg = await verifyPgOwnership(record.pgId, ownerId, res);
+  if (!pg) return null;
+  return record;
+}
+
 // GET /api/rent?pgId=xxx&month=2026-09
-router.get("/", async (req: Request, res: Response) => {
+router.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
     const { pgId, month } = req.query as { pgId: string; month?: string };
     if (!pgId) { res.status(400).json({ error: "pgId required" }); return; }
+
+    const pg = await verifyPgOwnership(pgId, req.owner!.ownerId, res);
+    if (!pg) return;
+
     const db = createDb(process.env.DATABASE_URL!);
     const m = month || currentMonth();
     const records = await db.select().from(rentPayments)
@@ -25,10 +44,14 @@ router.get("/", async (req: Request, res: Response) => {
 });
 
 // POST /api/rent/generate?pgId=xxx
-router.post("/generate", async (req: Request, res: Response) => {
+router.post("/generate", requireAuth, async (req: Request, res: Response) => {
   try {
     const { pgId } = req.query as { pgId: string };
     if (!pgId) { res.status(400).json({ error: "pgId required" }); return; }
+
+    const pg = await verifyPgOwnership(pgId, req.owner!.ownerId, res);
+    if (!pg) return;
+
     const db = createDb(process.env.DATABASE_URL!);
     const month = currentMonth();
     const activeTenants = await db.select().from(tenants)
@@ -45,8 +68,7 @@ router.post("/generate", async (req: Request, res: Response) => {
       await db.insert(rentPayments).values(
         missing.map((t) => ({
           tenantId: t.id, pgId, bedId: t.bedId!,
-          month, amount: t.rentAmount || 0,
-          paidAmount: 0, status: "pending",
+          month, amount: t.rentAmount || 0, paidAmount: 0, status: "pending",
         }))
       );
       created = missing.length;
@@ -59,60 +81,44 @@ router.post("/generate", async (req: Request, res: Response) => {
 });
 
 // PATCH /api/rent/:id/pay — partial or full payment
-router.patch("/:id/pay", async (req: Request, res: Response) => {
+router.patch("/:id/pay", requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { paymentMode = "cash", amount } = req.body as { paymentMode?: string; amount?: number };
 
-    const db = createDb(process.env.DATABASE_URL!);
-
-    // Fetch current record
-    const [record] = await db.select().from(rentPayments).where(eq(rentPayments.id, id)).limit(1);
-    if (!record) { res.status(404).json({ error: "Record not found" }); return; }
+    const record = await verifyRentOwnership(id, req.owner!.ownerId, res);
+    if (!record) return;
     if (record.status === "paid") { res.status(400).json({ error: "Already fully paid" }); return; }
 
+    const db = createDb(process.env.DATABASE_URL!);
     const payingNow = Math.max(1, amount ?? record.amount);
     const newPaidAmount = Math.min((record.paidAmount || 0) + payingNow, record.amount);
     const isFullyPaid = newPaidAmount >= record.amount;
 
-    // Update rent_payments record
     const [updated] = await db.update(rentPayments)
-      .set({
-        paidAmount: newPaidAmount,
-        status: isFullyPaid ? "paid" : "partial",
-        paymentMode,
-        paidAt: isFullyPaid ? new Date() : null,
-      })
-      .where(eq(rentPayments.id, id))
-      .returning();
+      .set({ paidAmount: newPaidAmount, status: isFullyPaid ? "paid" : "partial", paymentMode, paidAt: isFullyPaid ? new Date() : null })
+      .where(eq(rentPayments.id, id)).returning();
 
-    // Insert transaction record
     await db.insert(rentPaymentTransactions).values({
-      rentPaymentId: id,
-      tenantId: record.tenantId,
-      pgId: record.pgId,
-      amount: payingNow,
-      paymentMode,
+      rentPaymentId: id, tenantId: record.tenantId, pgId: record.pgId,
+      amount: payingNow, paymentMode,
       note: isFullyPaid ? "Full payment" : `Partial (${newPaidAmount}/${record.amount})`,
     });
 
-    res.json({
-      payment: updated,
-      paidNow: payingNow,
-      totalPaid: newPaidAmount,
-      remaining: record.amount - newPaidAmount,
-      isFullyPaid,
-    });
+    res.json({ payment: updated, paidNow: payingNow, totalPaid: newPaidAmount, remaining: record.amount - newPaidAmount, isFullyPaid });
   } catch (error) {
     console.error("Rent pay error:", error);
     res.status(500).json({ error: "Failed to record payment" });
   }
 });
 
-// GET /api/rent/:id/transactions — get payment history for a rent record
-router.get("/:id/transactions", async (req: Request, res: Response) => {
+// GET /api/rent/:id/transactions
+router.get("/:id/transactions", requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const record = await verifyRentOwnership(id, req.owner!.ownerId, res);
+    if (!record) return;
+
     const db = createDb(process.env.DATABASE_URL!);
     const txns = await db.select().from(rentPaymentTransactions)
       .where(eq(rentPaymentTransactions.rentPaymentId, id))
