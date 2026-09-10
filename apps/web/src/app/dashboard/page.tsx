@@ -148,23 +148,38 @@ export default function DashboardPage() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [changingPg, setChangingPg] = useState(false);
 
+  // ── Helper: auth header from current token ───────────────────
+  const authHeader = useCallback(
+    (): Record<string, string> => (token ? { Authorization: `Bearer ${token}` } : {}),
+    [token]
+  );
+
   const load = useCallback(async () => {
     // Use activePgId (selected PG) first, fall back to localStorage
     const pgId = activePgId || localStorage.getItem("pg_eg_active_pg_id") || localStorage.getItem("pg_eg_pg_id");
     if (!pgId) { setError("No PG found. Please complete setup first."); setLoading(false); return; }
     setLoading(true);
     try {
-      const headers: Record<string, string> = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(`${API_URL}/api/dashboard?pgId=${pgId}`, { headers });
+      const res = await fetch(`${API_URL}/api/dashboard?pgId=${pgId}`, {
+        headers: { ...authHeader() },
+      });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setData(json);
+      setError("");
     } catch { setError("Failed to load dashboard."); }
     finally { setLoading(false); }
-  }, [activePgId, token]);
+  }, [activePgId, token, authHeader]);
 
-  useEffect(() => { load(); }, [load]);
+  // ── Trigger load ONLY after auth has fully resolved ──────────────
+  // Without this guard, load() fires on mount with token=null (React state
+  // not yet populated from localStorage), sending an unauthenticated request
+  // before refreshAuth() has finished — causing a 401 on every page refresh.
+  useEffect(() => {
+    if (authLoading) return;      // wait for refreshAuth() to finish
+    if (!isAuthenticated) return; // redirect handled by the sign-in effect
+    load();
+  }, [load, authLoading, isAuthenticated]);
 
   // Open checkout modal instead of confirm dialog
   function openCheckout(bed: Bed, room: Room) {
@@ -181,7 +196,7 @@ export default function DashboardPage() {
     try {
       await fetch(`${API_URL}/api/dashboard/beds/${checkoutModal.bed.id}/checkout`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeader() },
         body: JSON.stringify({ depositDeduction: dep, refundMode: checkoutRefundMode }),
       });
       setCheckoutModal(null);
@@ -199,7 +214,10 @@ export default function DashboardPage() {
     setSearching(true);
     searchTimer.current = setTimeout(async () => {
       const pgId = localStorage.getItem("pg_eg_active_pg_id") || localStorage.getItem("pg_eg_pg_id") || "";
-      const res = await fetch(`${API_URL}/api/tenants/search?pgId=${pgId}&q=${encodeURIComponent(q)}`);
+      const res = await fetch(
+        `${API_URL}/api/tenants/search?pgId=${pgId}&q=${encodeURIComponent(q)}`,
+        { headers: authHeader() }
+      );
       const json = await res.json();
       setSearchResults(json.tenants || []);
       setSearching(false);
@@ -210,7 +228,10 @@ export default function DashboardPage() {
     setRoomHistoryRoom(room);
     setLoadingRoomHistory(true);
     setRoomHistoryData(null);
-    const res = await fetch(`${API_URL}/api/tenants/room-history/${room.id}`);
+    const res = await fetch(
+      `${API_URL}/api/tenants/room-history/${room.id}`,
+      { headers: authHeader() }
+    );
     const json = await res.json();
     setRoomHistoryData(json);
     setLoadingRoomHistory(false);
@@ -221,7 +242,7 @@ export default function DashboardPage() {
     try {
       const res = await fetch(`${API_URL}/api/tenants/${tenantId}/move`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeader() },
         body: JSON.stringify({ targetBedId }),
       });
       const data = await res.json();
@@ -248,7 +269,7 @@ export default function DashboardPage() {
     try {
       await fetch(`${API_URL}/api/rent/${rentId}/pay`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeader() },
         body: JSON.stringify({ paymentMode: rentPayMode, amount: paidAmount }),
       });
       setRentPayAmount("");

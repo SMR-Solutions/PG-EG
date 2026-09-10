@@ -3,6 +3,7 @@ import AppLogo from "@/components/AppLogo";
 
 import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -30,6 +31,7 @@ function CheckInForm() {
   const params = useSearchParams();
   const bedId = params.get("bedId");
   const roomId = params.get("roomId");
+  const { token } = useAuth();
 
   const selfieRef = useRef<HTMLInputElement>(null);
   const idCardRef = useRef<HTMLInputElement>(null);
@@ -119,7 +121,7 @@ function CheckInForm() {
     try {
       const res = await fetch(`${API_URL}/api/tenants`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({
           bedId: bedInfo.id,
           pgId: bedInfo.pgId,

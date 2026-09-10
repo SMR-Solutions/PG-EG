@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppLogo from "@/components/AppLogo";
+import { useAuth } from "@/contexts/AuthContext";
 import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -45,6 +46,7 @@ function TenantProfileInner() {
   const router = useRouter();
   const params = useSearchParams();
   const tenantId = params.get("id");
+  const { token, isLoading: authLoading, isAuthenticated } = useAuth();
 
   const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,7 +62,9 @@ function TenantProfileInner() {
     if (!tenantId) { setError("No tenant ID"); setLoading(false); return; }
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/tenants/${tenantId}`);
+      const res = await fetch(`${API_URL}/api/tenants/${tenantId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed");
       setData(json);
@@ -69,9 +73,13 @@ function TenantProfileInner() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, token]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) { router.replace("/sign-in"); return; }
+    load();
+  }, [load, authLoading, isAuthenticated, router]);
 
   // Current month rent record
   const currentMonth = currentMonthStr();
@@ -87,7 +95,7 @@ function TenantProfileInner() {
     try {
       const res = await fetch(`${API_URL}/api/rent/${currentRent.id}/pay`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ paymentMode: rentPayMode, amount: payingNow }),
       });
       const json = await res.json();
