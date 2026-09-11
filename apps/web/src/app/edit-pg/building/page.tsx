@@ -57,6 +57,12 @@ function EditBuildingInner() {
   const [renameError, setRenameError] = useState("");
   // ── Delete room error ────────────────────
   const [deleteRoomError, setDeleteRoomError] = useState<{roomId: string; msg: string} | null>(null);
+  // ── Confirmation modal ───────────────────
+  const [confirmModal, setConfirmModal] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   const loadRooms = useCallback(async (id: string) => {
     try {
@@ -136,6 +142,14 @@ function EditBuildingInner() {
     }
   }
 
+  function confirmDeleteRoom(roomId: string, floor: number, roomNumber: string) {
+    setConfirmModal({
+      title: "Delete Room",
+      message: `Delete room "${roomNumber}"? All its empty beds will be removed permanently.`,
+      onConfirm: () => { setConfirmModal(null); handleDeleteRoom(roomId, floor); },
+    });
+  }
+
   async function handleDeleteRoom(roomId: string, floor: number) {
     setDeleteRoomError(null);
     if (editingRoom?.id === roomId) { setEditingRoom(null); setEditingBeds([]); }
@@ -146,7 +160,6 @@ function EditBuildingInner() {
       });
       if (!res.ok) {
         const data = await res.json();
-        // 409 = occupied beds; surface the error on that specific room
         setDeleteRoomError({ roomId, msg: data.error || "Cannot delete room" });
         return;
       }
@@ -229,6 +242,16 @@ function EditBuildingInner() {
     } catch { setBedOpError("Network error. Try again."); }
   }
 
+  function confirmDeleteBed(bedId: string, room: Room, bedNumber: number) {
+    const bed = editingBeds.find((b) => b.id === bedId);
+    if (bed?.isOccupied) { setBedOpError("This bed has a tenant. Check them out first."); return; }
+    setConfirmModal({
+      title: "Remove Bed",
+      message: `Remove Bed ${bedNumber} from room "${room.roomNumber}"? This cannot be undone.`,
+      onConfirm: () => { setConfirmModal(null); handleDeleteBed(bedId, room); },
+    });
+  }
+
   async function handleDeleteBed(bedId: string, room: Room) {
     setBedOpError("");
     const bed = editingBeds.find((b) => b.id === bedId);
@@ -266,6 +289,7 @@ function EditBuildingInner() {
   }
 
   return (
+    <>
     <main className={styles.main}>
       <div className={styles.orb1} />
       <div className={styles.orb2} />
@@ -365,7 +389,7 @@ function EditBuildingInner() {
                                   {/* ── Delete room ── */}
                                   <button
                                     className={styles.roomDelete}
-                                    onClick={(e) => { e.stopPropagation(); handleDeleteRoom(room.id, floor); }}
+                                    onClick={(e) => { e.stopPropagation(); confirmDeleteRoom(room.id, floor, room.roomNumber); }}
                                     title="Delete entire room"
                                   >×</button>
 
@@ -452,7 +476,7 @@ function EditBuildingInner() {
                                             </span>
                                             <button
                                               className={styles.bedDeleteBtn}
-                                              onClick={() => handleDeleteBed(bed.id, room)}
+                                              onClick={() => confirmDeleteBed(bed.id, room, bed.bedNumber)}
                                               disabled={bed.isOccupied}
                                               title={bed.isOccupied ? "Check out tenant first, then you can remove this bed" : "Remove this bed"}
                                             >
@@ -554,6 +578,57 @@ function EditBuildingInner() {
         </div>
       </div>
     </main>
+
+      {/* ── Confirmation modal ── */}
+      {confirmModal && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)",
+            display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+          }}
+          onClick={() => setConfirmModal(null)}
+        >
+          <div
+            style={{
+              background: "#1a1f2e", border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 16, padding: "28px 28px 24px", maxWidth: 360, width: "100%",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 10px", fontSize: 17, fontWeight: 700, color: "#fff" }}>
+              {confirmModal.title}
+            </h3>
+            <p style={{ margin: "0 0 24px", fontSize: 14, color: "rgba(255,255,255,0.65)", lineHeight: 1.5 }}>
+              {confirmModal.message}
+            </p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setConfirmModal(null)}
+                style={{
+                  padding: "9px 20px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)",
+                  background: "transparent", color: "rgba(255,255,255,0.7)", cursor: "pointer",
+                  fontSize: 14, fontWeight: 600,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmModal.onConfirm}
+                style={{
+                  padding: "9px 22px", borderRadius: 8, border: "none",
+                  background: "#e63946", color: "#fff", cursor: "pointer",
+                  fontSize: 14, fontWeight: 700,
+                }}
+              >
+                OK, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
