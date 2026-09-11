@@ -30,6 +30,7 @@ function EditDetailsInner() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [originalFloors, setOriginalFloors] = useState(1); // floors at load time
 
   useEffect(() => {
     if (!pgId || authLoading) return; // wait for auth before fetching
@@ -43,6 +44,7 @@ function EditDetailsInner() {
           setPgName(pg.name || "");
           setPgType(pg.type || "gents");
           setTotalFloors(pg.totalFloors || 1);
+          setOriginalFloors(pg.totalFloors || 1);
           setAddress(pg.address || "");
           setLocationLink(pg.locationLink || "");
           setSelectedSharings(pg.sharings || []);
@@ -139,6 +141,11 @@ function EditDetailsInner() {
               <button type="button" className={styles.stepBtn}
                 onClick={() => setTotalFloors((p) => Math.min(50, p + 1))}>+</button>
             </div>
+            {totalFloors < originalFloors && (
+              <p style={{ margin: "6px 0 0", fontSize: 12, color: "#f4a261" }}>
+                ⚠️ Reducing floors: if any rooms on Floor{originalFloors - totalFloors > 1 ? "s" : ""} {Array.from({ length: originalFloors - totalFloors }, (_, i) => totalFloors + i + 1).join(", ")} have tenants, the save will be blocked.
+              </p>
+            )}
           </div>
 
           {/* Sharing types */}

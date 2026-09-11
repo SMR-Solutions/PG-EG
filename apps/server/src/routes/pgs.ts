@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
-import { eq, asc } from "drizzle-orm";
-import { createDb, pgs, owners } from "../db";
+import { eq, asc, and, gt, inArray } from "drizzle-orm";
+import { createDb, pgs, owners, rooms, beds } from "../db";
 import { requireAuth, verifyPgOwnership } from "../middleware/auth";
 
 const router = Router();
@@ -94,6 +94,38 @@ router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
     if (!existing) return;
 
     const db = createDb(process.env.DATABASE_URL!);
+
+    // ── Guard: block floor-count decrease if affected floors have tenants ──
+    if (totalFloors !== undefined && totalFloors < existing.totalFloors) {
+      // Find all rooms on floors > newTotalFloors
+      const affectedRooms = await db
+        .select({ id: rooms.id, floor: rooms.floor })
+        .from(rooms)
+        .where(and(eq(rooms.pgId, req.params.id), gt(rooms.floor, totalFloors)));
+
+      if (affectedRooms.length > 0) {
+        const roomIds = affectedRooms.map((r) => r.id);
+        const occupiedBeds = await db
+          .select({ id: beds.id, roomId: beds.roomId })
+          .from(beds)
+          .where(and(inArray(beds.roomId, roomIds), eq(beds.isOccupied, true)));
+
+        if (occupiedBeds.length > 0) {
+          // Collect which floor numbers are blocked
+          const occupiedRoomIds = new Set(occupiedBeds.map((b) => b.roomId));
+          const blockedFloors = [...new Set(
+            affectedRooms.filter((r) => occupiedRoomIds.has(r.id)).map((r) => r.floor)
+          )].sort((a, b) => a - b);
+
+          res.status(409).json({
+            error: `Cannot reduce floors to ${totalFloors}: Floor${blockedFloors.length > 1 ? "s" : ""} ${blockedFloors.join(", ")} still ${blockedFloors.length > 1 ? "have" : "has"} occupied beds. Check out all tenants on those floors first.`,
+            blockedFloors,
+          });
+          return;
+        }
+      }
+    }
+
     const updates: Partial<typeof existing> = { updatedAt: new Date() };
     if (name !== undefined) updates.name = name.trim();
     if (type !== undefined) updates.type = type;
