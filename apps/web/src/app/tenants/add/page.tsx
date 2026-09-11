@@ -31,7 +31,7 @@ function CheckInForm() {
   const params = useSearchParams();
   const bedId = params.get("bedId");
   const roomId = params.get("roomId");
-  const { token } = useAuth();
+  const { token, isLoading: authLoading } = useAuth();
 
   const selfieRef = useRef<HTMLInputElement>(null);
   const idCardRef = useRef<HTMLInputElement>(null);
@@ -61,13 +61,15 @@ function CheckInForm() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (!bedId || !roomId) { setLoading(false); return; }
+    if (!bedId || !roomId || authLoading) { if (!authLoading) setLoading(false); return; }
     // Always use the active PG key — pg_eg_pg_id is the old single-PG key
     const pgId = localStorage.getItem("pg_eg_active_pg_id")
       || localStorage.getItem("pg_eg_pg_id")
       || "";
     if (!pgId) { setLoading(false); return; }
-    fetch(`${API_URL}/api/dashboard?pgId=${pgId}`)
+    fetch(`${API_URL}/api/dashboard?pgId=${pgId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then((r) => r.json())
       .then((data) => {
         const room = data.rooms?.find((r: { id: string }) => r.id === roomId);
@@ -77,7 +79,7 @@ function CheckInForm() {
         }
       })
       .finally(() => setLoading(false));
-  }, [bedId, roomId]);
+  }, [bedId, roomId, token, authLoading]);
 
   function fileToBase64(file: File): Promise<string> {
     return new Promise((resolve) => {
