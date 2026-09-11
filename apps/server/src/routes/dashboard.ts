@@ -165,6 +165,10 @@ router.patch("/beds/:bedId/checkout", requireAuth, async (req: Request, res: Res
         ? `Room ${roomResult[0].roomNumber} (Floor ${roomResult[0].floor})`
         : "Unknown Room";
 
+      // Refund must never be negative: max(0, deposit - deduction)
+      const deposit = tenant.advanceAmount ?? 0;
+      const refundAmount = Math.max(0, deposit - depositDeduction);
+
       await db.update(tenants).set({
         status: "inactive",
         leavingDate: new Date(),
@@ -177,7 +181,7 @@ router.patch("/beds/:bedId/checkout", requireAuth, async (req: Request, res: Res
         eventType: "check_out",
         fromBedId: bedId,
         fromRoom: roomLabel,
-        note: `Checked out from ${roomLabel}. Deposit: ₹${tenant.advanceAmount ?? 0}, Deduction: ₹${depositDeduction}, Refund: ₹${(tenant.advanceAmount ?? 0) - depositDeduction}. Refund via ${refundMode.toUpperCase()}.`,
+        note: `Checked out from ${roomLabel}. Deposit: ₹${deposit}, Deduction: ₹${depositDeduction}, Refund: ₹${refundAmount}. Refund via ${refundMode.toUpperCase()}.`,
       });
     }
 
