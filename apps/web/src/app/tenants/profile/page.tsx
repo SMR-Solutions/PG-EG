@@ -25,17 +25,19 @@ function fmtTime(d: string | Date | null | undefined) {
 
 interface Transaction { id: string; amount: number; paymentMode: string; note?: string; createdAt: string; }
 interface RentRecord { id: string; month: string; amount: number; paidAmount: number; status: string; paymentMode?: string | null; paidAt?: string | null; transactions: Transaction[]; }
+interface HistoryEvent { id: string; eventType: string; fromRoom?: string | null; toRoom?: string | null; note?: string | null; createdAt: string; }
 interface TenantProfile {
   id: string; name: string; phone: string;
   altPhone?: string | null; emergencyContact?: string | null; emergencyRelation?: string | null;
   photoUrl?: string | null; idPhotoUrl?: string | null;
   joiningDate: string; leavingDate?: string | null;
   rentAmount?: number; advanceAmount?: number; paymentMode?: string | null;
+  depositDeduction?: number | null; refundMode?: string | null;
   status: string;
 }
 interface Bed { id: string; bedNumber: number; }
 interface Room { id: string; roomNumber: string; floor: number; sharingType: number; }
-interface ProfileData { tenant: TenantProfile; bed: Bed | null; room: Room | null; rentRecords: RentRecord[]; }
+interface ProfileData { tenant: TenantProfile; bed: Bed | null; room: Room | null; rentRecords: RentRecord[]; history: HistoryEvent[]; }
 
 function currentMonthStr() {
   const d = new Date();
@@ -189,13 +191,13 @@ function TenantProfileInner() {
           <div className={styles.infoGrid}>
             {room && (
               <div className={styles.infoCard}>
-                <span className={styles.infoLabel}>Room · Bed</span>
+                <span className={styles.infoLabel}>{tenant.status === "active" ? "Room · Bed" : "Last Room · Bed"}</span>
                 <span className={styles.infoValue}>{room.roomNumber} · Bed {bed?.bedNumber}</span>
               </div>
             )}
             {room && (
               <div className={styles.infoCard}>
-                <span className={styles.infoLabel}>Floor</span>
+                <span className={styles.infoLabel}>{tenant.status === "active" ? "Floor" : "Last Floor"}</span>
                 <span className={styles.infoValue}>{room.floor}</span>
               </div>
             )}
@@ -348,6 +350,110 @@ function TenantProfileInner() {
             ))}
           </section>
         )}
+
+        {/* ── Full Lifecycle History ── */}
+        {(() => {
+          type TimelineItem =
+            | { kind: "event"; id: string; eventType: string; fromRoom?: string | null; toRoom?: string | null; note?: string | null; createdAt: string }
+            | { kind: "rent"; id: string; amount: number; mode: string; month: string; note?: string | null; createdAt: string };
+
+          const items: TimelineItem[] = [
+            ...(data.history ?? []).map((evt) => ({ kind: "event" as const, ...evt })),
+            ...data.rentRecords.flatMap((rec) =>
+              rec.transactions.map((txn) => ({
+                kind: "rent" as const,
+                id: `txn-${txn.id}`,
+                amount: txn.amount,
+                mode: txn.paymentMode,
+                month: rec.month,
+                note: txn.note ?? null,
+                createdAt: txn.createdAt,
+              }))
+            ),
+          ].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+          if (items.length === 0) return null;
+
+          return (
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>🕓 Full History</h2>
+              <div style={{ position: "relative", paddingLeft: 28 }}>
+                <div style={{ position: "absolute", left: 10, top: 0, bottom: 0, width: 2, background: "rgba(255,255,255,0.08)", borderRadius: 2 }} />
+
+                {items.map((item, i) => {
+                  const isLast = i === items.length - 1;
+
+                  if (item.kind === "rent") {
+                    return (
+                      <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: isLast ? 0 : 20, position: "relative" }}>
+                        <div style={{ position: "absolute", left: -22, top: 4, width: 12, height: 12, borderRadius: "50%", background: "#f4a261", border: "2px solid rgba(255,255,255,0.15)" }} />
+                        <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(244,162,97,0.15)", borderRadius: 10, padding: "10px 14px" }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                            <span style={{ fontWeight: 700, fontSize: 13, color: "#f4a261" }}>
+                              {item.mode === "upi" ? "📱" : "💵"} Rent Paid · {monthLabel(item.month)}
+                            </span>
+                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{fmt(item.createdAt)} {fmtTime(item.createdAt)}</span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                            <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>₹{item.amount.toLocaleString()}</span>
+                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", textTransform: "uppercase" }}>{item.mode}</span>
+                          </div>
+                          {item.note && <p style={{ margin: "4px 0 0", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{item.note}</p>}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const isCheckIn  = item.eventType === "check_in";
+                  const isMove     = item.eventType === "move";
+                  const isCheckOut = item.eventType === "check_out";
+
+                  const dot   = isCheckIn ? "#2dc653" : isCheckOut ? "#e63946" : isMove ? "#4dabf7" : "#aaa";
+                  const icon  = isCheckIn ? "🏠" : isCheckOut ? "🚪" : isMove ? "🔄" : "📋";
+                  const label = isCheckIn ? "Checked In" : isCheckOut ? "Checked Out" : isMove ? "Room Move" : item.eventType;
+
+                  let co: { deposit: string; deduction: string; refund: string; via: string } | null = null;
+                  if (isCheckOut && item.note) {
+                    const m = item.note.match(/Deposit: ₹([\d,]+), Deduction: ₹([\d,]+), Refund: ₹([\d,]+)\. Refund via (\w+)/i);
+                    if (m) co = { deposit: m[1], deduction: m[2], refund: m[3], via: m[4] };
+                  }
+
+                  return (
+                    <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: isLast ? 0 : 20, position: "relative" }}>
+                      <div style={{ position: "absolute", left: -22, top: 4, width: 12, height: 12, borderRadius: "50%", background: dot, border: "2px solid rgba(255,255,255,0.15)" }} />
+                      <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: `1px solid ${dot}26`, borderRadius: 10, padding: "10px 14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span style={{ fontWeight: 700, fontSize: 13, color: dot }}>{icon} {label}</span>
+                          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{fmt(item.createdAt)} {fmtTime(item.createdAt)}</span>
+                        </div>
+                        {isMove && item.fromRoom && item.toRoom && (
+                          <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
+                            <span style={{ color: "#f4a261" }}>{item.fromRoom}</span>
+                            <span style={{ margin: "0 6px", color: "rgba(255,255,255,0.3)" }}>→</span>
+                            <span style={{ color: "#4dabf7" }}>{item.toRoom}</span>
+                          </p>
+                        )}
+                        {isCheckOut && co && (
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px", marginTop: 6 }}>
+                            {[["Deposit","#fff",co.deposit],["Deduction","#e63946",co.deduction],["Refund","#2dc653",co.refund],["Via","#fff",co.via.toUpperCase()]].map(([lbl,clr,val]) => (
+                              <div key={lbl} style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>{lbl}
+                                <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: clr }}>
+                                  {lbl !== "Via" ? "₹" : ""}{val}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {isCheckOut && !co && item.note && <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{item.note}</p>}
+                        {(isCheckIn || (!isMove && !isCheckOut)) && item.note && <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{item.note}</p>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })()}
 
         {/* ── ID Card ── */}
         {tenant.idPhotoUrl && (
