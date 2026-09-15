@@ -142,6 +142,16 @@ router.patch("/beds/:bedId/checkout", requireAuth, async (req: Request, res: Res
       refundMode?: string;
     };
 
+    // ── Monetary input validation ──────────────────────────────────────
+    if (depositDeduction < 0) {
+      res.status(400).json({ error: "Deduction cannot be negative" });
+      return;
+    }
+    if (!Number.isInteger(depositDeduction)) {
+      res.status(400).json({ error: "Deduction must be a whole rupee amount (no paise/decimals)" });
+      return;
+    }
+
     // Resolve bed → room → pg → ownership
     const bedRow = await db.select().from(beds).where(eq(beds.id, bedId)).limit(1);
     if (!bedRow[0]) { res.status(404).json({ error: "Bed not found" }); return; }

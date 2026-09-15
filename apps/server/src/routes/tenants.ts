@@ -39,6 +39,18 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
+    // ── Monetary input validation ──────────────────────────────────────
+    const rent = rentAmount ?? 0;
+    const deposit = advanceAmount ?? 0;
+    if (!Number.isInteger(rent) || rent < 0) {
+      res.status(400).json({ error: "Monthly rent must be a whole rupee amount (no paise/decimals)" });
+      return;
+    }
+    if (!Number.isInteger(deposit) || deposit < 0) {
+      res.status(400).json({ error: "Deposit must be a whole rupee amount (no paise/decimals)" });
+      return;
+    }
+
     // Caller must own the PG they are checking a tenant into
     const pg = await verifyPgOwnership(pgId, req.owner!.ownerId, res);
     if (!pg) return;

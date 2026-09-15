@@ -91,11 +91,17 @@ function TenantProfileInner() {
   async function handleMarkPaid() {
     if (!currentRent) return;
     setPayError("");
-    // If the user left the field blank, default to the full remaining amount
-    const payingNow = rentPayAmount.trim() === "" ? remaining : parseInt(rentPayAmount, 10);
+    // Blank = pay full remaining; otherwise parse exactly as typed
+    const raw = rentPayAmount.trim();
+    const payingNow = raw === "" ? remaining : Number(raw);
 
-    if (!payingNow || payingNow <= 0) {
+    if (!raw && !remaining) { setPayError("Enter a payment amount greater than ₹0"); return; }
+    if (raw !== "" && (!Number.isFinite(payingNow) || payingNow <= 0)) {
       setPayError("Enter a payment amount greater than ₹0");
+      return;
+    }
+    if (raw !== "" && !Number.isInteger(payingNow)) {
+      setPayError("⚠️ Please enter a whole rupee amount (no paise/decimals)");
       return;
     }
     if (payingNow > remaining) {
@@ -302,13 +308,19 @@ function TenantProfileInner() {
                 <button
                   className={styles.markPaidBtn}
                   onClick={handleMarkPaid}
-                  disabled={markingPaid}
+                  disabled={markingPaid || (() => {
+                    const raw = rentPayAmount.trim();
+                    if (raw === "") return false; // blank = full remaining, always valid
+                    const n = Number(raw);
+                    return !Number.isFinite(n) || n <= 0 || !Number.isInteger(n) || n > remaining;
+                  })()}
                   id="btn-mark-paid"
                 >
                   {markingPaid
                     ? <><span className={styles.spinnerDark} /> Processing…</>
                     : (() => {
-                        const display = rentPayAmount.trim() === "" ? remaining : (parseInt(rentPayAmount, 10) || 0);
+                        const raw = rentPayAmount.trim();
+                        const display = raw === "" ? remaining : (Number.isFinite(Number(raw)) ? Number(raw) : 0);
                         return `💵 MARK AS PAID · ₹${Math.max(0, display).toLocaleString("en-IN")}`;
                       })()}
                 </button>

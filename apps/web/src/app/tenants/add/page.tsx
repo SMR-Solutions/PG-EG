@@ -119,6 +119,25 @@ function CheckInForm() {
     if (phone.replace(/\D/g, "").length < 10) { setError("Enter a valid 10-digit mobile number"); return; }
     if (!bedInfo) { setError("Bed info not loaded. Go back and try again."); return; }
 
+    // ── Monetary validation ───────────────────────────────────────────
+    const rawRent = monthlyRent.trim();
+    const rawDeposit = depositAmount.trim();
+    const rentVal = rawRent === "" ? 0 : Number(rawRent);
+    const depositVal = rawDeposit === "" ? 0 : Number(rawDeposit);
+
+    if (rawRent !== "" && (!Number.isFinite(rentVal) || rentVal < 0)) {
+      setError("Monthly rent must be a positive amount"); return;
+    }
+    if (rawRent !== "" && !Number.isInteger(rentVal)) {
+      setError("⚠️ Monthly rent: Please enter a whole rupee amount (no paise/decimals)"); return;
+    }
+    if (rawDeposit !== "" && (!Number.isFinite(depositVal) || depositVal < 0)) {
+      setError("Deposit must be a positive amount"); return;
+    }
+    if (rawDeposit !== "" && !Number.isInteger(depositVal)) {
+      setError("⚠️ Deposit: Please enter a whole rupee amount (no paise/decimals)"); return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch(`${API_URL}/api/tenants`, {
@@ -133,8 +152,8 @@ function CheckInForm() {
           emergencyContact: emergencyContact.replace(/\D/g, "").slice(-10) || undefined,
           emergencyRelation: emergencyContact ? emergencyRelation : undefined,
           joiningDate,
-          rentAmount: parseInt(monthlyRent) || 0,
-          advanceAmount: parseInt(depositAmount) || 0,
+          rentAmount: rentVal,
+          advanceAmount: depositVal,
           paymentMode,
           photoUrl: selfieUrl || null,
           idPhotoUrl: idUrl || null,

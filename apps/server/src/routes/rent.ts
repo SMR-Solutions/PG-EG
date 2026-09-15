@@ -93,14 +93,19 @@ router.patch("/:id/pay", requireAuth, async (req: Request, res: Response) => {
     const db = createDb(process.env.DATABASE_URL!);
 
     // ── Strict payment validation ──────────────────────────────────────
-    const payingNow = typeof amount === "number" ? amount : record.amount;
+    const rawAmount = typeof amount === "number" ? amount : record.amount;
     const alreadyPaid = record.paidAmount || 0;
     const remaining = record.amount - alreadyPaid;
 
-    if (!Number.isFinite(payingNow) || payingNow <= 0) {
+    if (rawAmount == null || !Number.isFinite(rawAmount) || rawAmount <= 0) {
       res.status(400).json({ error: "Payment amount must be greater than ₹0" });
       return;
     }
+    if (!Number.isInteger(rawAmount)) {
+      res.status(400).json({ error: "Payment amount must be a whole rupee amount (no paise/decimals)" });
+      return;
+    }
+    const payingNow = rawAmount;
     if (payingNow > remaining) {
       res.status(400).json({
         error: `Payment of ₹${payingNow.toLocaleString("en-IN")} exceeds the remaining balance of ₹${remaining.toLocaleString("en-IN")}`,

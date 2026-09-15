@@ -191,10 +191,10 @@ export default function DashboardPage() {
 
   async function handleCheckout() {
     if (!checkoutModal) return;
-    const dep = parseInt(deduction) || 0;
+    const raw = deduction.trim();
+    const dep = raw === "" ? 0 : Number(raw);
     const deposit = checkoutModal.tenant.advanceAmount || 0;
-    if (dep < 0) return; // negative caught by input min
-    if (dep > deposit) return; // blocked by disabled button; guard here too
+    if (!Number.isInteger(dep) || dep < 0 || dep > deposit) return;
     setCheckingOut(true);
     try {
       const res = await fetch(`${API_URL}/api/dashboard/beds/${checkoutModal.bed.id}/checkout`, {
@@ -272,14 +272,23 @@ export default function DashboardPage() {
   }
 
   async function handleMarkPaid(rentId: string, fullAmount: number) {
-    const paidAmount = parseInt(rentPayAmount) || fullAmount;
+    const raw = rentPayAmount.trim();
+    const paidAmount = raw === "" ? fullAmount : Number(raw);
+    // Validation (belt-and-suspenders — button is disabled for invalid values)
+    if (raw !== "" && (!Number.isFinite(paidAmount) || paidAmount <= 0 || !Number.isInteger(paidAmount))) return;
+    if (raw !== "" && paidAmount > fullAmount) return;
     setMarkingPaid(rentId);
     try {
-      await fetch(`${API_URL}/api/rent/${rentId}/pay`, {
+      const res = await fetch(`${API_URL}/api/rent/${rentId}/pay`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...authHeader() },
         body: JSON.stringify({ paymentMode: rentPayMode, amount: paidAmount }),
       });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || "Payment failed");
+        return;
+      }
       setRentPayAmount("");
       await load();
       // Refresh detail view
@@ -763,11 +772,21 @@ export default function DashboardPage() {
                       </div>
                       <button className={styles.markPaidBtn}
                         onClick={() => handleMarkPaid(detailTenant.tenant.rent!.id, detailTenant.tenant.rentAmount || 0)}
-                        disabled={markingPaid === detailTenant.tenant.rent.id || (!rentPayAmount && !detailTenant.tenant.rentAmount)}
+                        disabled={markingPaid === detailTenant.tenant.rent.id || (() => {
+                          const raw = rentPayAmount.trim();
+                          if (!raw) return false; // blank = full amount, always OK
+                          const n = Number(raw);
+                          const full = detailTenant.tenant.rentAmount || 0;
+                          return !Number.isFinite(n) || n <= 0 || !Number.isInteger(n) || n > full;
+                        })()}
                         id="btn-mark-paid">
                         {markingPaid === detailTenant.tenant.rent.id
                           ? <><span className={styles.spinnerDark} /> Marking…</>
-                          : `💵 MARK AS PAID · ₹${(parseInt(rentPayAmount) || detailTenant.tenant.rentAmount || 0).toLocaleString()}`}
+                          : (() => {
+                              const raw = rentPayAmount.trim();
+                              const display = raw === "" ? (detailTenant.tenant.rentAmount || 0) : (Number.isFinite(Number(raw)) ? Number(raw) : 0);
+                              return `💵 MARK AS PAID · ₹${Math.max(0, display).toLocaleString("en-IN")}`;
+                            })()}
                       </button>
                     </>
                   )}
@@ -968,16 +987,23 @@ export default function DashboardPage() {
                 </div>
                 {/* Real-time deduction validation error */}
                 {(() => {
-                  const dep = parseInt(deduction) || 0;
+                  const raw = deduction.trim();
+                  if (!raw) return null;
+                  const dep = Number(raw);
                   const deposit = checkoutModal.tenant.advanceAmount || 0;
-                  if (dep > deposit) return (
-                    <p style={{ margin: "4px 0 0", fontSize: 12, color: "#e63946", fontWeight: 600 }}>
-                      ⚠️ Deduction (₹{dep.toLocaleString("en-IN")}) cannot exceed the initial deposit (₹{deposit.toLocaleString("en-IN")})
-                    </p>
-                  );
                   if (dep < 0) return (
                     <p style={{ margin: "4px 0 0", fontSize: 12, color: "#e63946", fontWeight: 600 }}>
                       ⚠️ Deduction cannot be negative
+                    </p>
+                  );
+                  if (!Number.isInteger(dep)) return (
+                    <p style={{ margin: "4px 0 0", fontSize: 12, color: "#e63946", fontWeight: 600 }}>
+                      ⚠️ Please enter a whole rupee amount (no paise/decimals)
+                    </p>
+                  );
+                  if (dep > deposit) return (
+                    <p style={{ margin: "4px 0 0", fontSize: 12, color: "#e63946", fontWeight: 600 }}>
+                      ⚠️ Deduction (₹{dep.toLocaleString("en-IN")}) cannot exceed the initial deposit (₹{deposit.toLocaleString("en-IN")})
                     </p>
                   );
                   return null;
@@ -986,7 +1012,7 @@ export default function DashboardPage() {
                 <div className={`${styles.depositRow} ${styles.depositRefundRow}`}>
                   <span className={styles.depositLabel}>Final Refund to Tenant</span>
                   <span className={styles.depositRefundAmount}>
-                    ₹{Math.max(0, (checkoutModal.tenant.advanceAmount || 0) - (parseInt(deduction) || 0)).toLocaleString()}
+                    ₹{Math.max(0, (checkoutModal.tenant.advanceAmount || 0) - (Number.isInteger(Number(deduction)) ? Number(deduction) : 0)).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -1001,7 +1027,12 @@ export default function DashboardPage() {
 
               <button className={styles.permanentExitBtn}
                 onClick={handleCheckout}
-                disabled={checkingOut || (() => { const dep = parseInt(deduction) || 0; const deposit = checkoutModal.tenant.advanceAmount || 0; return dep < 0 || dep > deposit; })()}
+                disabled={checkingOut || (() => {
+                  const raw = deduction.trim();
+                  const dep = raw === "" ? 0 : Number(raw);
+                  const deposit = checkoutModal.tenant.advanceAmount || 0;
+                  return dep < 0 || !Number.isInteger(dep) || dep > deposit;
+                })()}
                 id="btn-permanent-exit">
                 {checkingOut
                   ? <><span className={styles.spinnerDark} /> Processing…</>
