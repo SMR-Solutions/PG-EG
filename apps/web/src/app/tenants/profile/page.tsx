@@ -91,8 +91,18 @@ function TenantProfileInner() {
   async function handleMarkPaid() {
     if (!currentRent) return;
     setPayError("");
-    const payingNow = parseInt(rentPayAmount) || remaining;
-    if (payingNow <= 0) { setPayError("Enter a valid amount"); return; }
+    // If the user left the field blank, default to the full remaining amount
+    const payingNow = rentPayAmount.trim() === "" ? remaining : parseInt(rentPayAmount, 10);
+
+    if (!payingNow || payingNow <= 0) {
+      setPayError("Enter a payment amount greater than ₹0");
+      return;
+    }
+    if (payingNow > remaining) {
+      setPayError(`Amount cannot exceed the remaining balance of ₹${remaining.toLocaleString("en-IN")}`);
+      return;
+    }
+
     setMarkingPaid(true);
     try {
       const res = await fetch(`${API_URL}/api/rent/${currentRent.id}/pay`, {
@@ -297,7 +307,10 @@ function TenantProfileInner() {
                 >
                   {markingPaid
                     ? <><span className={styles.spinnerDark} /> Processing…</>
-                    : `💵 MARK AS PAID · ₹${(parseInt(rentPayAmount) || remaining).toLocaleString()}`}
+                    : (() => {
+                        const display = rentPayAmount.trim() === "" ? remaining : (parseInt(rentPayAmount, 10) || 0);
+                        return `💵 MARK AS PAID · ₹${Math.max(0, display).toLocaleString("en-IN")}`;
+                      })()}
                 </button>
               </>
             )}

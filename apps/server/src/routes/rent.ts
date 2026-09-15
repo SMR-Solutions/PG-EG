@@ -91,9 +91,26 @@ router.patch("/:id/pay", requireAuth, async (req: Request, res: Response) => {
     if (record.status === "paid") { res.status(400).json({ error: "Already fully paid" }); return; }
 
     const db = createDb(process.env.DATABASE_URL!);
-    const payingNow = Math.max(1, amount ?? record.amount);
-    const newPaidAmount = Math.min((record.paidAmount || 0) + payingNow, record.amount);
-    const isFullyPaid = newPaidAmount >= record.amount;
+
+    // ── Strict payment validation ──────────────────────────────────────
+    const payingNow = typeof amount === "number" ? amount : record.amount;
+    const alreadyPaid = record.paidAmount || 0;
+    const remaining = record.amount - alreadyPaid;
+
+    if (!Number.isFinite(payingNow) || payingNow <= 0) {
+      res.status(400).json({ error: "Payment amount must be greater than ₹0" });
+      return;
+    }
+    if (payingNow > remaining) {
+      res.status(400).json({
+        error: `Payment of ₹${payingNow.toLocaleString("en-IN")} exceeds the remaining balance of ₹${remaining.toLocaleString("en-IN")}`,
+      });
+      return;
+    }
+
+    const newPaidAmount = alreadyPaid + payingNow;
+    // Mark fully paid only when the payment amount exactly clears the balance
+    const isFullyPaid = newPaidAmount === record.amount;
 
     const [updated] = await db.update(rentPayments)
       .set({ paidAmount: newPaidAmount, status: isFullyPaid ? "paid" : "partial", paymentMode, paidAt: isFullyPaid ? new Date() : null })
@@ -102,7 +119,7 @@ router.patch("/:id/pay", requireAuth, async (req: Request, res: Response) => {
     await db.insert(rentPaymentTransactions).values({
       rentPaymentId: id, tenantId: record.tenantId, pgId: record.pgId,
       amount: payingNow, paymentMode,
-      note: isFullyPaid ? "Full payment" : `Partial (${newPaidAmount}/${record.amount})`,
+      note: isFullyPaid ? "Full payment" : `Partial payment (₹${newPaidAmount.toLocaleString("en-IN")} of ₹${record.amount.toLocaleString("en-IN")})`,
     });
 
     res.json({ payment: updated, paidNow: payingNow, totalPaid: newPaidAmount, remaining: record.amount - newPaidAmount, isFullyPaid });
