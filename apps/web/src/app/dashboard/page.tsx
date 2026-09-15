@@ -191,14 +191,22 @@ export default function DashboardPage() {
 
   async function handleCheckout() {
     if (!checkoutModal) return;
-    setCheckingOut(true);
     const dep = parseInt(deduction) || 0;
+    const deposit = checkoutModal.tenant.advanceAmount || 0;
+    if (dep < 0) return; // negative caught by input min
+    if (dep > deposit) return; // blocked by disabled button; guard here too
+    setCheckingOut(true);
     try {
-      await fetch(`${API_URL}/api/dashboard/beds/${checkoutModal.bed.id}/checkout`, {
+      const res = await fetch(`${API_URL}/api/dashboard/beds/${checkoutModal.bed.id}/checkout`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...authHeader() },
         body: JSON.stringify({ depositDeduction: dep, refundMode: checkoutRefundMode }),
       });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || "Checkout failed");
+        return;
+      }
       setCheckoutModal(null);
       setSelectedRoom(null);
       setDetailTenant(null);
@@ -952,11 +960,28 @@ export default function DashboardPage() {
                   <div className={styles.deductionInput}>
                     <span className={styles.rupeePrefix}>₹</span>
                     <input type="number" className={styles.deductionField}
-                      placeholder="0" value={deduction}
+                      placeholder="0" value={deduction} min="0"
+                      max={checkoutModal.tenant.advanceAmount || 0}
                       onChange={(e) => setDeduction(e.target.value)}
                       inputMode="numeric" id="input-deduction" />
                   </div>
                 </div>
+                {/* Real-time deduction validation error */}
+                {(() => {
+                  const dep = parseInt(deduction) || 0;
+                  const deposit = checkoutModal.tenant.advanceAmount || 0;
+                  if (dep > deposit) return (
+                    <p style={{ margin: "4px 0 0", fontSize: 12, color: "#e63946", fontWeight: 600 }}>
+                      ⚠️ Deduction (₹{dep.toLocaleString("en-IN")}) cannot exceed the initial deposit (₹{deposit.toLocaleString("en-IN")})
+                    </p>
+                  );
+                  if (dep < 0) return (
+                    <p style={{ margin: "4px 0 0", fontSize: 12, color: "#e63946", fontWeight: 600 }}>
+                      ⚠️ Deduction cannot be negative
+                    </p>
+                  );
+                  return null;
+                })()}
                 <div className={styles.depositDivider} />
                 <div className={`${styles.depositRow} ${styles.depositRefundRow}`}>
                   <span className={styles.depositLabel}>Final Refund to Tenant</span>
@@ -975,7 +1000,9 @@ export default function DashboardPage() {
               </div>
 
               <button className={styles.permanentExitBtn}
-                onClick={handleCheckout} disabled={checkingOut} id="btn-permanent-exit">
+                onClick={handleCheckout}
+                disabled={checkingOut || (() => { const dep = parseInt(deduction) || 0; const deposit = checkoutModal.tenant.advanceAmount || 0; return dep < 0 || dep > deposit; })()}
+                id="btn-permanent-exit">
                 {checkingOut
                   ? <><span className={styles.spinnerDark} /> Processing…</>
                   : "🚨 PERMANENT EXIT"}

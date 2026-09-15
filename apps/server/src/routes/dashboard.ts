@@ -152,6 +152,24 @@ router.patch("/beds/:bedId/checkout", requireAuth, async (req: Request, res: Res
     const pg = await verifyPgOwnership(roomRow[0].pgId, req.owner!.ownerId, res);
     if (!pg) return;
 
+    // Fetch the active tenant NOW (before processing) so we can validate deduction
+    const tenantForValidation = await db.select().from(tenants)
+      .where(and(eq(tenants.bedId, bedId), eq(tenants.status, "active"))).limit(1);
+
+    if (tenantForValidation[0]) {
+      const deposit = tenantForValidation[0].advanceAmount ?? 0;
+      if (depositDeduction < 0) {
+        res.status(400).json({ error: "Deduction cannot be negative" });
+        return;
+      }
+      if (depositDeduction > deposit) {
+        res.status(400).json({
+          error: `Deduction of ₹${depositDeduction.toLocaleString("en-IN")} exceeds the initial deposit of ₹${deposit.toLocaleString("en-IN")}`,
+        });
+        return;
+      }
+    }
+
     const tenantResult = await db.select().from(tenants)
       .where(and(eq(tenants.bedId, bedId), eq(tenants.status, "active"))).limit(1);
 
