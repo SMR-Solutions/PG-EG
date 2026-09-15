@@ -8,7 +8,7 @@ import styles from "./page.module.css";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 /* ─── Types ─── */
-interface RentRecord { id: string; status: string; amount: number; paymentMode: string | null; paidAt: string | null; }
+interface RentRecord { id: string; status: string; amount: number; paidAmount: number; paymentMode: string | null; paidAt: string | null; }
 interface Tenant {
   id: string; name: string; phone: string; joiningDate: string;
   altPhone?: string | null;
@@ -195,6 +195,15 @@ export default function DashboardPage() {
     const dep = raw === "" ? 0 : Number(raw);
     const deposit = checkoutModal.tenant.advanceAmount || 0;
     if (!Number.isInteger(dep) || dep < 0 || dep > deposit) return;
+
+    // Block checkout if rent is outstanding
+    const rent = checkoutModal.tenant.rent;
+    const outstanding = rent ? Math.max(0, rent.amount - (rent.paidAmount ?? 0)) : 0;
+    if (outstanding > 0) {
+      alert(`Please clear the outstanding rent of ₹${outstanding.toLocaleString("en-IN")} before checkout.`);
+      return;
+    }
+
     setCheckingOut(true);
     try {
       const res = await fetch(`${API_URL}/api/dashboard/beds/${checkoutModal.bed.id}/checkout`, {
@@ -1025,13 +1034,37 @@ export default function DashboardPage() {
                   onClick={() => setCheckoutRefundMode("upi")}>📱 UPI</button>
               </div>
 
+              {/* Outstanding rent warning */}
+              {(() => {
+                const rent = checkoutModal.tenant.rent;
+                const outstanding = rent ? Math.max(0, rent.amount - (rent.paidAmount ?? 0)) : 0;
+                if (outstanding <= 0) return null;
+                return (
+                  <div style={{
+                    background: "rgba(230,57,70,0.12)",
+                    border: "1px solid rgba(230,57,70,0.35)",
+                    borderRadius: 10, padding: "10px 14px", marginBottom: 14,
+                  }}>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#e63946" }}>
+                      ⚠️ Outstanding Rent: ₹{outstanding.toLocaleString("en-IN")}
+                    </p>
+                    <p style={{ margin: "4px 0 0", fontSize: 11, color: "rgba(255,255,255,0.6)" }}>
+                      Please clear the outstanding rent of ₹{outstanding.toLocaleString("en-IN")} before checkout.
+                    </p>
+                  </div>
+                );
+              })()}
+
               <button className={styles.permanentExitBtn}
                 onClick={handleCheckout}
                 disabled={checkingOut || (() => {
                   const raw = deduction.trim();
                   const dep = raw === "" ? 0 : Number(raw);
                   const deposit = checkoutModal.tenant.advanceAmount || 0;
-                  return dep < 0 || !Number.isInteger(dep) || dep > deposit;
+                  if (dep < 0 || !Number.isInteger(dep) || dep > deposit) return true;
+                  const rent = checkoutModal.tenant.rent;
+                  const outstanding = rent ? Math.max(0, rent.amount - (rent.paidAmount ?? 0)) : 0;
+                  return outstanding > 0;
                 })()}
                 id="btn-permanent-exit">
                 {checkingOut

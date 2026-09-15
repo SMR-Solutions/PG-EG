@@ -178,6 +178,24 @@ router.patch("/beds/:bedId/checkout", requireAuth, async (req: Request, res: Res
         });
         return;
       }
+
+      // ── Outstanding rent guard ─────────────────────────────────────
+      const month = currentMonth();
+      const [rentRecord] = await db.select().from(rentPayments)
+        .where(and(
+          eq(rentPayments.tenantId, tenantForValidation[0].id),
+          eq(rentPayments.month, month)
+        )).limit(1);
+
+      if (rentRecord) {
+        const outstanding = rentRecord.amount - (rentRecord.paidAmount ?? 0);
+        if (outstanding > 0) {
+          res.status(409).json({
+            error: `Please clear the outstanding rent of ₹${outstanding.toLocaleString("en-IN")} before checkout.`,
+          });
+          return;
+        }
+      }
     }
 
     const tenantResult = await db.select().from(tenants)
