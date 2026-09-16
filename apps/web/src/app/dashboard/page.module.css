@@ -210,6 +210,72 @@
 /* ─── Building ─── */
 .buildingSection { margin-bottom: 8px; }
 
+/* section header row — label + dropdown */
+.buildingSectionHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 4px 8px;
+}
+
+/* ── View toggle dropdown ── */
+.viewDropWrap { position: relative; }
+
+.viewDropBtn {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 700; font-family: inherit;
+  color: rgba(255,255,255,0.65);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px; padding: 5px 10px;
+  cursor: pointer; white-space: nowrap;
+  transition: all 0.18s ease;
+  letter-spacing: 0.03em;
+}
+.viewDropBtn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+  color: #fff;
+}
+.viewDropChevron {
+  font-size: 10px; transition: transform 0.2s ease;
+  display: inline-block;
+}
+.viewDropChevronUp { transform: rotate(180deg); }
+
+.viewDropBackdrop {
+  position: fixed; inset: 0; z-index: 49;
+}
+.viewDropMenu {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  background: #1a1f2e;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 4px;
+  min-width: 140px;
+  z-index: 50;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  animation: dropIn 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.viewDropItem {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px; border: none; background: none;
+  color: rgba(255,255,255,0.65); font-size: 12px; font-weight: 600;
+  cursor: pointer; border-radius: 8px; font-family: inherit;
+  text-align: left; transition: background 0.15s, color 0.15s;
+}
+.viewDropItem:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.viewDropItemActive {
+  color: #2dc653;
+  background: rgba(45,198,83,0.08);
+}
+.viewDropItemActive:hover { background: rgba(45,198,83,0.14); }
+.viewDropCheck {
+  margin-left: auto; font-size: 13px; font-weight: 900; color: #2dc653;
+}
+
 /* ─── 3D Building outer wrapper ─── */
 .building3dOuter {
   padding: 0 0 8px;
