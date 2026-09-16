@@ -183,7 +183,7 @@ router.get("/me", async (req: Request, res: Response) => {
       .where(eq(pgs.ownerId, owner.id)).orderBy(asc(pgs.createdAt));
 
     res.json({
-      owner: { id: owner.id, name: owner.name, phone: owner.phone, email: owner.email, createdAt: owner.createdAt },
+      owner: { id: owner.id, name: owner.name, phone: owner.phone, email: owner.email, photoUrl: owner.photoUrl, createdAt: owner.createdAt },
       hasPG: ownerPGs.length > 0,
       pgId: ownerPGs[0]?.id || null,
       pgs: ownerPGs,

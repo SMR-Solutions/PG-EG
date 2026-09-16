@@ -389,10 +389,17 @@ export default function DashboardPage() {
         {profileOpen && (
           <div className={styles.sidebarBackdrop} onClick={() => setProfileOpen(false)}>
             <div className={styles.profileSidebar} onClick={(e) => e.stopPropagation()}>
-              {/* PG Manager info + Google account */}
-              <div className={styles.sidebarOwner}>
+              {/* PG Manager info + Google account — click to open Owner Profile */}
+              <button
+                className={styles.sidebarOwner}
+                style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", width: "100%", padding: 0 }}
+                onClick={() => { setProfileOpen(false); router.push("/owner-profile"); }}
+                id="btn-owner-profile"
+              >
                 <div className={styles.sidebarAvatar}>
-                  {(data?.pg.managerName || owner?.name || "O")[0].toUpperCase()}
+                  {owner?.photoUrl
+                    ? <img src={owner.photoUrl} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                    : (data?.pg.managerName || owner?.name || "O")[0].toUpperCase()}
                 </div>
                 <div>
                   <div className={styles.sidebarOwnerName}>
@@ -401,22 +408,23 @@ export default function DashboardPage() {
                   <div className={styles.sidebarOwnerEmail}>
                     {data?.pg.managerPhone || owner?.phone || ""}
                   </div>
-                  {/* Google account email — always shown as login identity */}
                   {owner?.email && (
                     <div className={styles.sidebarOwnerEmail} style={{ fontSize: 10, opacity: 0.5, marginTop: 2 }}>
                       {owner.email}
                     </div>
                   )}
                 </div>
-              </div>
+              </button>
 
               <div className={styles.sidebarDivider} />
 
               {/* Actions */}
+              {/* Add Another PG — hidden for V1, feature ready for later */}
               <button
                 className={styles.sidebarAction}
                 id="btn-add-another-pg"
                 onClick={() => { setProfileOpen(false); router.push("/add-pg?new=true"); }}
+                style={{ display: "none" }}
               >
                 <span className={styles.sidebarActionIcon}>➕</span>
                 <div>

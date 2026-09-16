@@ -14,6 +14,7 @@ interface Owner {
   name: string;
   phone: string;
   email?: string | null;
+  photoUrl?: string | null;
 }
 
 interface PGSummary {

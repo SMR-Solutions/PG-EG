@@ -16,6 +16,7 @@ export const owners = pgTable("owners", {
   phone: text("phone").notNull().unique(),
   firebaseUid: text("firebase_uid").unique(),
   email: text("email"),
+  photoUrl: text("photo_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
