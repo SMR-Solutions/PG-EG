@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import styles from "./page.module.css";
+import AppLogo from "@/components/AppLogo";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -352,6 +353,11 @@ export default function DashboardPage() {
       <div className={styles.orb1} /><div className={styles.orb2} />
       <div className={styles.content}>
 
+        {/* ─── PG-EG Logo Bar ─── */}
+        <div className={styles.logoBar}>
+          <AppLogo size="sm" />
+        </div>
+
         {/* ─── Header ─── */}
         <header className={styles.header}>
           <div className={styles.headerLeft}>
@@ -380,7 +386,9 @@ export default function DashboardPage() {
               id="btn-open-profile"
               title={(data?.pg.managerName || owner?.name || "Profile")}
             >
-              {(data?.pg.managerName || owner?.name || "O")[0].toUpperCase()}
+              {owner?.photoUrl
+                ? <img src={owner.photoUrl} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                : (data?.pg.managerName || owner?.name || "O")[0].toUpperCase()}
             </button>
           </div>
         </header>

@@ -38,6 +38,12 @@
   gap: 16px;
 }
 
+/* ─── Logo Bar ─── */
+.logoBar {
+  display: flex; align-items: center; justify-content: center;
+  padding: 6px 0 2px;
+}
+
 /* ─── Header ─── */
 .header {
   display: flex;

@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import AppLogo from "@/components/AppLogo";
 import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -95,7 +96,8 @@ export default function OwnerProfilePage() {
       <div className={styles.orb1} /><div className={styles.orb2} />
       <header className={styles.header}>
         <button className={styles.backBtn} onClick={() => router.back()} id="btn-back">&#8592; Back</button>
-        <h1 className={styles.pageTitle}>Owner Profile</h1>
+        <AppLogo size="sm" />
+        <h1 className={styles.pageTitle}>Profile</h1>
       </header>
       <div className={styles.content}>
         <div className={styles.photoSection}>
