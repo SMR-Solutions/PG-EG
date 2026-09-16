@@ -514,81 +514,123 @@ export default function DashboardPage() {
           </section>
         )}
 
-        {/* ─── Iron Man Building ─── */}
+        {/* ─── 3D Building ─── */}
         <section className={styles.buildingSection}>
           <p className={styles.sectionLabel}>🏢 {pg.name.toUpperCase()} — LIVE MAP</p>
-          <div className={styles.building}>
-            <div className={styles.buildingRoof}><span className={styles.roofEmoji}>🏗️</span></div>
+          <div className={styles.building3dOuter}>
 
-            {floorNums.map((floor) => {
-              const all = floorStats(data.rooms, floor);
-              const vis = floorStats(visibleRooms, floor);
-              const colorKey = filterType
-                ? (vis.rooms.length > 0 ? floorColor(all.free, all.totalBeds) : "dimmed")
-                : floorColor(all.free, all.totalBeds);
-              const isActive = activeFloor === floor;
+            {/* ── 3D perspective building ── */}
+            <div className={styles.building3dScene}>
+              <div className={styles.building3dStack}>
 
-              return (
-                <div key={floor} className={styles.floorWrap}>
-                  <button
-                    className={`${styles.floorBlock} ${styles[`floor_${colorKey}`]} ${isActive ? styles.floorBlockActive : ""}`}
-                    onClick={() => setActiveFloor(isActive ? null : floor)} id={`dashboard-floor-${floor}`}>
-                    <div className={`${styles.floorIndicator} ${styles[`indicator_${colorKey}`]}`} />
-                    <div className={styles.floorBlockContent}>
-                      <div className={styles.floorBlockLabelRow}>
-                        <span className={styles.floorBlockLabel}>Floor {floor}</span>
-                        {all.pendingRent && <span className={styles.rentDot} title="Rent pending">⚠️</span>}
-                      </div>
-                      <span className={styles.floorBlockMeta}>
-                        {colorKey === "full" ? "🟥 100% FULL"
-                          : colorKey === "almost" ? `🟧 ${all.free} Bed${all.free > 1 ? "s" : ""} Free`
-                          : colorKey === "dimmed" ? "No matching rooms"
-                          : `🟩 ${all.free} Bed${all.free > 1 ? "s" : ""} Free`}
-                      </span>
+                {/* Floors top→bottom (highest first) */}
+                {[...floorNums].reverse().map((floor, idx) => {
+                  const all = floorStats(data.rooms, floor);
+                  const colorKey = floorColor(all.free, all.totalBeds);
+                  const isActive = activeFloor === floor;
+                  const floorColor3d =
+                    colorKey === "full" ? "#e63946" :
+                    colorKey === "almost" ? "#f4a261" : "#2dc653";
+                  const allBeds = all.rooms.flatMap(r => r.beds);
+
+                  return (
+                    <div key={floor} className={`${styles.floorSlab} ${isActive ? styles.floorSlabActive : ""}`}
+                      style={{ "--fc": floorColor3d } as React.CSSProperties}>
+                      <button
+                        className={styles.floorSlabBtn}
+                        id={`floor3d-${floor}`}
+                        onClick={() => {
+                          // 🔊 Subtle click sound via Web Audio API
+                          try {
+                            const ac = new AudioContext();
+                            const osc = ac.createOscillator();
+                            const g = ac.createGain();
+                            osc.connect(g); g.connect(ac.destination);
+                            osc.type = "sine";
+                            osc.frequency.setValueAtTime(isActive ? 380 : 520, ac.currentTime);
+                            osc.frequency.exponentialRampToValueAtTime(isActive ? 280 : 380, ac.currentTime + 0.12);
+                            g.gain.setValueAtTime(0.18, ac.currentTime);
+                            g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
+                            osc.start(); osc.stop(ac.currentTime + 0.18);
+                          } catch { /* ignore – unsupported browser */ }
+                          setActiveFloor(isActive ? null : floor);
+                        }}
+                      >
+                        {/* Left side face */}
+                        <div className={styles.floorSlabSide} />
+
+                        {/* Top cap */}
+                        <div className={styles.floorSlabTop} />
+
+                        {/* Front face content */}
+                        <div className={styles.floorSlabFront}>
+                          <div className={styles.floorSlabLabel}>
+                            <span className={styles.floorSlabNum}>FL {floor}</span>
+                            {all.pendingRent && <span className={styles.floorPendingDot}>⚠️</span>}
+                          </div>
+                          {/* Bed windows */}
+                          <div className={styles.floorWindows}>
+                            {allBeds.slice(0, 10).map((bed, i) => (
+                              <div key={i} className={`${styles.window} ${
+                                bed.isOccupied
+                                  ? (bed.tenant?.rent?.status === "pending" ? styles.windowOrange : styles.windowRed)
+                                  : styles.windowGreen
+                              }`} />
+                            ))}
+                          </div>
+                          <div className={styles.floorSlabMeta}>
+                            {all.free === 0 ? "FULL" : `${all.free} free`}
+                          </div>
+                        </div>
+
+                        {/* Active glow */}
+                        {isActive && <div className={styles.floorSlabGlow} />}
+                      </button>
+
+                      {/* Rooms revealed when active */}
+                      {isActive && (
+                        <div className={styles.rooms3dGrid}>
+                          {all.rooms.length === 0 ? (
+                            <p className={styles.noRoomsNote}>No rooms on this floor.</p>
+                          ) : all.rooms.map((room) => {
+                            const isDimmed = filterType && room.sharingType !== filterType;
+                            const roomFree = room.beds.filter(b => !b.isOccupied).length;
+                            const hasPending = roomHasPendingRent(room);
+                            return (
+                              <button key={room.id}
+                                className={`${styles.roomCard3d} ${isDimmed ? styles.roomCard3dDimmed : ""}`}
+                                onClick={() => !isDimmed && setSelectedRoom(room)}
+                                id={`room3d-${room.id}`}
+                              >
+                                <div className={styles.roomCard3dHeader}>
+                                  <span className={styles.roomCard3dName}>{room.roomNumber}</span>
+                                  {hasPending && <span className={styles.roomRentDot}>⚠️</span>}
+                                </div>
+                                <div className={styles.roomBedDots3d}>
+                                  {room.beds.map(bed => (
+                                    <span key={bed.id} className={`${styles.bedDot3d} ${bed.isOccupied
+                                      ? (bed.tenant?.rent?.status === "pending" ? styles.bedDotOrange : styles.bedDotRed)
+                                      : styles.bedDotGreen}`} />
+                                  ))}
+                                </div>
+                                <span className={styles.roomCard3dSub}>
+                                  {roomFree === 0 ? "Full" : `${roomFree} free`}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                    <div className={styles.floorBlockRight}>
-                      <span className={styles.floorRoomCount}>{all.rooms.length} rooms</span>
-                      <span className={`${styles.floorChevron} ${isActive ? styles.floorChevronUp : ""}`}>›</span>
-                    </div>
-                  </button>
+                  );
+                })}
+              </div>
 
-                  {isActive && (
-                    <div className={styles.roomsGrid}>
-                      {all.rooms.length === 0 ? (
-                        <p className={styles.noRoomsNote}>No rooms on this floor.</p>
-                      ) : all.rooms.map((room) => {
-                        const isDimmed = filterType && room.sharingType !== filterType;
-                        const roomFree = room.beds.filter((b) => !b.isOccupied).length;
-                        const hasPending = roomHasPendingRent(room);
-                        return (
-                          <button key={room.id}
-                            className={`${styles.roomCard} ${isDimmed ? styles.roomCardDimmed : ""}`}
-                            onClick={() => !isDimmed && setSelectedRoom(room)} id={`room-card-${room.id}`}>
-                            <div className={styles.roomCardHeader}>
-                              <span className={styles.roomCardName}>{room.roomNumber}</span>
-                              {hasPending && <span className={styles.roomRentDot}>⚠️</span>}
-                            </div>
-                            <div className={styles.roomBedDots}>
-                              {room.beds.map((bed) => (
-                                <span key={bed.id}
-                                  className={`${styles.bedDot} ${bed.isOccupied
-                                    ? (bed.tenant?.rent?.status === "pending" ? styles.bedDotOrange : styles.bedDotRed)
-                                    : styles.bedDotGreen}`} />
-                              ))}
-                            </div>
-                            <span className={styles.roomCardSub}>{roomFree === 0 ? "Full" : `${roomFree} free`}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-
-            <div className={styles.buildingGround}>
-              <div className={styles.groundDoor} />
-              <span className={styles.groundLabel}>ENTRANCE</span>
+              {/* Ground / Entrance */}
+              <div className={styles.entrance3d}>
+                <div className={styles.entranceDoor} />
+                <span className={styles.entranceLabel}>ENTRANCE</span>
+              </div>
             </div>
           </div>
         </section>

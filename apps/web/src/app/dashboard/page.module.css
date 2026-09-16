@@ -202,117 +202,233 @@
 }
 
 /* ─── Building ─── */
-.buildingSection { }
+.buildingSection { margin-bottom: 8px; }
 
-.building {
-  background: linear-gradient(180deg, #0f1219 0%, #090c12 100%);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05);
+/* ─── 3D Building outer wrapper ─── */
+.building3dOuter {
+  padding: 0 0 8px;
 }
 
-.buildingRoof {
-  background: linear-gradient(180deg, #1a1f30 0%, #121828 100%);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  height: 48px;
-  display: flex; align-items: center; justify-content: center;
-}
-.roofEmoji { font-size: 24px; filter: drop-shadow(0 0 8px rgba(45,198,83,0.4)); }
-
-/* Floor blocks */
-.floorWrap { border-bottom: 1px solid rgba(255,255,255,0.04); }
-.floorWrap:last-of-type { border-bottom: none; }
-
-.floorBlock {
-  width: 100%;
-  display: flex; align-items: center; gap: 14px;
-  padding: 16px 20px;
-  background: transparent; border: none;
-  cursor: pointer; font-family: inherit;
-  transition: background 0.15s ease;
-  text-align: left; position: relative;
-}
-.floorBlock:hover { background: rgba(255,255,255,0.02); }
-.floorBlockActive { background: rgba(255,255,255,0.03) !important; }
-
-/* Color variants */
-.floorIndicator {
-  width: 4px; height: 36px;
-  border-radius: 2px; flex-shrink: 0;
-}
-.indicator_full { background: #e63946; box-shadow: 0 0 8px rgba(230,57,70,0.5); }
-.indicator_almost { background: #f4a261; box-shadow: 0 0 8px rgba(244,162,97,0.4); }
-.indicator_available { background: #2dc653; box-shadow: 0 0 8px rgba(45,198,83,0.4); }
-.indicator_empty { background: rgba(255,255,255,0.1); }
-.indicator_dimmed { background: rgba(255,255,255,0.05); }
-
-.floor_full { }
-.floor_almost { }
-.floor_available { }
-.floor_empty { opacity: 0.5; }
-.floor_dimmed { opacity: 0.3; }
-
-.floorBlockContent { flex: 1; }
-.floorBlockLabel { display: block; font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px; }
-.floorBlockMeta { font-size: 12px; color: var(--text-muted); }
-
-.floorBlockRight { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.floorRoomCount { font-size: 11px; color: var(--text-muted); }
-.floorChevron { font-size: 20px; color: var(--text-muted); transition: transform 0.2s ease; line-height: 1; }
-.floorChevronUp { transform: rotate(90deg); color: var(--brand-green); }
-
-/* Room grid */
-.roomsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 10px;
-  padding: 4px 20px 20px;
-  background: rgba(255,255,255,0.01);
+.building3dScene {
+  position: relative;
+  padding: 12px 16px 0;
 }
 
-.noRoomsNote { font-size: 13px; color: var(--text-muted); padding: 10px 0; }
-
-.roomCard {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: var(--radius-md);
-  padding: 14px 10px;
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  cursor: pointer; font-family: inherit; transition: var(--transition);
+/* The perspective container — gives the tilt */
+.building3dStack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  perspective: 900px;
+  perspective-origin: 50% -20%;
 }
-.roomCard:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-1px); }
-.roomCardDimmed { opacity: 0.25; cursor: default; }
-.roomCardDimmed:hover { transform: none; border-color: rgba(255,255,255,0.08); }
 
-.roomCardName { font-size: 14px; font-weight: 800; color: var(--text-primary); }
+/* ─── Floor slab ─── */
+.floorSlab {
+  position: relative;
+  border-radius: 8px;
+  overflow: visible;
+  animation: slabIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes slabIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
-.roomBedDots { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
-.bedDot {
+.floorSlabBtn {
+  width: 100%; border: none; cursor: pointer; font-family: inherit;
+  padding: 0; background: transparent;
+  position: relative;
+  display: block;
+  /* 3D tilt */
+  transform: rotateX(20deg);
+  transform-origin: top center;
+  transform-style: preserve-3d;
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.28s ease;
+}
+.floorSlabBtn:hover {
+  transform: rotateX(20deg) translateZ(8px) scale(1.012);
+}
+.floorSlabActive .floorSlabBtn {
+  transform: rotateX(20deg) translateZ(14px) scale(1.018);
+}
+
+/* Front face — main visible panel */
+.floorSlabFront {
+  position: relative; z-index: 2;
+  height: 54px;
+  display: flex; align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--fc) 16%, #0d1117),
+    color-mix(in srgb, var(--fc) 6%, #0d1117)
+  );
+  border: 1.5px solid color-mix(in srgb, var(--fc) 35%, transparent);
+  border-radius: 10px;
+  box-shadow:
+    0 4px 18px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 0 0 0 var(--fc);
+  transition: box-shadow 0.28s ease;
+}
+.floorSlabActive .floorSlabFront {
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 0 20px color-mix(in srgb, var(--fc) 30%, transparent);
+}
+
+/* Top cap (visible top edge — 3D illusion) */
+.floorSlabTop {
+  position: absolute; top: -6px; left: 4px; right: -4px; height: 6px;
+  background: color-mix(in srgb, var(--fc) 25%, #1e2433);
+  border-radius: 10px 10px 0 0;
+  z-index: 1;
+  transform: perspective(300px) rotateX(-50deg);
+  transform-origin: bottom center;
+  border: 1px solid color-mix(in srgb, var(--fc) 40%, transparent);
+  border-bottom: none;
+}
+
+/* Left side face (depth illusion) */
+.floorSlabSide {
+  position: absolute; top: 2px; left: -6px; width: 6px; bottom: -2px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--fc) 22%, #0a0d14),
+    color-mix(in srgb, var(--fc) 10%, #060810)
+  );
+  z-index: 1;
+  border-radius: 3px 0 0 3px;
+  transform: perspective(300px) rotateY(35deg);
+  transform-origin: right center;
+}
+
+/* Glow overlay */
+.floorSlabGlow {
+  position: absolute; inset: -2px; border-radius: 12px;
+  background: transparent;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--fc) 35%, transparent),
+              inset 0 0 20px color-mix(in srgb, var(--fc) 10%, transparent);
+  pointer-events: none; z-index: 3;
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+/* Floor label */
+.floorSlabLabel {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+}
+.floorSlabNum {
+  font-size: 12px; font-weight: 900; letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--fc) 85%, #fff);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--fc) 60%, transparent);
+  min-width: 36px;
+}
+.floorPendingDot { font-size: 12px; }
+
+/* Bed windows row */
+.floorWindows {
+  display: flex; gap: 5px; align-items: center; flex-wrap: wrap;
+  flex: 1;
+}
+.window {
   width: 10px; height: 10px;
-  border-radius: 50%;
+  border-radius: 2px;
+  transition: all 0.2s;
 }
-.bedDotGreen { background: #2dc653; box-shadow: 0 0 4px rgba(45,198,83,0.5); }
-.bedDotRed { background: #e63946; box-shadow: 0 0 4px rgba(230,57,70,0.4); }
-
-.roomCardSub { font-size: 11px; color: var(--text-muted); }
-
-/* Ground */
-.buildingGround {
-  height: 56px;
-  background: linear-gradient(180deg, #090c12 0%, #060810 100%);
-  border-top: 1px solid rgba(255,255,255,0.05);
-  display: flex; align-items: center; justify-content: center;
-  gap: 14px;
+.windowGreen {
+  background: #2dc653;
+  box-shadow: 0 0 6px rgba(45,198,83,0.7), 0 0 2px rgba(45,198,83,0.9);
 }
-.groundDoor {
-  width: 32px; height: 42px;
-  background: rgba(45,198,83,0.08);
-  border: 1px solid rgba(45,198,83,0.2);
+.windowRed {
+  background: #e63946;
+  box-shadow: 0 0 6px rgba(230,57,70,0.5);
+}
+.windowOrange {
+  background: #f4a261;
+  box-shadow: 0 0 6px rgba(244,162,97,0.6);
+}
+
+/* Floor meta text */
+.floorSlabMeta {
+  font-size: 11px; font-weight: 800; flex-shrink: 0;
+  color: color-mix(in srgb, var(--fc) 80%, #fff);
+  background: color-mix(in srgb, var(--fc) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--fc) 25%, transparent);
+  border-radius: 20px; padding: 2px 9px;
+  letter-spacing: 0.02em;
+}
+
+/* ─── Rooms 3D grid (revealed on click) ─── */
+.rooms3dGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  padding: 10px 4px 12px;
+  animation: roomsReveal 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes roomsReveal {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.roomCard3d {
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid rgba(255,255,255,0.09);
+  border-radius: 12px;
+  padding: 12px 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  cursor: pointer; font-family: inherit;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.roomCard3d:hover {
+  border-color: rgba(255,255,255,0.22);
+  transform: translateY(-3px) scale(1.03);
+  background: rgba(255,255,255,0.07);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.roomCard3dDimmed { opacity: 0.25; cursor: default; }
+.roomCard3dDimmed:hover { transform: none; background: rgba(255,255,255,0.04); }
+
+.roomCard3dHeader { display: flex; align-items: center; gap: 4px; }
+.roomCard3dName { font-size: 14px; font-weight: 800; color: #fff; }
+.roomBedDots3d { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.bedDot3d { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.roomCard3dSub { font-size: 11px; color: rgba(255,255,255,0.45); }
+
+/* ─── Entrance ─── */
+.entrance3d {
+  height: 52px; margin: 0 16px;
+  background: linear-gradient(180deg, rgba(45,198,83,0.04) 0%, rgba(0,0,0,0) 100%);
+  border: 1px solid rgba(45,198,83,0.12);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+}
+.entranceDoor {
+  width: 28px; height: 38px;
+  background: rgba(45,198,83,0.1);
+  border: 1px solid rgba(45,198,83,0.25);
   border-bottom: none;
   border-radius: 3px 3px 0 0;
 }
-.groundLabel { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.15); letter-spacing: 1.5px; }
+.entranceLabel {
+  font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.18);
+  letter-spacing: 2px;
+}
+
+/* ─── keep old names so nothing else breaks ─── */
+.noRoomsNote { font-size: 13px; color: rgba(255,255,255,0.4); padding: 8px 0; margin: 0; }
+.roomRentDot { font-size: 11px; }
+.rentDot { font-size: 12px; }
+.bedDotGreen { background: #2dc653; box-shadow: 0 0 4px rgba(45,198,83,0.6); }
+.bedDotRed   { background: #e63946; box-shadow: 0 0 4px rgba(230,57,70,0.5); }
+.bedDotOrange { background: #f4a261; box-shadow: 0 0 4px rgba(244,162,97,0.5); }
 
 /* ─── Bottom Sheet ─── */
 .backdrop {
