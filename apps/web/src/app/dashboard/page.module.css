@@ -482,6 +482,18 @@
 }
 .detailsBtn:hover { background: rgba(255,255,255,0.12); color: var(--text-primary); border-color: rgba(255,255,255,0.3); }
 
+.editContactBtn {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.05);
+  border: 1.5px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-sm);
+  font-size: 14px; cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+.editContactBtn:hover { background: rgba(255,200,50,0.12); border-color: rgba(255,200,50,0.35); }
+
 /* Orange bed badge for pending rent */
 .bedBadgeOrange {
   background: rgba(244,162,97,0.15);

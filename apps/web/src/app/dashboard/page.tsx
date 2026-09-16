@@ -144,6 +144,16 @@ export default function DashboardPage() {
   const [roomHistoryData, setRoomHistoryData] = useState<{ past: TenantWithHistory[]; moveHistory: HistoryEvent[] } | null>(null);
   const [loadingRoomHistory, setLoadingRoomHistory] = useState(false);
 
+  // Edit contact modal state
+  const [editModal, setEditModal] = useState<{
+    tenantId: string; name: string;
+    phone: string; altPhone: string; emergencyContact: string; emergencyRelation: string; idPhotoUrl: string | null;
+  } | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editUploading, setEditUploading] = useState(false);
+  const editIdCardRef = useRef<HTMLInputElement>(null);
+
   // Profile sidebar state
   const [profileOpen, setProfileOpen] = useState(false);
   const [changingPg, setChangingPg] = useState(false);
@@ -622,6 +632,23 @@ export default function DashboardPage() {
                           <button className={styles.detailsBtn}
                             onClick={() => router.push(`/tenants/profile?id=${bed.tenant!.id}`)}
                             id={`details-${bed.id}`}>Details</button>
+                          <button
+                            className={styles.editContactBtn}
+                            title="Edit contact details"
+                            id={`edit-${bed.id}`}
+                            onClick={() => {
+                              const t = bed.tenant!;
+                              setEditModal({
+                                tenantId: t.id, name: t.name,
+                                phone: t.phone || "",
+                                altPhone: t.altPhone || "",
+                                emergencyContact: t.emergencyContact || "",
+                                emergencyRelation: t.emergencyRelation || "",
+                                idPhotoUrl: t.idPhotoUrl || null,
+                              });
+                              setEditError("");
+                            }}
+                          >✏️</button>
                           <button className={styles.moveBtn}
                             onClick={() => {
                               setMovingTenant({ tenant: bed.tenant!, bed, room: selectedRoom });
@@ -1071,6 +1098,174 @@ export default function DashboardPage() {
                   ? <><span className={styles.spinnerDark} /> Processing…</>
                   : "🚨 PERMANENT EXIT"}
               </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ─── Edit Contact Modal ─── */}
+      {editModal && (
+        <>
+          <div className={styles.backdrop} onClick={() => setEditModal(null)} />
+          <div className={styles.checkoutSheet}>
+            <div className={styles.sheetHandle} />
+            <div className={styles.checkoutHeader}>
+              <span className={styles.checkoutHeaderTitle}>✏️ EDIT CONTACT — {editModal.name}</span>
+              <button className={styles.sheetClose} onClick={() => setEditModal(null)}>✕</button>
+            </div>
+
+            <div className={styles.checkoutBody} style={{ gap: 14 }}>
+
+              {/* Mobile Number */}
+              <div>
+                <p className={styles.paymentLabel}>📞 Mobile Number</p>
+                <div style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden" }}>
+                  <span style={{ padding: "0 10px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>+91</span>
+                  <input
+                    type="tel" inputMode="numeric" maxLength={10}
+                    value={editModal.phone}
+                    onChange={(e) => setEditModal({ ...editModal, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                    placeholder="10-digit mobile"
+                    style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#fff", fontSize: 14, fontWeight: 600, padding: "11px 10px 11px 0", fontFamily: "inherit" }}
+                    id="edit-phone"
+                  />
+                </div>
+              </div>
+
+              {/* Alt Number */}
+              <div>
+                <p className={styles.paymentLabel}>📞 Alternative Number <span style={{ opacity: 0.45, fontWeight: 500 }}>(optional)</span></p>
+                <div style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden" }}>
+                  <span style={{ padding: "0 10px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>+91</span>
+                  <input
+                    type="tel" inputMode="numeric" maxLength={10}
+                    value={editModal.altPhone}
+                    onChange={(e) => setEditModal({ ...editModal, altPhone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                    placeholder="Alt. number"
+                    style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#fff", fontSize: 14, fontWeight: 600, padding: "11px 10px 11px 0", fontFamily: "inherit" }}
+                    id="edit-alt-phone"
+                  />
+                </div>
+              </div>
+
+              {/* Emergency Contact */}
+              <div>
+                <p className={styles.paymentLabel}>🆘 Emergency Contact <span style={{ opacity: 0.45, fontWeight: 500 }}>(optional)</span></p>
+                <div style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden" }}>
+                  <span style={{ padding: "0 10px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>+91</span>
+                  <input
+                    type="tel" inputMode="numeric" maxLength={10}
+                    value={editModal.emergencyContact}
+                    onChange={(e) => setEditModal({ ...editModal, emergencyContact: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                    placeholder="Emergency number"
+                    style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#fff", fontSize: 14, fontWeight: 600, padding: "11px 10px 11px 0", fontFamily: "inherit" }}
+                    id="edit-emergency"
+                  />
+                </div>
+                {/* Relation tags */}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                  {["Father","Mother","Sibling","Friend","Other"].map((rel) => (
+                    <button key={rel}
+                      onClick={() => setEditModal({ ...editModal, emergencyRelation: editModal.emergencyRelation === rel ? "" : rel })}
+                      style={{
+                        padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                        background: editModal.emergencyRelation === rel ? "rgba(45,198,83,0.15)" : "rgba(255,255,255,0.05)",
+                        border: `1.5px solid ${editModal.emergencyRelation === rel ? "rgba(45,198,83,0.4)" : "rgba(255,255,255,0.1)"}`,
+                        color: editModal.emergencyRelation === rel ? "#2dc653" : "rgba(255,255,255,0.55)",
+                      }}
+                    >{rel}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ID Card */}
+              <div>
+                <p className={styles.paymentLabel}>🪪 ID Card</p>
+                {editModal.idPhotoUrl && (
+                  <img src={editModal.idPhotoUrl} alt="ID Card" style={{ width: "100%", borderRadius: 10, marginBottom: 8, maxHeight: 160, objectFit: "cover" }} />
+                )}
+                <button
+                  onClick={() => editIdCardRef.current?.click()}
+                  disabled={editUploading}
+                  style={{
+                    width: "100%", padding: "11px", border: "1.5px dashed rgba(255,255,255,0.18)", borderRadius: 10,
+                    background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.6)", fontSize: 13,
+                    fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                  }}
+                  id="btn-edit-id-card"
+                >
+                  {editUploading ? "Uploading…" : editModal.idPhotoUrl ? "🔄 Change ID Card" : "📷 Upload ID Card"}
+                </button>
+                <input
+                  ref={editIdCardRef} type="file" accept="image/*" capture="environment"
+                  style={{ display: "none" }}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setEditUploading(true);
+                    try {
+                      const reader = new FileReader();
+                      reader.onload = async (ev) => {
+                        const base64 = ev.target?.result as string;
+                        const upRes = await fetch(`${API_URL}/api/upload`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", ...authHeader() },
+                          body: JSON.stringify({ base64, fileName: `id-${editModal.tenantId}.jpg` }),
+                        });
+                        const upJson = await upRes.json();
+                        if (upRes.ok) setEditModal({ ...editModal, idPhotoUrl: upJson.url });
+                        else setEditError(upJson.error || "Upload failed");
+                        setEditUploading(false);
+                      };
+                      reader.readAsDataURL(file);
+                    } catch { setEditUploading(false); setEditError("Upload failed"); }
+                  }}
+                />
+              </div>
+
+              {editError && <p style={{ margin: 0, fontSize: 12, color: "#e63946", fontWeight: 600 }}>⚠️ {editError}</p>}
+
+              <button
+                onClick={async () => {
+                  if (!editModal) return;
+                  setEditError("");
+                  if (editModal.phone.length !== 10) { setEditError("Mobile number must be 10 digits"); return; }
+                  if (editModal.altPhone && editModal.altPhone.length !== 10) { setEditError("Alternative number must be 10 digits"); return; }
+                  if (editModal.emergencyContact && editModal.emergencyContact.length !== 10) { setEditError("Emergency contact must be 10 digits"); return; }
+                  setEditSaving(true);
+                  try {
+                    const res = await fetch(`${API_URL}/api/tenants/${editModal.tenantId}/contact`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json", ...authHeader() },
+                      body: JSON.stringify({
+                        phone: editModal.phone,
+                        altPhone: editModal.altPhone || null,
+                        emergencyContact: editModal.emergencyContact || null,
+                        emergencyRelation: editModal.emergencyRelation || null,
+                        idPhotoUrl: editModal.idPhotoUrl,
+                      }),
+                    });
+                    const json = await res.json();
+                    if (!res.ok) throw new Error(json.error || "Failed to save");
+                    setEditModal(null);
+                    await load();
+                  } catch (err) {
+                    setEditError(err instanceof Error ? err.message : "Save failed");
+                  } finally { setEditSaving(false); }
+                }}
+                disabled={editSaving || editUploading}
+                style={{
+                  width: "100%", padding: "14px", borderRadius: 12, border: "none",
+                  background: "linear-gradient(135deg, #2dc653, #1a9e3d)",
+                  color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
+                  opacity: (editSaving || editUploading) ? 0.6 : 1,
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                }}
+                id="btn-save-contact"
+              >
+                {editSaving ? <><span className={styles.spinnerDark} /> Saving…</> : "✅ SAVE CHANGES"}
+              </button>
+
             </div>
           </div>
         </>

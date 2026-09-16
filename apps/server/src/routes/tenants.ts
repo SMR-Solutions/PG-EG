@@ -301,4 +301,43 @@ router.get("/:id/history", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// PATCH /api/tenants/:id/contact — update contact details
+router.patch("/:id/contact", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { phone, altPhone, emergencyContact, emergencyRelation, idPhotoUrl } = req.body as {
+      phone?: string;
+      altPhone?: string | null;
+      emergencyContact?: string | null;
+      emergencyRelation?: string | null;
+      idPhotoUrl?: string | null;
+    };
+
+    const tenant = await verifyTenantOwnership(id, req.owner!.ownerId, res);
+    if (!tenant) return;
+
+    if (phone !== undefined) {
+      const clean = phone.replace(/\D/g, "").slice(-10);
+      if (clean.length !== 10) {
+        res.status(400).json({ error: "Mobile number must be 10 digits" });
+        return;
+      }
+    }
+
+    const db = createDb(process.env.DATABASE_URL!);
+    const updates: Record<string, unknown> = {};
+    if (phone !== undefined) updates.phone = phone.replace(/\D/g, "").slice(-10);
+    if ("altPhone" in req.body) updates.altPhone = altPhone?.trim() || null;
+    if ("emergencyContact" in req.body) updates.emergencyContact = emergencyContact?.trim() || null;
+    if ("emergencyRelation" in req.body) updates.emergencyRelation = emergencyRelation?.trim() || null;
+    if ("idPhotoUrl" in req.body) updates.idPhotoUrl = idPhotoUrl || null;
+
+    const [updated] = await db.update(tenants).set(updates).where(eq(tenants.id, id)).returning();
+    res.json({ tenant: updated });
+  } catch (error) {
+    console.error("Tenant contact update error:", error);
+    res.status(500).json({ error: "Failed to update tenant details" });
+  }
+});
+
 export default router;
