@@ -1245,8 +1245,8 @@ export default function DashboardPage() {
                         idPhotoUrl: editModal.idPhotoUrl,
                       }),
                     });
-                    const json = await res.json();
-                    if (!res.ok) throw new Error(json.error || "Failed to save");
+                    const json = await res.json().catch(() => ({}));
+                    if (!res.ok) throw new Error(json.error || `Server error (${res.status})`);
                     setEditModal(null);
                     await load();
                   } catch (err) {
