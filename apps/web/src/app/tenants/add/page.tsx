@@ -223,7 +223,7 @@ function CheckInForm() {
                   : <><span className={styles.photoIcon}>📸</span><span className={styles.photoLabel}>SELFIE</span><span className={styles.photoHint}>Front camera</span></>}
               {selfiePreview && !uploadingPhoto && <div className={styles.photoOverlay}>✓ Change</div>}
             </button>
-            <input ref={selfieRef} type="file" accept="image/*" capture="user"
+            <input ref={selfieRef} type="file" accept="image/*"
               className={styles.hiddenInput}
               onChange={(e) => e.target.files?.[0] && handlePhoto(e.target.files[0], "selfie")} />
 
@@ -237,7 +237,7 @@ function CheckInForm() {
                   : <><span className={styles.photoIcon}>🪪</span><span className={styles.photoLabel}>ID CARD</span><span className={styles.photoHint}>Aadhaar / Passport</span></>}
               {idPreview && !uploadingId && <div className={styles.photoOverlay}>✓ Change</div>}
             </button>
-            <input ref={idCardRef} type="file" accept="image/*" capture="environment"
+            <input ref={idCardRef} type="file" accept="image/*"
               className={styles.hiddenInput}
               onChange={(e) => e.target.files?.[0] && handlePhoto(e.target.files[0], "id")} />
           </div>

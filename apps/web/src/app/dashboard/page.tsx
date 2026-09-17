@@ -185,10 +185,15 @@ export default function DashboardPage() {
   const [editUploading, setEditUploading] = useState(false);
   const editIdCardRef = useRef<HTMLInputElement>(null);
   const sharingScrollRef = useRef<HTMLDivElement>(null);
+  const sidebarSwipeX = useRef(0);
 
   // Profile sidebar state
   const [profileOpen, setProfileOpen] = useState(false);
   const [changingPg, setChangingPg] = useState(false);
+
+  // Swipe-right-to-close sidebar
+  const onSidebarTouchStart = (e: React.TouchEvent) => { sidebarSwipeX.current = e.touches[0].clientX; };
+  const onSidebarTouchEnd   = (e: React.TouchEvent) => { if (e.changedTouches[0].clientX - sidebarSwipeX.current > 60) setProfileOpen(false); };
 
   // ── Helper: auth header from current token ───────────────────
   const authHeader = useCallback(
@@ -427,97 +432,118 @@ export default function DashboardPage() {
         {/* ─── Profile Sidebar ─── */}
         {profileOpen && (
           <div className={styles.sidebarBackdrop} onClick={() => setProfileOpen(false)}>
-            <div className={styles.profileSidebar} onClick={(e) => e.stopPropagation()}>
-              {/* PG Manager info + Google account — click to open Owner Profile */}
+            <div
+              className={styles.profileSidebar}
+              onClick={(e) => e.stopPropagation()}
+              onTouchStart={onSidebarTouchStart}
+              onTouchEnd={onSidebarTouchEnd}
+            >
+              {/* ── Center pill tab over the sidebar ── */}
               <button
-                className={styles.sidebarOwner}
-                style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", width: "100%", padding: 0 }}
-                onClick={() => { setProfileOpen(false); router.push("/owner-profile"); }}
-                id="btn-owner-profile"
+                className={styles.sidebarPillTab}
+                onClick={() => setProfileOpen(false)}
+                id="btn-sidebar-pill-close"
+                aria-label="Close sidebar"
               >
-                <div className={styles.sidebarAvatar}>
-                  {owner?.photoUrl
-                    ? <img src={owner.photoUrl} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
-                    : (data?.pg.managerName || owner?.name || "O")[0].toUpperCase()}
-                </div>
-                <div>
-                  <div className={styles.sidebarOwnerName}>
-                    {data?.pg.managerName || owner?.name || "Manager"}
-                  </div>
-                  <div className={styles.sidebarOwnerEmail}>
-                    {data?.pg.managerPhone || owner?.phone || ""}
-                  </div>
-                  {owner?.email && (
-                    <div className={styles.sidebarOwnerEmail} style={{ fontSize: 10, opacity: 0.5, marginTop: 2 }}>
-                      {owner.email}
-                    </div>
-                  )}
-                </div>
+                <span className={styles.sidebarPillArrow}>→</span>
               </button>
 
-              <div className={styles.sidebarDivider} />
-
-              {/* Actions */}
-              {/* Add Another PG — hidden for V1, feature ready for later */}
+              {/* ── Close handle strip at the top ── */}
               <button
-                className={styles.sidebarAction}
-                id="btn-add-another-pg"
-                onClick={() => { setProfileOpen(false); router.push("/add-pg?new=true"); }}
-                style={{ display: "none" }}
+                className={styles.sidebarClose}
+                onClick={() => setProfileOpen(false)}
+                id="btn-close-sidebar"
+                aria-label="Close sidebar"
               >
-                <span className={styles.sidebarActionIcon}>➕</span>
-                <div>
-                  <div className={styles.sidebarActionTitle}>Add Another PG</div>
-                  <div className={styles.sidebarActionDesc}>Register a new property</div>
-                </div>
+                <span className={styles.sidebarCloseLabel}>Close</span>
               </button>
 
-              <button
-                className={styles.sidebarAction}
-                id="btn-edit-pg"
-                onClick={() => { setProfileOpen(false); router.push("/edit-pg"); }}
-              >
-                <span className={styles.sidebarActionIcon}>✏️</span>
-                <div>
-                  <div className={styles.sidebarActionTitle}>Edit PG</div>
-                  <div className={styles.sidebarActionDesc}>Change PG details or rooms</div>
-                </div>
-              </button>
-
-              {/* Change PG — only when owner has 2+ PGs */}
-              {allPgs.length > 1 && (
+              <div className={styles.sidebarBody}>
+                {/* PG Manager info + Google account — click to open Owner Profile */}
                 <button
-                  className={styles.sidebarAction}
-                  id="btn-change-pg"
-                  onClick={() => { setProfileOpen(false); router.push("/select-pg"); }}
+                  className={styles.sidebarOwner}
+                  style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", width: "100%", padding: 0 }}
+                  onClick={() => { setProfileOpen(false); router.push("/owner-profile"); }}
+                  id="btn-owner-profile"
                 >
-                  <span className={styles.sidebarActionIcon}>🔄</span>
+                  <div className={styles.sidebarAvatar}>
+                    {owner?.photoUrl
+                      ? <img src={owner.photoUrl} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                      : (data?.pg.managerName || owner?.name || "O")[0].toUpperCase()}
+                  </div>
                   <div>
-                    <div className={styles.sidebarActionTitle}>Change PG</div>
-                    <div className={styles.sidebarActionDesc}>
-                      {allPgs.length} properties — switch here
+                    <div className={styles.sidebarOwnerName}>
+                      {data?.pg.managerName || owner?.name || "Manager"}
                     </div>
+                    <div className={styles.sidebarOwnerEmail}>
+                      {data?.pg.managerPhone || owner?.phone || ""}
+                    </div>
+                    {owner?.email && (
+                      <div className={styles.sidebarOwnerEmail} style={{ fontSize: 10, opacity: 0.5, marginTop: 2 }}>
+                        {owner.email}
+                      </div>
+                    )}
                   </div>
                 </button>
-              )}
 
-              <div className={styles.sidebarDivider} />
+                <div className={styles.sidebarDivider} />
 
-              <button
-                className={`${styles.sidebarAction} ${styles.sidebarActionDanger}`}
-                id="btn-sign-out"
-                onClick={() => { signOut(); router.replace("/sign-in"); }}
-              >
-                <span className={styles.sidebarActionIcon}>🚪</span>
-                <div>
-                  <div className={styles.sidebarActionTitle}>Sign Out</div>
-                  <div className={styles.sidebarActionDesc}>Log out of your account</div>
-                </div>
-              </button>
+                {/* Actions */}
+                <button
+                  className={styles.sidebarAction}
+                  id="btn-add-another-pg"
+                  onClick={() => { setProfileOpen(false); router.push("/add-pg?new=true"); }}
+                  style={{ display: "none" }}
+                >
+                  <span className={styles.sidebarActionIcon}>➕</span>
+                  <div>
+                    <div className={styles.sidebarActionTitle}>Add Another PG</div>
+                    <div className={styles.sidebarActionDesc}>Register a new property</div>
+                  </div>
+                </button>
 
-              <button className={styles.sidebarClose} onClick={() => setProfileOpen(false)} id="btn-close-sidebar">
-                ✕
-              </button>
+                <button
+                  className={styles.sidebarAction}
+                  id="btn-edit-pg"
+                  onClick={() => { setProfileOpen(false); router.push("/edit-pg"); }}
+                >
+                  <span className={styles.sidebarActionIcon}>✏️</span>
+                  <div>
+                    <div className={styles.sidebarActionTitle}>Edit PG</div>
+                    <div className={styles.sidebarActionDesc}>Change PG details or rooms</div>
+                  </div>
+                </button>
+
+                {allPgs.length > 1 && (
+                  <button
+                    className={styles.sidebarAction}
+                    id="btn-change-pg"
+                    onClick={() => { setProfileOpen(false); router.push("/select-pg"); }}
+                  >
+                    <span className={styles.sidebarActionIcon}>🔄</span>
+                    <div>
+                      <div className={styles.sidebarActionTitle}>Change PG</div>
+                      <div className={styles.sidebarActionDesc}>
+                        {allPgs.length} properties — switch here
+                      </div>
+                    </div>
+                  </button>
+                )}
+
+                <div className={styles.sidebarDivider} />
+
+                <button
+                  className={`${styles.sidebarAction} ${styles.sidebarActionDanger}`}
+                  id="btn-sign-out"
+                  onClick={() => { signOut(); router.replace("/sign-in"); }}
+                >
+                  <span className={styles.sidebarActionIcon}>🚪</span>
+                  <div>
+                    <div className={styles.sidebarActionTitle}>Sign Out</div>
+                    <div className={styles.sidebarActionDesc}>Log out of your account</div>
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1344,7 +1370,7 @@ export default function DashboardPage() {
                   {editUploading ? "Uploading…" : editModal.idPhotoUrl ? "🔄 Change ID Card" : "📷 Upload ID Card"}
                 </button>
                 <input
-                  ref={editIdCardRef} type="file" accept="image/*" capture="environment"
+                  ref={editIdCardRef} type="file" accept="image/*"
                   style={{ display: "none" }}
                   onChange={async (e) => {
                     const file = e.target.files?.[0];

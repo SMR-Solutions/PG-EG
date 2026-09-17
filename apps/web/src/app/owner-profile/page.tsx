@@ -110,7 +110,7 @@ export default function OwnerProfilePage() {
               {uploading ? <span className={styles.spinner} /> : "📷"}
             </div>
           </button>
-          <input ref={photoRef} type="file" accept="image/*" capture="user"
+          <input ref={photoRef} type="file" accept="image/*"
             style={{ display: "none" }}
             onChange={(e) => e.target.files?.[0] && handlePhotoUpload(e.target.files[0])} />
           <p className={styles.photoHint}>Tap to change photo</p>

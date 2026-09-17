@@ -177,21 +177,23 @@ function TenantProfileInner() {
               {tenant.status === "active" ? "● ACTIVE" : "● CHECKED OUT"}
             </span>
           </div>
-          {/* Flip button — only if tenant has ID uploaded */}
-          {tenant.idPhotoUrl && (
-            <button
-              className={styles.flipBtn}
-              onClick={() => setIdFlipped(f => !f)}
-              id="btn-flip-id"
-            >
-              🔄 {idFlipped ? "See Photo" : "See ID"}
-            </button>
-          )}
         </div>
 
         {/* ── Contact ── */}
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>📞 Contact</h2>
+          <div className={styles.sectionTitleRow}>
+            <h2 className={styles.sectionTitle}>📞 Contact</h2>
+            {/* Flip button — right side above Alternate number */}
+            {tenant.idPhotoUrl && (
+              <button
+                className={styles.flipBtn}
+                onClick={() => setIdFlipped(f => !f)}
+                id="btn-flip-id"
+              >
+                🔄 {idFlipped ? "See Photo" : "See ID"}
+              </button>
+            )}
+          </div>
           <div className={styles.infoGrid}>
             <div className={styles.infoCard}>
               <span className={styles.infoLabel}>Primary</span>

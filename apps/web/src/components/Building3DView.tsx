@@ -70,17 +70,18 @@ function floorStatusColor(floorRooms: Room[]) {
 
 export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick, filterType }: Props) {
   const [rotY, setRotY] = useState(-30);
-  const [rotX, setRotX] = useState(18);
+  const ROT_X = 5; // fixed tilt — nearly forward-facing
   const [activeFloor, setActiveFloor] = useState<number | null>(null);
   const dragging = useRef(false);
   const lastX = useRef(0);
   const lastY = useRef(0);
+  const touchIsHorizontal = useRef<boolean | null>(null); // null = undecided
 
+  // Mouse drag — horizontal only
   const onMouseDown = (e: React.MouseEvent) => { dragging.current = true; lastX.current = e.clientX; lastY.current = e.clientY; e.preventDefault(); };
   const onMouseMove = useCallback((e: MouseEvent) => {
     if (!dragging.current) return;
-    setRotY(y => Math.max(-180, Math.min(180, y + (e.clientX - lastX.current) * 0.5)));
-    setRotX(x => Math.max(5, Math.min(35, x - (e.clientY - lastY.current) * 0.2)));
+    setRotY(y => Math.max(-180, Math.min(180, y + (e.clientX - lastX.current) * 0.7)));
     lastX.current = e.clientX; lastY.current = e.clientY;
   }, []);
   const onMouseUp = useCallback(() => { dragging.current = false; }, []);
@@ -90,12 +91,26 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
     return () => { window.removeEventListener("mousemove", onMouseMove); window.removeEventListener("mouseup", onMouseUp); };
   }, [onMouseMove, onMouseUp]);
 
-  const onTouchStart = (e: React.TouchEvent) => { lastX.current = e.touches[0].clientX; lastY.current = e.touches[0].clientY; };
-  const onTouchMove = (e: React.TouchEvent) => {
-    setRotY(y => Math.max(-180, Math.min(180, y + (e.touches[0].clientX - lastX.current) * 0.4)));
-    setRotX(x => Math.max(5, Math.min(35, x - (e.touches[0].clientY - lastY.current) * 0.15)));
-    lastX.current = e.touches[0].clientX; lastY.current = e.touches[0].clientY;
+  // Touch drag — horizontal only; yield vertical to page scroll
+  const onTouchStart = (e: React.TouchEvent) => {
+    lastX.current = e.touches[0].clientX;
+    lastY.current = e.touches[0].clientY;
+    touchIsHorizontal.current = null; // reset decision
   };
+  const onTouchMove = (e: React.TouchEvent) => {
+    const dx = Math.abs(e.touches[0].clientX - lastX.current);
+    const dy = Math.abs(e.touches[0].clientY - lastY.current);
+    // First meaningful movement decides direction
+    if (touchIsHorizontal.current === null && (dx > 4 || dy > 4)) {
+      touchIsHorizontal.current = dx >= dy;
+    }
+    if (!touchIsHorizontal.current) return; // let page scroll handle it
+    e.preventDefault(); // block page scroll while rotating
+    setRotY(y => Math.max(-180, Math.min(180, y + (e.touches[0].clientX - lastX.current) * 0.65)));
+    lastX.current = e.touches[0].clientX;
+    lastY.current = e.touches[0].clientY;
+  };
+  const onTouchEnd = () => { touchIsHorizontal.current = null; };
 
   const floors = Array.from({ length: totalFloors }, (_, i) => totalFloors - i); // 5→1
   const totalH = totalFloors * FH;
@@ -109,18 +124,24 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
 
   return (
     <div className={styles.wrap}>
-      <p className={styles.hint}>⟵ Drag to rotate ⟶</p>
 
       {/* ── 3D BUILDING SCENE ── */}
       <div
         className={styles.scene}
-        style={{ height: totalH + 260, paddingTop: 155 }}
+        style={{ height: totalH + 260, paddingTop: 190 }}
         onMouseDown={onMouseDown}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
+        {/* Rotate indicator — absolute inside scene, near entrance */}
+        <div className={styles.rotateHint}>
+          <span className={styles.rotateArrowL}>&#8592;</span>
+          <span className={styles.rotateIcon}>&#x21BB;</span>
+          <span className={styles.rotateArrowR}>&#8594;</span>
+        </div>
         <div className={styles.perspBox}>
-          <div className={styles.building} style={{ transform: `rotateX(${rotX}deg) rotateY(${rotY}deg)` }}>
+          <div className={styles.building} style={{ transform: `rotateX(${ROT_X}deg) rotateY(${rotY}deg)` }}>
 
             {/* ── ROOF ── */}
             <div className={styles.roofGroup} style={{ transform: `translateY(${-totalH - 30}px)` }}>
