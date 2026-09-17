@@ -72,6 +72,28 @@ function roomHasPendingRent(room: Room) {
   return room.beds.some((b) => b.tenant?.rent?.status === "pending");
 }
 
+/** Shared whoosh — lowpass filtered noise sweep (the good one) */
+function playWhoosh(short = false) {
+  try {
+    const ac = new AudioContext();
+    const dur = short ? 0.18 : 0.32;
+    const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * dur), ac.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const filter = ac.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(short ? 2800 : 1800, ac.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(short ? 400 : 180, ac.currentTime + dur);
+    const gain = ac.createGain();
+    gain.gain.setValueAtTime(0, ac.currentTime);
+    gain.gain.linearRampToValueAtTime(short ? 0.16 : 0.22, ac.currentTime + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+    src.connect(filter); filter.connect(gain); gain.connect(ac.destination);
+    src.start(); src.stop(ac.currentTime + dur + 0.01);
+  } catch { /* ignore */ }
+}
+
 /* ─── Donut Ring ─── */
 function DonutRing({ pct, free, total }: { pct: number; free: number; total: number }) {
   const r = 38, circ = 2 * Math.PI * r;
@@ -112,7 +134,12 @@ export default function DashboardPage() {
   // UI state
   const [filterType, setFilterType] = useState<number | null>(null);
   const [activeFloor, setActiveFloor] = useState<number | null>(null);
-  const [buildingView, setBuildingView] = useState<"list" | "3d">("list");
+  const [buildingView, setBuildingView] = useState<"list" | "3d">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("pg-eg-view") as "list" | "3d") || "list";
+    }
+    return "list";
+  });
   const [viewDropOpen, setViewDropOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [detailTenant, setDetailTenant] = useState<{ tenant: Tenant; bed: Bed; room: Room } | null>(null);
@@ -157,6 +184,7 @@ export default function DashboardPage() {
   const [editError, setEditError] = useState("");
   const [editUploading, setEditUploading] = useState(false);
   const editIdCardRef = useRef<HTMLInputElement>(null);
+  const sharingScrollRef = useRef<HTMLDivElement>(null);
 
   // Profile sidebar state
   const [profileOpen, setProfileOpen] = useState(false);
@@ -359,6 +387,17 @@ export default function DashboardPage() {
         {/* ─── PG-EG Logo Bar ─── */}
         <div className={styles.logoBar}>
           <AppLogo size="sm" />
+          {/* Profile button — top-right, boxy, same height as logo */}
+          <button
+            className={styles.topProfileBtn}
+            onClick={() => setProfileOpen(true)}
+            id="btn-open-profile"
+            title={(data?.pg.managerName || owner?.name || "Profile")}
+          >
+            {owner?.photoUrl
+              ? <img src={owner.photoUrl} alt="Profile" className={styles.topProfileImg} />
+              : (data?.pg.managerName || owner?.name || "O")[0].toUpperCase()}
+          </button>
         </div>
 
         {/* ─── Header ─── */}
@@ -382,17 +421,6 @@ export default function DashboardPage() {
                 <span className={styles.overallLabel}>rent due</span>
               </div>
             )}
-            {/* Manager avatar — opens profile sidebar */}
-            <button
-              className={styles.ownerAvatar}
-              onClick={() => setProfileOpen(true)}
-              id="btn-open-profile"
-              title={(data?.pg.managerName || owner?.name || "Profile")}
-            >
-              {owner?.photoUrl
-                ? <img src={owner.photoUrl} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
-                : (data?.pg.managerName || owner?.name || "O")[0].toUpperCase()}
-            </button>
           </div>
         </header>
 
@@ -497,15 +525,32 @@ export default function DashboardPage() {
         {/* ─── Sharing Cards — only show types with rooms ─── */}
         {activeShareTypes.length > 0 && (
           <section className={styles.sharingSection}>
-            <p className={styles.sectionLabel}>AVAILABILITY BY SHARING TYPE</p>
-            <div className={styles.sharingScroll}>
+            {/* Label row with chevron navigation */}
+            <div className={styles.sharingNav}>
+              <p className={`${styles.sectionLabel} ${styles.sharingNavLabel}`} style={{ margin: 0 }}>AVAILABILITY BY SHARING TYPE</p>
+              <div className={styles.sharingNavBtns}>
+                <button
+                  className={styles.sharingChevron}
+                  id="btn-sharing-prev"
+                  aria-label="Scroll left"
+                  onClick={() => sharingScrollRef.current?.scrollBy({ left: -160, behavior: "smooth" })}
+                >‹</button>
+                <button
+                  className={styles.sharingChevron}
+                  id="btn-sharing-next"
+                  aria-label="Scroll right"
+                  onClick={() => sharingScrollRef.current?.scrollBy({ left: 160, behavior: "smooth" })}
+                >›</button>
+              </div>
+            </div>
+            <div className={styles.sharingScroll} ref={sharingScrollRef}>
               {activeShareTypes.map((type) => {
                 const stats = sharingStats(data.rooms, type);
                 const isActive = filterType === type;
                 return (
                   <button key={type}
                     className={`${styles.sharingCard} ${isActive ? styles.sharingCardActive : ""}`}
-                    onClick={() => setFilterType(isActive ? null : type)} id={`sharing-card-${type}`}>
+                    onClick={() => { playWhoosh(true); setFilterType(isActive ? null : type); }} id={`sharing-card-${type}`}>
                     <DonutRing pct={stats.pct} free={stats.free} total={stats.totalBeds} />
                     <div className={styles.sharingInfo}>
                       <span className={styles.sharingIcon}>{SHARE_ICONS[Math.min(type, 5)] || "🏠"}</span>
@@ -547,7 +592,7 @@ export default function DashboardPage() {
                     <button
                       className={`${styles.viewDropItem} ${buildingView === "list" ? styles.viewDropItemActive : ""}`}
                       id="btn-view-list"
-                      onClick={() => { setBuildingView("list"); setViewDropOpen(false); }}
+                      onClick={() => { setBuildingView("list"); localStorage.setItem("pg-eg-view", "list"); setViewDropOpen(false); }}
                     >
                       <span>☰</span> List View
                       {buildingView === "list" && <span className={styles.viewDropCheck}>✓</span>}
@@ -555,7 +600,7 @@ export default function DashboardPage() {
                     <button
                       className={`${styles.viewDropItem} ${buildingView === "3d" ? styles.viewDropItemActive : ""}`}
                       id="btn-view-3d"
-                      onClick={() => { setBuildingView("3d"); setViewDropOpen(false); }}
+                      onClick={() => { setBuildingView("3d"); localStorage.setItem("pg-eg-view", "3d"); setViewDropOpen(false); }}
                     >
                       <span>🏢</span> 3D View
                       {buildingView === "3d" && <span className={styles.viewDropCheck}>✓</span>}
@@ -573,6 +618,7 @@ export default function DashboardPage() {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               rooms={data.rooms as any}
               onRoomClick={(room) => setSelectedRoom(room as any)}
+              filterType={filterType}
             />
           ) : (
             /* ── List View (slab building) ── */
@@ -587,26 +633,26 @@ export default function DashboardPage() {
                       colorKey === "full" ? "#e63946" :
                       colorKey === "almost" ? "#f4a261" : "#2dc653";
                     const allBeds = all.rooms.flatMap(r => r.beds);
+                    // Filter highlighting
+                    const isFloorDimmed = !!filterType && !all.rooms.some(r => r.sharingType === filterType);
+                    const isFloorHighlighted = !!filterType && all.rooms.some(r => r.sharingType === filterType);
 
                     return (
                       <div key={floor} className={`${styles.floorSlab} ${isActive ? styles.floorSlabActive : ""}`}
-                        style={{ "--fc": floorColor3d } as React.CSSProperties}>
+                        style={{
+                          "--fc": floorColor3d,
+                          opacity: isFloorDimmed ? 0.22 : 1,
+                          filter: isFloorDimmed ? "grayscale(0.7)" : "none",
+                          outline: isFloorHighlighted && !isActive ? `2px solid ${floorColor3d}` : "none",
+                          outlineOffset: "2px",
+                          transition: "opacity 0.3s, filter 0.3s",
+                        } as React.CSSProperties}>
                         <button
                           className={styles.floorSlabBtn}
                           id={`floor3d-${floor}`}
                           onClick={() => {
-                            try {
-                              const ac = new AudioContext();
-                              const osc = ac.createOscillator();
-                              const g = ac.createGain();
-                              osc.connect(g); g.connect(ac.destination);
-                              osc.type = "sine";
-                              osc.frequency.setValueAtTime(isActive ? 380 : 520, ac.currentTime);
-                              osc.frequency.exponentialRampToValueAtTime(isActive ? 280 : 380, ac.currentTime + 0.12);
-                              g.gain.setValueAtTime(0.18, ac.currentTime);
-                              g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
-                              osc.start(); osc.stop(ac.currentTime + 0.18);
-                            } catch { /* ignore */ }
+                            // Whoosh — same for open and close
+                            playWhoosh();
                             setActiveFloor(isActive ? null : floor);
                           }}
                         >
@@ -644,7 +690,11 @@ export default function DashboardPage() {
                               return (
                                 <button key={room.id}
                                   className={`${styles.roomCard3d} ${isDimmed ? styles.roomCard3dDimmed : ""}`}
-                                  onClick={() => !isDimmed && setSelectedRoom(room)}
+                                  onClick={() => {
+                                    if (isDimmed) return;
+                                    playWhoosh(true);
+                                    setSelectedRoom(room);
+                                  }}
                                   id={`room3d-${room.id}`}
                                 >
                                   <div className={styles.roomCard3dHeader}>
@@ -683,7 +733,7 @@ export default function DashboardPage() {
       {/* ─── Room Bottom Sheet ─── */}
       {selectedRoom && !detailTenant && (
         <>
-          <div className={styles.backdrop} onClick={() => setSelectedRoom(null)} />
+          <div className={styles.backdrop} onClick={() => { playWhoosh(true); setSelectedRoom(null); }} />
           <div className={styles.sheet}>
             <div className={styles.sheetHandle} />
             <div className={styles.sheetHeader}>
@@ -692,7 +742,7 @@ export default function DashboardPage() {
                 <h3 className={styles.sheetTitle}>🚪 Room {selectedRoom.roomNumber}</h3>
                 <p className={styles.sheetSub}>{selectedRoom.sharingType}-Sharing · {selectedRoom.beds.length} Beds</p>
               </div>
-              <button className={styles.sheetClose} onClick={() => setSelectedRoom(null)}>✕</button>
+              <button className={styles.sheetClose} onClick={() => { playWhoosh(true); setSelectedRoom(null); }}>✕</button>
             </div>
 
             <div className={styles.bedsList}>
@@ -723,26 +773,29 @@ export default function DashboardPage() {
                     <div className={styles.bedActionGroup}>
                       {bed.isOccupied && bed.tenant ? (
                         <>
-                          <button className={styles.detailsBtn}
-                            onClick={() => router.push(`/tenants/profile?id=${bed.tenant!.id}`)}
-                            id={`details-${bed.id}`}>Details</button>
-                          <button
-                            className={styles.editContactBtn}
-                            title="Edit contact details"
-                            id={`edit-${bed.id}`}
-                            onClick={() => {
-                              const t = bed.tenant!;
-                              setEditModal({
-                                tenantId: t.id, name: t.name,
-                                phone: t.phone || "",
-                                altPhone: t.altPhone || "",
-                                emergencyContact: t.emergencyContact || "",
-                                emergencyRelation: t.emergencyRelation || "",
-                                idPhotoUrl: t.idPhotoUrl || null,
-                              });
-                              setEditError("");
-                            }}
-                          >✏️</button>
+                          {/* Top row: pencil icon + Details side by side */}
+                          <div className={styles.bedActionTopRow}>
+                            <button
+                              className={styles.editContactBtn}
+                              title="Edit contact details"
+                              id={`edit-${bed.id}`}
+                              onClick={() => {
+                                const t = bed.tenant!;
+                                setEditModal({
+                                  tenantId: t.id, name: t.name,
+                                  phone: t.phone || "",
+                                  altPhone: t.altPhone || "",
+                                  emergencyContact: t.emergencyContact || "",
+                                  emergencyRelation: t.emergencyRelation || "",
+                                  idPhotoUrl: t.idPhotoUrl || null,
+                                });
+                                setEditError("");
+                              }}
+                            >✏️</button>
+                            <button className={styles.detailsBtn}
+                              onClick={() => router.push(`/tenants/profile?id=${bed.tenant!.id}`)}
+                              id={`details-${bed.id}`}>Details</button>
+                          </div>
                           <button className={styles.moveBtn}
                             onClick={() => {
                               setMovingTenant({ tenant: bed.tenant!, bed, room: selectedRoom });

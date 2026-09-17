@@ -1,7 +1,29 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import styles from "./Building3DView.module.css";
+
+/** Shared whoosh — lowpass filtered noise sweep */
+function playWhoosh(short = false) {
+  try {
+    const ac = new AudioContext();
+    const dur = short ? 0.18 : 0.32;
+    const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * dur), ac.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const filter = ac.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(short ? 2800 : 1800, ac.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(short ? 400 : 180, ac.currentTime + dur);
+    const gain = ac.createGain();
+    gain.gain.setValueAtTime(0, ac.currentTime);
+    gain.gain.linearRampToValueAtTime(short ? 0.16 : 0.22, ac.currentTime + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+    src.connect(filter); filter.connect(gain); gain.connect(ac.destination);
+    src.start(); src.stop(ac.currentTime + dur + 0.01);
+  } catch { /* ignore */ }
+}
 
 interface Tenant {
   id: string; name: string; phone: string;
@@ -17,6 +39,7 @@ interface Room {
 interface Props {
   pgName: string; totalFloors: number;
   rooms: Room[]; onRoomClick: (room: Room) => void;
+  filterType?: number | null;
 }
 
 const W = 280;   // building width
@@ -45,7 +68,7 @@ function floorStatusColor(floorRooms: Room[]) {
   return BED_COLORS.free;
 }
 
-export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick }: Props) {
+export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick, filterType }: Props) {
   const [rotY, setRotY] = useState(-30);
   const [rotX, setRotX] = useState(18);
   const [activeFloor, setActiveFloor] = useState<number | null>(null);
@@ -56,7 +79,7 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
   const onMouseDown = (e: React.MouseEvent) => { dragging.current = true; lastX.current = e.clientX; lastY.current = e.clientY; e.preventDefault(); };
   const onMouseMove = useCallback((e: MouseEvent) => {
     if (!dragging.current) return;
-    setRotY(y => Math.max(-70, Math.min(70, y + (e.clientX - lastX.current) * 0.5)));
+    setRotY(y => Math.max(-180, Math.min(180, y + (e.clientX - lastX.current) * 0.5)));
     setRotX(x => Math.max(5, Math.min(35, x - (e.clientY - lastY.current) * 0.2)));
     lastX.current = e.clientX; lastY.current = e.clientY;
   }, []);
@@ -69,7 +92,7 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
 
   const onTouchStart = (e: React.TouchEvent) => { lastX.current = e.touches[0].clientX; lastY.current = e.touches[0].clientY; };
   const onTouchMove = (e: React.TouchEvent) => {
-    setRotY(y => Math.max(-70, Math.min(70, y + (e.touches[0].clientX - lastX.current) * 0.4)));
+    setRotY(y => Math.max(-180, Math.min(180, y + (e.touches[0].clientX - lastX.current) * 0.4)));
     setRotX(x => Math.max(5, Math.min(35, x - (e.touches[0].clientY - lastY.current) * 0.15)));
     lastX.current = e.touches[0].clientX; lastY.current = e.touches[0].clientY;
   };
@@ -78,18 +101,7 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
   const totalH = totalFloors * FH;
 
   function handleFloorClick(floor: number) {
-    // sound
-    try {
-      const ac = new AudioContext();
-      const osc = ac.createOscillator(); const g = ac.createGain();
-      osc.connect(g); g.connect(ac.destination);
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(activeFloor === floor ? 340 : 480, ac.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(activeFloor === floor ? 240 : 340, ac.currentTime + 0.14);
-      g.gain.setValueAtTime(0.14, ac.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.2);
-      osc.start(); osc.stop(ac.currentTime + 0.2);
-    } catch { /* noop */ }
+    playWhoosh();
     setActiveFloor(activeFloor === floor ? null : floor);
   }
 
@@ -133,7 +145,10 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
               const floorRooms = rooms.filter(r => r.floor === floor);
               const fc = floorStatusColor(floorRooms);
               const isActive = activeFloor === floor;
-              const yPos = -((totalFloors - 1 - idx) * FH); // FL5 at top (-272), FL1 at 0 (bottom)
+              const yPos = -((totalFloors - 1 - idx) * FH);
+              // Dimmed when a sharing filter is active and this floor has NO matching rooms
+              const isFloorDimmed = !!filterType && !floorRooms.some(r => r.sharingType === filterType);
+              const isFloorHighlighted = !!filterType && floorRooms.some(r => r.sharingType === filterType);
 
               return (
                 <div key={floor} className={styles.floorGroup}
@@ -155,6 +170,11 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
                       width: W, height: FH,
                       borderBottom: `2px solid ${fc}70`,
                       boxShadow: isActive ? `0 0 30px ${fc}44, inset 0 0 20px ${fc}11` : "none",
+                      opacity: isFloorDimmed ? 0.22 : 1,
+                      filter: isFloorDimmed ? "grayscale(0.7)" : "none",
+                      outline: isFloorHighlighted && !isActive ? `2px solid ${fc}` : "none",
+                      outlineOffset: "2px",
+                      transition: "opacity 0.3s, filter 0.3s",
                     }}
                     onClick={() => handleFloorClick(floor)}
                   >
@@ -177,7 +197,7 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
                               borderColor: `${rc}55`,
                               boxShadow: `inset 0 0 8px ${rc}18, 0 0 8px ${rc}30`,
                             }}
-                            onClick={e => { e.stopPropagation(); onRoomClick(room); }}
+                            onClick={e => { e.stopPropagation(); playWhoosh(true); onRoomClick(room); }}
                           >
                             <div className={styles.winGlow} style={{ background: `${rc}40` }} />
                             <span className={styles.winRoomNum} style={{ color: rc }}>{room.roomNumber}</span>
@@ -206,7 +226,7 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
                     />
                   )}
 
-                  {/* ── RIGHT SIDE FACE ── */}
+                  {/* ── RIGHT SIDE FACE — 🛌 beds floating inside ── */}
                   <div className={styles.floorRight}
                     style={{
                       transform: `translateX(${W / 2}px) rotateY(90deg) translateZ(${-D / 2}px)`,
@@ -215,17 +235,100 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
                     }}
                     onClick={() => handleFloorClick(floor)}
                   >
-                    <div className={styles.sideWin} />
-                    <div className={styles.sideWin} />
+                    {/* Beds spread across full width = "floating at different depths" */}
+                    <div className={styles.sideFloatBeds}>
+                      {floorRooms.flatMap(r => r.beds).slice(0, 4).map((bed, bi) => (
+                        <span key={bi} className={styles.sideFloatBed}
+                          style={{
+                            opacity: bed.isOccupied ? 1 : 0.45,
+                            filter: `drop-shadow(0 0 ${bed.isOccupied ? 5 : 2}px ${bedColor(bed)})`,
+                          }}
+                        >🛌</span>
+                      ))}
+                      {floorRooms.flatMap(r => r.beds).length === 0 && (
+                        <span className={styles.sideFloatBed} style={{ opacity: 0.2 }}>🛌</span>
+                      )}
+                    </div>
                   </div>
 
-                  {/* ── LEFT SIDE FACE ── */}
+                  {/* ── LEFT SIDE FACE — 🛌 beds + 🪟 window ── */}
                   <div className={styles.floorLeft}
                     style={{
                       transform: `translateX(${-W / 2}px) rotateY(-90deg) translateZ(${-D / 2}px)`,
                       width: D, height: FH,
                     }}
-                  />
+                  >
+                    <div className={styles.sideFloatBeds}>
+                      {floorRooms.flatMap(r => r.beds).slice(0, 4).map((bed, bi) => (
+                        <span key={bi} className={styles.sideFloatBed}
+                          style={{
+                            opacity: bed.isOccupied ? 1 : 0.45,
+                            filter: `drop-shadow(0 0 ${bed.isOccupied ? 5 : 2}px ${bedColor(bed)})`,
+                          }}
+                        >🛌</span>
+                      ))}
+                      {floorRooms.flatMap(r => r.beds).length === 0 && (
+                        <span className={styles.sideFloatBed} style={{ opacity: 0.2 }}>🛌</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ── BACK FACE — beds inside the building ── */}
+                  <div className={styles.floorBack}
+                    style={{
+                      transform: `translateZ(${-D / 2}px) rotateY(180deg)`,
+                      width: W, height: FH,
+                      borderBottom: `2px solid ${fc}50`,
+                    }}
+                  >
+                    {/* interior ambient glow */}
+                    <div className={styles.backAmbient} style={{ background: `${fc}12` }} />
+
+                    {/* floor label on back */}
+                    <div className={styles.backFlLabel} style={{ color: `${fc}90`, borderColor: `${fc}35` }}>
+                      FL {floor}
+                    </div>
+
+                    {/* rooms + beds */}
+                    <div className={styles.backRoomsRow}>
+                      {floorRooms.map(room => (
+                        <div key={room.id} className={styles.backRoom}>
+                          <span className={styles.backRoomNum} style={{ color: `${roomColor(room)}aa` }}>
+                            {room.roomNumber}
+                          </span>
+                          <div className={styles.backBeds}>
+                            {room.beds.map(bed => {
+                              const bc = bedColor(bed);
+                              return (
+                                <div key={bed.id} className={styles.backBed}
+                                  style={{
+                                    borderColor: `${bc}70`,
+                                    boxShadow: `0 0 8px ${bc}55, inset 0 0 6px ${bc}15`,
+                                  }}
+                                >
+                                  {/* headboard */}
+                                  <div className={styles.bedHeadboard} style={{ background: `${bc}55`, borderBottomColor: `${bc}40` }} />
+                                  {/* pillow */}
+                                  <div className={styles.bedPillow} style={{ background: bc, boxShadow: `0 0 5px ${bc}90` }} />
+                                  {/* blanket */}
+                                  <div className={styles.bedBlanket} style={{ background: `${bc}14` }}>
+                                    {bed.isOccupied && (
+                                      <div className={styles.bedPersonHead} />
+                                    )}
+                                    <div className={styles.bedLine} />
+                                    <div className={styles.bedLine} />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                      {floorRooms.length === 0 && (
+                        <span className={styles.backEmpty}>No rooms</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -254,7 +357,7 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
       {/* ── FLOOR DETAIL SLIDE-UP ── */}
       {activeFloor !== null && (
         <>
-          <div className={styles.panelBackdrop} onClick={() => setActiveFloor(null)} />
+          <div className={styles.panelBackdrop} onClick={() => { playWhoosh(true); setActiveFloor(null); }} />
           <div className={styles.floorPanel}>
             <div className={styles.panelHandle} />
             <div className={styles.panelHeader}>
@@ -262,7 +365,7 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
                 <p className={styles.panelFloorLabel}>Floor {activeFloor}</p>
                 <h3 className={styles.panelTitle}>🚪 Select a Room</h3>
               </div>
-              <button className={styles.panelClose} onClick={() => setActiveFloor(null)}>✕</button>
+              <button className={styles.panelClose} onClick={() => { playWhoosh(true); setActiveFloor(null); }}>✕</button>
             </div>
 
             {activeFloorRooms.length === 0 ? (
@@ -276,7 +379,7 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
                   return (
                     <button key={room.id} className={styles.roomCard}
                       style={{ borderColor: `${rc}44` }}
-                      onClick={() => { setActiveFloor(null); onRoomClick(room); }}
+                      onClick={() => { playWhoosh(true); setActiveFloor(null); onRoomClick(room); }}
                     >
                       {/* Header */}
                       <div className={styles.rcHeader}>

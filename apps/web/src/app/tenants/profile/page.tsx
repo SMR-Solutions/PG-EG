@@ -53,6 +53,7 @@ function TenantProfileInner() {
   const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [idFlipped, setIdFlipped] = useState(false);
 
   // Rent payment state
   const [rentPayMode, setRentPayMode] = useState<"cash" | "upi">("cash");
@@ -154,22 +155,39 @@ function TenantProfileInner() {
         <AppLogo size="sm" />
       </header>
 
-      {/* Hero — photo */}
-      <div className={styles.heroWrap}>
-        {tenant.photoUrl
-          ? <img src={tenant.photoUrl} alt={tenant.name} className={styles.heroPhoto} />
-          : <div className={styles.heroPlaceholder}><span>👤</span></div>
-        }
-        <div className={styles.heroGradient} />
-        <div className={styles.heroName}>
-          <h1 className={styles.tenantName}>{tenant.name}</h1>
-          <span className={`${styles.statusBadge} ${tenant.status === "active" ? styles.statusActive : styles.statusOut}`}>
-            {tenant.status === "active" ? "● ACTIVE" : "● CHECKED OUT"}
-          </span>
-        </div>
-      </div>
-
       <div className={styles.content}>
+
+        {/* Hero — photo (click to flip to ID card) */}
+        <div className={styles.heroWrap}>
+          {/* Photo side */}
+          {!idFlipped && (
+            tenant.photoUrl
+              ? <img src={tenant.photoUrl} alt={tenant.name} className={styles.heroPhoto} />
+              : <div className={styles.heroPlaceholder}><span>👤</span></div>
+          )}
+          {/* ID card side */}
+          {idFlipped && tenant.idPhotoUrl && (
+            <img src={tenant.idPhotoUrl} alt="ID Card" className={styles.heroPhoto}
+              style={{ objectFit: "contain", background: "#0a0d14", padding: 14, boxSizing: "border-box" }} />
+          )}
+          <div className={styles.heroGradient} />
+          <div className={styles.heroName}>
+            <h1 className={styles.tenantName}>{tenant.name}</h1>
+            <span className={`${styles.statusBadge} ${tenant.status === "active" ? styles.statusActive : styles.statusOut}`}>
+              {tenant.status === "active" ? "● ACTIVE" : "● CHECKED OUT"}
+            </span>
+          </div>
+          {/* Flip button — only if tenant has ID uploaded */}
+          {tenant.idPhotoUrl && (
+            <button
+              className={styles.flipBtn}
+              onClick={() => setIdFlipped(f => !f)}
+              id="btn-flip-id"
+            >
+              🔄 {idFlipped ? "See Photo" : "See ID"}
+            </button>
+          )}
+        </div>
 
         {/* ── Contact ── */}
         <section className={styles.section}>
@@ -192,7 +210,10 @@ function TenantProfileInner() {
               background: tenant.emergencyContact ? "rgba(244,162,97,0.06)" : undefined,
             }}>
               <span className={styles.infoLabel}>
-                🆘 Emergency Contact{tenant.emergencyRelation ? ` · ${tenant.emergencyRelation}` : ""}
+                🏥 Emergency Contact
+                {tenant.emergencyRelation && (
+                  <span className={styles.relationTag}>{tenant.emergencyRelation}</span>
+                )}
               </span>
               <span className={styles.infoValue} style={{ color: tenant.emergencyContact ? "#f4a261" : "var(--text-muted)", fontSize: 16 }}>
                 {tenant.emergencyContact ? `+91 ${tenant.emergencyContact}` : "Not provided"}
@@ -479,14 +500,6 @@ function TenantProfileInner() {
             </section>
           );
         })()}
-
-        {/* ── ID Card ── */}
-        {tenant.idPhotoUrl && (
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>🪪 ID Card</h2>
-            <img src={tenant.idPhotoUrl} alt="ID Card" className={styles.idCard} />
-          </section>
-        )}
 
       </div>
     </main>

@@ -42,6 +42,27 @@
 .logoBar {
   display: flex; align-items: center; justify-content: center;
   padding: 6px 0 2px;
+  position: relative;
+}
+
+/* Top-right boxy profile button */
+.topProfileBtn {
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--brand-green), #16a34a);
+  color: #000; font-size: 15px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border: none; overflow: hidden;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 0 0 2px transparent;
+}
+.topProfileBtn:hover {
+  transform: translateY(-50%) scale(1.08);
+  box-shadow: 0 0 0 2px var(--brand-green);
+}
+.topProfileImg {
+  width: 100%; height: 100%; object-fit: cover; border-radius: 10px;
 }
 
 /* ─── Header ─── */
@@ -54,12 +75,14 @@
   border-radius: var(--radius-xl);
   padding: 18px 20px;
   box-shadow: var(--shadow-card);
+  flex-wrap: wrap;
+  gap: 10px;
 }
-.headerLeft { display: flex; flex-direction: column; gap: 4px; }
-.pgName { font-size: 22px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.3px; }
+.headerLeft { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.pgName { font-size: 22px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pgMeta { font-size: 13px; color: var(--text-muted); }
 
-.headerRight { display: flex; gap: 20px; align-items: center; }
+.headerRight { display: flex; gap: 20px; align-items: center; flex-shrink: 0; }
 .overallStat { display: flex; flex-direction: column; align-items: center; }
 .overallNum { font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1; }
 .overallLabel { font-size: 10px; color: var(--text-muted); font-weight: 500; margin-top: 2px; }
@@ -152,7 +175,29 @@
 }
 
 /* ─── Sharing Cards ─── */
-.sharingSection { }
+.sharingSection { position: relative; }
+
+/* Chevron nav row */
+.sharingNav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.sharingNavLabel {
+  font-size: 10px; font-weight: 700;
+  color: var(--text-muted); letter-spacing: 1.5px;
+}
+.sharingNavBtns { display: flex; gap: 6px; }
+.sharingChevron {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-muted); font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+  font-family: inherit;
+}
+.sharingChevron:hover { background: rgba(255,255,255,0.12); color: var(--text-primary); border-color: rgba(255,255,255,0.2); }
+.sharingChevron:disabled { opacity: 0.25; cursor: default; }
 
 .sharingScroll {
   display: flex;
@@ -160,6 +205,7 @@
   overflow-x: auto;
   padding-bottom: 6px;
   scrollbar-width: none;
+  scroll-behavior: smooth;
 }
 .sharingScroll::-webkit-scrollbar { display: none; }
 
@@ -442,11 +488,11 @@
   grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: 8px;
   padding: 10px 4px 12px;
-  animation: roomsReveal 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: roomsReveal 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @keyframes roomsReveal {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: perspective(500px) scale(0.7) translateZ(-80px); }
+  to   { opacity: 1; transform: perspective(500px) scale(1)   translateZ(0px); }
 }
 
 .roomCard3d {
@@ -550,7 +596,11 @@
 .sheetClose:hover { background: rgba(255,255,255,0.12); color: var(--text-primary); }
 
 /* Beds list */
-.bedsList { display: flex; flex-direction: column; gap: 0; padding: 8px 0; }
+.bedsList { display: flex; flex-direction: column; gap: 0; padding: 8px 0; animation: bedsReveal 0.38s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes bedsReveal {
+  from { opacity: 0; transform: perspective(500px) scale(0.72) translateZ(-70px); }
+  to   { opacity: 1; transform: perspective(500px) scale(1)   translateZ(0px); }
+}
 
 .bedRow {
   display: flex; align-items: center; gap: 14px;
@@ -634,10 +684,35 @@
   cursor: pointer; font-family: inherit;
 }
 
-/* ─── Mobile ─── */
+/* ─── Responsive ─── */
+/* Medium screens (tablets ~600px) */
+@media (max-width: 640px) {
+  /* Header: name row + compact stats+avatar row */
+  .header { padding: 14px 16px; gap: 8px; }
+  .headerLeft { flex: 1 1 100%; }
+  .pgName { font-size: 17px; }
+  .pgMeta { font-size: 12px; }
+  .headerRight { flex: 1 1 100%; justify-content: space-between; gap: 12px; }
+  .overallStat { flex-direction: row; gap: 6px; align-items: baseline; }
+  .overallNum { font-size: 20px; }
+  .overallLabel { margin-top: 0; font-size: 11px; }
+  /* Cards: 2 per row, equal widths */
+  .sharingScroll { flex-wrap: wrap; overflow-x: hidden; }
+  .sharingCard { flex: 1 1 calc(50% - 6px); width: auto; min-width: 120px; }
+  /* Hide chevrons on small/medium screens */
+  .sharingNavBtns { display: none; }
+  /* PG meta inline beside name */
+  .headerLeft { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+  .pgName { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .pgMeta { font-size: 11px; flex-shrink: 0; }
+}
+
+/* Small screens (phones ≤400px) */
 @media (max-width: 400px) {
-  .sharingCard { width: 120px; }
-  .pgName { font-size: 18px; }
+  .pgName { font-size: 15px; }
+  .pgMeta { font-size: 10px; }
+  .overallNum { font-size: 18px; }
+  .sharingCard { flex: 1 1 calc(50% - 6px); width: auto; min-width: 110px; }
   .sheet { border-radius: 20px 20px 0 0; }
 }
 
@@ -655,8 +730,9 @@
   font-size: 11px; font-weight: 700; color: #2dc653; margin-top: 3px;
 }
 
-/* ─── Bed action group (Details + Checkout) ─── */
+/* ─── Bed action group ─── */
 .bedActionGroup { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; flex-shrink: 0; }
+.bedActionTopRow { display: flex; flex-direction: row; gap: 6px; align-items: center; }
 
 .detailsBtn {
   padding: 7px 14px;
