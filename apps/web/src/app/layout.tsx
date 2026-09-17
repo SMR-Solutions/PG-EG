@@ -1,6 +1,14 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import Script from "next/script";
+
+export const viewport: Viewport = {
+  themeColor: "#2dc653",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
 
 export const metadata: Metadata = {
   title: "PG-EG — Making PG Maintenance Easy",
@@ -8,6 +16,13 @@ export const metadata: Metadata = {
     "PG-EG is the simplest way for PG owners to manage their rooms, beds, and tenants — all in one place.",
   keywords: ["PG management", "paying guest", "room management", "tenant management"],
   authors: [{ name: "PG-EG" }],
+  applicationName: "PG-EG",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "PG-EG",
+  },
+  formatDetection: { telephone: false },
   icons: {
     icon: [
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
@@ -40,6 +55,16 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* PWA: Service Worker registration */}
+        <Script id="sw-register" strategy="afterInteractive">{`
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+              navigator.serviceWorker.register('/sw.js')
+                .then(function(reg) { console.log('[SW] Registered:', reg.scope); })
+                .catch(function(err) { console.warn('[SW] Registration failed:', err); });
+            });
+          }
+        `}</Script>
       </head>
       <body>
         <AuthProvider>{children}</AuthProvider>
