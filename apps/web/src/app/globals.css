@@ -47,6 +47,27 @@
 }
 
 /* ─────────────────────────────────────────
+   LIGHT MODE OVERRIDES
+───────────────────────────────────────── */
+[data-theme="light"] {
+  --bg-base: #f0f4f8;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-overlay: #e8edf5;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(0, 0, 0, 0.18);
+
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --shadow-card-hover: 0 8px 40px rgba(0, 0, 0, 0.14);
+  --shadow-glow-red: 0 0 40px rgba(230, 57, 70, 0.10);
+  --shadow-glow-green: 0 0 40px rgba(45, 198, 83, 0.12);
+}
+
+/* ─────────────────────────────────────────
    RESET & BASE
 ───────────────────────────────────────── */
 *, *::before, *::after {

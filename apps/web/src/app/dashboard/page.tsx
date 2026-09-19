@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import styles from "./page.module.css";
 import AppLogo from "@/components/AppLogo";
 import Building3DView from "@/components/Building3DView";
@@ -99,17 +100,23 @@ function DonutRing({ pct, free, total }: { pct: number; free: number; total: num
   const r = 38, circ = 2 * Math.PI * r;
   const offset = circ - (Math.min(pct, 100) / 100) * circ;
   const color = pct >= 100 ? "#e63946" : pct >= 80 ? "#f4a261" : "#2dc653";
+  // Read theme from html attribute so it works without context import
+  const isLight = typeof document !== "undefined" &&
+    document.documentElement.getAttribute("data-theme") === "light";
+  const textColor = isLight ? "#111827" : "white";
+  const subColor  = isLight ? "rgba(0,0,0,0.45)" : "rgba(255,255,255,0.4)";
+  const trackColor = isLight ? "rgba(0,0,0,0.10)" : "rgba(255,255,255,0.07)";
   return (
     <svg viewBox="0 0 100 100" width="80" height="80" className={styles.ring}>
-      <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="9" />
+      <circle cx="50" cy="50" r={r} fill="none" stroke={trackColor} strokeWidth="9" />
       <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="9"
         strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
         transform="rotate(-90 50 50)"
         style={{ transition: "stroke-dashoffset 0.6s ease", filter: `drop-shadow(0 0 4px ${color}66)` }} />
-      <text x="50" y="45" textAnchor="middle" fill="white" fontSize="17" fontWeight="800" fontFamily="inherit">
+      <text x="50" y="45" textAnchor="middle" fill={textColor} fontSize="17" fontWeight="800" fontFamily="inherit">
         {total === 0 ? "—" : free}
       </text>
-      <text x="50" y="60" textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="9" fontFamily="inherit">
+      <text x="50" y="60" textAnchor="middle" fill={subColor} fontSize="9" fontFamily="inherit">
         {total === 0 ? "no rooms" : "free"}
       </text>
     </svg>
@@ -119,6 +126,7 @@ function DonutRing({ pct, free, total }: { pct: number; free: number; total: num
 /* ─── Main ─── */
 export default function DashboardPage() {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
   const { activePgId, allPgs, setActivePg, token, isAuthenticated, isLoading: authLoading, owner, signOut } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -185,6 +193,17 @@ export default function DashboardPage() {
   const [editUploading, setEditUploading] = useState(false);
   const editIdCardRef = useRef<HTMLInputElement>(null);
   const sharingScrollRef = useRef<HTMLDivElement>(null);
+  const [sharingCollapsed, setSharingCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("pg-eg-sharing-collapsed") === "1";
+  });
+  function toggleSharingCollapsed() {
+    setSharingCollapsed(v => {
+      const next = !v;
+      localStorage.setItem("pg-eg-sharing-collapsed", next ? "1" : "0");
+      return next;
+    });
+  }
   const sidebarSwipeX = useRef(0);
 
   // Profile sidebar state
@@ -413,18 +432,27 @@ export default function DashboardPage() {
           </div>
           <div className={styles.headerRight}>
             <div className={styles.overallStat}>
-              <span className={styles.overallNum} style={{ color: (totalBeds - occupiedBeds) > 0 ? "var(--brand-green)" : "#e63946" }}>{totalBeds - occupiedBeds}</span>
-              <span className={styles.overallLabel}>beds free</span>
+              <span className={styles.overallNum}>{totalBeds}</span>
+              <span className={styles.overallLabel}>total</span>
             </div>
+            <div className={styles.statDivider} />
             <div className={styles.overallStat}>
-              <span className={styles.overallNum}>{occupiedBeds}</span>
-              <span className={styles.overallLabel}>occupied</span>
+              <span className={styles.overallNum} style={{ color: (totalBeds - occupiedBeds) > 0 ? "var(--brand-green)" : "#e63946" }}>{totalBeds - occupiedBeds}</span>
+              <span className={styles.overallLabel}>free</span>
+            </div>
+            <div className={styles.statDivider} />
+            <div className={styles.overallStat}>
+              <span className={styles.overallNum} style={{ color: "#e63946" }}>{occupiedBeds}</span>
+              <span className={styles.overallLabel}>filled</span>
             </div>
             {pendingRentCount > 0 && (
-              <div className={styles.overallStat}>
-                <span className={styles.overallNum} style={{ color: "#f4a261" }}>⚠️ {pendingRentCount}</span>
-                <span className={styles.overallLabel}>rent due</span>
-              </div>
+              <>
+                <div className={styles.statDivider} />
+                <div className={styles.overallStat}>
+                  <span className={styles.overallNum} style={{ color: "#f4a261" }}>⚠️ {pendingRentCount}</span>
+                  <span className={styles.overallLabel}>rent due</span>
+                </div>
+              </>
             )}
           </div>
         </header>
@@ -448,15 +476,25 @@ export default function DashboardPage() {
                 <span className={styles.sidebarPillArrow}>→</span>
               </button>
 
-              {/* ── Close handle strip at the top ── */}
-              <button
-                className={styles.sidebarClose}
-                onClick={() => setProfileOpen(false)}
-                id="btn-close-sidebar"
-                aria-label="Close sidebar"
-              >
-                <span className={styles.sidebarCloseLabel}>Close</span>
-              </button>
+              {/* ── Theme toggle pill (dark | light) ── */}
+              <div className={styles.themePill}>
+                <button
+                  className={`${styles.themePillHalf} ${styles.themePillDark} ${theme === "dark" ? styles.themePillActive : ""}`}
+                  onClick={() => setTheme("dark")}
+                  aria-label="Switch to dark mode"
+                  id="btn-theme-dark"
+                >
+                  🌙
+                </button>
+                <button
+                  className={`${styles.themePillHalf} ${styles.themePillLight} ${theme === "light" ? styles.themePillActive : ""}`}
+                  onClick={() => setTheme("light")}
+                  aria-label="Switch to light mode"
+                  id="btn-theme-light"
+                >
+                  ☀️
+                </button>
+              </div>
 
               <div className={styles.sidebarBody}>
                 {/* PG Manager info + Google account — click to open Owner Profile */}
@@ -475,11 +513,11 @@ export default function DashboardPage() {
                     <div className={styles.sidebarOwnerName}>
                       {data?.pg.managerName || owner?.name || "Manager"}
                     </div>
-                    <div className={styles.sidebarOwnerEmail}>
+                    <div className={styles.sidebarOwnerPhone}>
                       {data?.pg.managerPhone || owner?.phone || ""}
                     </div>
                     {owner?.email && (
-                      <div className={styles.sidebarOwnerEmail} style={{ fontSize: 10, opacity: 0.5, marginTop: 2 }}>
+                      <div className={styles.sidebarOwnerEmail}>
                         {owner.email}
                       </div>
                     )}
@@ -495,7 +533,7 @@ export default function DashboardPage() {
                   onClick={() => { setProfileOpen(false); router.push("/add-pg?new=true"); }}
                   style={{ display: "none" }}
                 >
-                  <span className={styles.sidebarActionIcon}>➕</span>
+                  <div className={styles.sidebarActionIcon}>➕</div>
                   <div>
                     <div className={styles.sidebarActionTitle}>Add Another PG</div>
                     <div className={styles.sidebarActionDesc}>Register a new property</div>
@@ -507,7 +545,7 @@ export default function DashboardPage() {
                   id="btn-edit-pg"
                   onClick={() => { setProfileOpen(false); router.push("/edit-pg"); }}
                 >
-                  <span className={styles.sidebarActionIcon}>✏️</span>
+                  <div className={styles.sidebarActionIcon}>✏️</div>
                   <div>
                     <div className={styles.sidebarActionTitle}>Edit PG</div>
                     <div className={styles.sidebarActionDesc}>Change PG details or rooms</div>
@@ -520,7 +558,7 @@ export default function DashboardPage() {
                     id="btn-change-pg"
                     onClick={() => { setProfileOpen(false); router.push("/select-pg"); }}
                   >
-                    <span className={styles.sidebarActionIcon}>🔄</span>
+                    <div className={styles.sidebarActionIcon}>🔄</div>
                     <div>
                       <div className={styles.sidebarActionTitle}>Change PG</div>
                       <div className={styles.sidebarActionDesc}>
@@ -537,7 +575,7 @@ export default function DashboardPage() {
                   id="btn-sign-out"
                   onClick={() => { signOut(); router.replace("/sign-in"); }}
                 >
-                  <span className={styles.sidebarActionIcon}>🚪</span>
+                  <div className={styles.sidebarActionIcon}>🚪</div>
                   <div>
                     <div className={styles.sidebarActionTitle}>Sign Out</div>
                     <div className={styles.sidebarActionDesc}>Log out of your account</div>
@@ -554,52 +592,70 @@ export default function DashboardPage() {
             {/* Label row with chevron navigation */}
             <div className={styles.sharingNav}>
               <p className={`${styles.sectionLabel} ${styles.sharingNavLabel}`} style={{ margin: 0 }}>AVAILABILITY BY SHARING TYPE</p>
-              <div className={styles.sharingNavBtns}>
+              {/* Right side controls — chevrons hidden on small screens, collapse always visible */}
+              <div className={styles.sharingNavRight}>
+                {/* ‹ › scroll chevrons — hidden on small screens via CSS */}
+                <div className={styles.sharingNavBtns}>
+                  <button
+                    className={styles.sharingChevron}
+                    id="btn-sharing-prev"
+                    aria-label="Scroll left"
+                    onClick={() => sharingScrollRef.current?.scrollBy({ left: -160, behavior: "smooth" })}
+                    disabled={sharingCollapsed}
+                  >‹</button>
+                  <button
+                    className={styles.sharingChevron}
+                    id="btn-sharing-next"
+                    aria-label="Scroll right"
+                    onClick={() => sharingScrollRef.current?.scrollBy({ left: 160, behavior: "smooth" })}
+                    disabled={sharingCollapsed}
+                  >›</button>
+                </div>
+                {/* Collapse toggle — always visible at right end */}
                 <button
                   className={styles.sharingChevron}
-                  id="btn-sharing-prev"
-                  aria-label="Scroll left"
-                  onClick={() => sharingScrollRef.current?.scrollBy({ left: -160, behavior: "smooth" })}
-                >‹</button>
-                <button
-                  className={styles.sharingChevron}
-                  id="btn-sharing-next"
-                  aria-label="Scroll right"
-                  onClick={() => sharingScrollRef.current?.scrollBy({ left: 160, behavior: "smooth" })}
-                >›</button>
+                  id="btn-sharing-collapse"
+                  aria-label={sharingCollapsed ? "Expand sharing cards" : "Collapse sharing cards"}
+                  onClick={toggleSharingCollapsed}
+                >
+                  <span className={`${styles.collapseArrow} ${sharingCollapsed ? styles.collapseArrowUp : ""}`}>⌄</span>
+                </button>
               </div>
             </div>
-            <div className={styles.sharingScroll} ref={sharingScrollRef}>
-              {activeShareTypes.map((type) => {
-                const stats = sharingStats(data.rooms, type);
-                const isActive = filterType === type;
-                return (
-                  <button key={type}
-                    className={`${styles.sharingCard} ${isActive ? styles.sharingCardActive : ""}`}
-                    onClick={() => { playWhoosh(true); setFilterType(isActive ? null : type); }} id={`sharing-card-${type}`}>
-                    <DonutRing pct={stats.pct} free={stats.free} total={stats.totalBeds} />
-                    <div className={styles.sharingInfo}>
-                      <span className={styles.sharingIcon}>{SHARE_ICONS[Math.min(type, 5)] || "🏠"}</span>
-                      <span className={styles.sharingLabel}>{type}-Share</span>
-                      <span className={styles.sharingDetail}>{stats.free} of {stats.totalBeds} free</span>
-                    </div>
-                    {isActive && <div className={styles.filterPill}>Filtering ✕</div>}
-                  </button>
-                );
-              })}
+            {/* Cards — collapsible */}
+            <div className={`${styles.sharingCardsWrap} ${sharingCollapsed ? styles.sharingCardsCollapsed : ""}`}>
+              <div className={styles.sharingScroll} ref={sharingScrollRef}>
+                {activeShareTypes.map((type) => {
+                  const stats = sharingStats(data.rooms, type);
+                  const isActive = filterType === type;
+                  return (
+                    <button key={type}
+                      className={`${styles.sharingCard} ${isActive ? styles.sharingCardActive : ""}`}
+                      onClick={() => { playWhoosh(true); setFilterType(isActive ? null : type); }} id={`sharing-card-${type}`}>
+                      <DonutRing pct={stats.pct} free={stats.free} total={stats.totalBeds} />
+                      <div className={styles.sharingInfo}>
+                        <span className={styles.sharingIcon}>{SHARE_ICONS[Math.min(type, 5)] || "🏠"}</span>
+                        <span className={styles.sharingLabel}>{type}-Share</span>
+                        <span className={styles.sharingDetail}>{stats.free} of {stats.totalBeds} free</span>
+                      </div>
+                      {isActive && <div className={styles.filterPill}>Filtering ✕</div>}
+                    </button>
+                  );
+                })}
+              </div>
+              {filterType && (
+                <p className={styles.filterNote}>
+                  Showing {filterType}-sharing · <button className={styles.clearFilter} onClick={() => setFilterType(null)}>Clear</button>
+                </p>
+              )}
             </div>
-            {filterType && (
-              <p className={styles.filterNote}>
-                Showing {filterType}-sharing · <button className={styles.clearFilter} onClick={() => setFilterType(null)}>Clear</button>
-              </p>
-            )}
           </section>
         )}
 
         {/* ─── 3D Building ─── */}
         <section className={styles.buildingSection}>
           <div className={styles.buildingSectionHeader}>
-            <p className={styles.sectionLabel} style={{ margin: 0 }}>🏢 {pg.name.toUpperCase()} — LIVE MAP</p>
+            <p className={`${styles.sectionLabel} ${styles.buildingLabel}`} style={{ margin: 0 }}>🏢 {pg.name.toUpperCase()} — LIVE MAP</p>
 
             {/* View toggle dropdown */}
             <div className={styles.viewDropWrap} id="view-drop-wrap">
@@ -637,7 +693,7 @@ export default function DashboardPage() {
             </div>
           </div>
           {buildingView === "3d" ? (
-            /* Full 3D rotatable building */
+            /* Full 3D rotatable building — no dark wrapper, component is self-contained */
             <Building3DView
               pgName={pg.name}
               totalFloors={pg.totalFloors}
@@ -648,7 +704,7 @@ export default function DashboardPage() {
             />
           ) : (
             /* ── List View (slab building) ── */
-            <div className={styles.building3dOuter}>
+            <div className={`${styles.building3dOuter} ${styles.buildingDark}`}>
               <div className={styles.building3dScene}>
                 <div className={styles.building3dStack}>
                   {floorNums.map((floor, idx) => {

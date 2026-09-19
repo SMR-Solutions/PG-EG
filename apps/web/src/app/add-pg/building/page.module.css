@@ -214,21 +214,21 @@
   box-shadow: 0 0 6px rgba(45, 198, 83, 0.3);
 }
 
-/* Floor label */
+/* Floor label — forced white inside dark building */
 .floorLabel { flex: 1; }
 .floorNum {
   display: block;
   font-size: 14px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #fff;
   margin-bottom: 2px;
 }
-.floorCount { font-size: 12px; color: var(--text-muted); }
+.floorCount { font-size: 12px; color: rgba(255,255,255,0.5); }
 
 /* Chevron */
 .chevron {
   font-size: 20px;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.4);
   transition: transform 0.2s ease;
   line-height: 1;
 }
@@ -291,13 +291,13 @@
 .roomName {
   font-size: 15px;
   font-weight: 800;
-  color: var(--text-primary);
+  color: #fff;
   letter-spacing: -0.2px;
 }
 .roomBeds { display: flex; gap: 1px; flex-wrap: wrap; justify-content: center; }
 .bedIcon { font-size: 11px; line-height: 1; }
-.bedExtra { font-size: 11px; color: var(--text-muted); }
-.roomBedsLabel { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+.bedExtra { font-size: 11px; color: rgba(255,255,255,0.45); }
+.roomBedsLabel { font-size: 11px; color: rgba(255,255,255,0.45); font-weight: 500; }
 
 /* ─── Add Room button ─── */
 .addRoomBtn {
@@ -368,10 +368,10 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.05);
-  color: var(--text-primary);
-  font-size: 20px;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  font-size: 22px;
   cursor: pointer;
   transition: var(--transition);
   display: flex;
@@ -382,14 +382,14 @@
 }
 .bedBtn:hover:not(:disabled) {
   border-color: var(--brand-green);
-  background: rgba(45, 198, 83, 0.1);
+  background: rgba(45, 198, 83, 0.15);
   color: var(--brand-green);
 }
 .bedBtn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 .bedCountDisplay { display: flex; flex-direction: column; align-items: center; min-width: 50px; }
-.bedCountNum { font-size: 36px; font-weight: 800; color: var(--text-primary); line-height: 1; letter-spacing: -1px; }
-.bedCountLabel { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.bedCountNum { font-size: 36px; font-weight: 800; color: #fff; line-height: 1; letter-spacing: -1px; }
+.bedCountLabel { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
 
 .addError {
   font-size: 12px;
@@ -426,17 +426,17 @@
 
 .cancelBtn {
   padding: 13px 18px;
-  background: transparent;
-  border: 1px solid var(--border);
+  background: rgba(230,57,70,0.12);
+  border: 1.5px solid rgba(230,57,70,0.4);
   border-radius: var(--radius-md);
-  color: var(--text-secondary);
+  color: #e63946;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: var(--transition);
   font-family: inherit;
 }
-.cancelBtn:hover { border-color: var(--border-hover); color: var(--text-primary); }
+.cancelBtn:hover { background: rgba(230,57,70,0.22); border-color: #e63946; }
 
 /* ─── Ground floor ─── */
 .ground {
@@ -544,8 +544,8 @@
 /* ─── Bed Editor ─── */
 .bedEditor {
   margin-top: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   padding: 12px 14px;
   width: 100%;
@@ -554,7 +554,7 @@
 .bedEditorTitle {
   font-size: 12px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.6);
   letter-spacing: 0.5px;
   text-transform: uppercase;
   margin-bottom: 10px;
@@ -580,7 +580,7 @@
   flex: 1;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #fff;
 }
 
 .bedRowStatus {

@@ -134,12 +134,7 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {/* Rotate indicator — absolute inside scene, near entrance */}
-        <div className={styles.rotateHint}>
-          <span className={styles.rotateArrowL}>&#8592;</span>
-          <span className={styles.rotateIcon}>&#x21BB;</span>
-          <span className={styles.rotateArrowR}>&#8594;</span>
-        </div>
+
         <div className={styles.perspBox}>
           <div className={styles.building} style={{ transform: `rotateX(${ROT_X}deg) rotateY(${rotY}deg)` }}>
 

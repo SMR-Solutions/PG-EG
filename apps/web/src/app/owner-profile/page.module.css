@@ -1,7 +1,7 @@
-﻿.main {
+.main {
   min-height: 100vh;
-  background: #0d1117;
-  color: #fff;
+  background: var(--bg-base);
+  color: var(--text-primary);
   font-family: "Inter", "Outfit", sans-serif;
   position: relative;
   overflow-x: hidden;
@@ -17,17 +17,17 @@
   position: sticky; top: 0; z-index: 10;
   display: flex; align-items: center; gap: 14px;
   padding: 14px 20px;
-  background: rgba(13,17,23,0.9);
+  background: var(--bg-card);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid var(--border);
 }
 .backBtn {
-  font-size: 13px; font-weight: 600; color: #2dc653;
+  font-size: 13px; font-weight: 600; color: var(--brand-green);
   background: none; border: none; cursor: pointer;
   font-family: inherit; padding: 6px 0; flex-shrink: 0;
 }
 .pageTitle {
-  font-size: 16px; font-weight: 800; color: #fff; margin: 0;
+  font-size: 16px; font-weight: 800; color: var(--text-primary); margin: 0;
 }
 
 .content {
@@ -61,10 +61,10 @@
   font-size: 22px; opacity: 0; transition: opacity 0.2s;
 }
 .avatarWrap:hover .avatarOverlay { opacity: 1; }
-.photoHint { font-size: 11px; color: rgba(255,255,255,0.4); margin: 0; }
+.photoHint { font-size: 11px; color: var(--text-muted); margin: 0; }
 .spinner {
-  width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: #fff; border-radius: 50%;
+  width: 18px; height: 18px; border: 2px solid var(--border-hover);
+  border-top-color: var(--text-primary); border-radius: 50%;
   animation: spin 0.8s linear infinite; display: inline-block;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -72,56 +72,56 @@
 /* ─── Fields ─── */
 .fieldGroup { display: flex; flex-direction: column; gap: 6px; }
 .fieldLabel {
-  font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.45);
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: 0.06em; margin: 0;
 }
-.fieldHint { font-size: 11px; color: rgba(255,255,255,0.3); margin: 0; }
+.fieldHint { font-size: 11px; color: var(--text-muted); margin: 0; opacity: 0.7; }
 
 .fieldReadonly {
   display: flex; align-items: center; justify-content: space-between;
   padding: 11px 14px;
-  background: rgba(255,255,255,0.04);
-  border: 1.5px solid rgba(255,255,255,0.08);
+  background: var(--border);
+  border: 1.5px solid var(--border-hover);
   border-radius: 10px;
-  font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.6);
+  font-size: 14px; font-weight: 600; color: var(--text-primary); opacity: 0.75;
 }
 .lockBadge {
   font-size: 10px; font-weight: 700;
-  color: rgba(255,255,255,0.3);
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-muted);
+  background: var(--border);
+  border: 1px solid var(--border-hover);
   border-radius: 20px; padding: 2px 8px;
   white-space: nowrap; margin-left: 8px;
 }
 
 .inputWrap {
   display: flex; align-items: center;
-  background: rgba(255,255,255,0.06);
-  border: 1.5px solid rgba(255,255,255,0.12);
+  background: var(--bg-overlay);
+  border: 1.5px solid var(--border-hover);
   border-radius: 10px; overflow: hidden;
   transition: border-color 0.2s;
 }
-.inputWrap:focus-within { border-color: rgba(45,198,83,0.4); }
+.inputWrap:focus-within { border-color: rgba(45,198,83,0.5); }
 .inputPrefix {
-  padding: 0 12px; color: rgba(255,255,255,0.35);
+  padding: 0 12px; color: var(--text-muted);
   font-size: 13px; font-weight: 600;
 }
 .input {
   flex: 1; background: none; border: none; outline: none;
-  color: #fff; font-size: 14px; font-weight: 600;
+  color: var(--text-primary); font-size: 14px; font-weight: 600;
   padding: 12px 12px 12px 0; font-family: inherit;
 }
 /* standalone input (email) */
 input.input {
   width: 100%;
-  background: rgba(255,255,255,0.06);
-  border: 1.5px solid rgba(255,255,255,0.12);
+  background: var(--bg-overlay);
+  border: 1.5px solid var(--border-hover);
   border-radius: 10px;
   padding: 12px 14px;
   box-sizing: border-box;
   transition: border-color 0.2s;
 }
-input.input:focus { border-color: rgba(45,198,83,0.4); outline: none; }
+input.input:focus { border-color: rgba(45,198,83,0.5); outline: none; }
 
 /* ─── Messages ─── */
 .errorMsg {
@@ -148,7 +148,7 @@ input.input:focus { border-color: rgba(45,198,83,0.4); outline: none; }
 .saveBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 .spinnerDark {
   width: 16px; height: 16px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: #fff; border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.25);
+  border-top-color: #000; border-radius: 50%;
   animation: spin 0.8s linear infinite; display: inline-block;
 }

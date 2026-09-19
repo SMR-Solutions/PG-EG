@@ -202,7 +202,11 @@ function CheckInForm() {
             <p className={styles.bannerTitle}>
               CHECK-IN: Room {bedInfo?.room.roomNumber ?? "—"} · Bed {bedLetter}
             </p>
-            <p className={styles.bannerSub}>Floor {bedInfo?.room.floor} · {bedInfo?.room.sharingType}-Sharing</p>
+            <p className={styles.bannerSub}>
+              <span className={styles.bannerBadgeFloor}>🏢 Floor {bedInfo?.room.floor}</span>
+              <span className={styles.bannerBadgeSep}>·</span>
+              <span className={styles.bannerBadgeSharing}>{bedInfo?.room.sharingType}-Sharing 🛏️</span>
+            </p>
           </div>
         </div>
 
