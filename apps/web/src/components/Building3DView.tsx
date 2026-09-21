@@ -46,7 +46,7 @@ const W = 280;   // building width
 const D = 90;    // building depth (front-to-back)
 const FH = 68;   // floor height in px
 
-const BED_COLORS = { free: "#2dc653", occupied: "#e63946", pending: "#f4a261" } as const;
+const BED_COLORS = { occupied: "#2dc653", free: "#e63946", pending: "#f4a261" } as const;
 
 function bedColor(bed: Bed) {
   if (!bed.isOccupied) return BED_COLORS.free;
@@ -55,17 +55,17 @@ function bedColor(bed: Bed) {
 function roomColor(room: Room) {
   const free = room.beds.filter(b => !b.isOccupied).length;
   if (room.beds.length === 0) return "#666";
-  if (free === 0) return BED_COLORS.occupied;
-  if (free < room.beds.length) return BED_COLORS.pending;
-  return BED_COLORS.free;
+  if (free === 0) return BED_COLORS.occupied;          // all filled → green
+  if (free < room.beds.length) return BED_COLORS.pending; // partial → orange
+  return BED_COLORS.free;                               // all empty → red
 }
 function floorStatusColor(floorRooms: Room[]) {
   const beds = floorRooms.flatMap(r => r.beds);
   if (!beds.length) return "#555";
   const free = beds.filter(b => !b.isOccupied).length;
-  if (free === 0) return BED_COLORS.occupied;
-  if (free / beds.length <= 0.35) return BED_COLORS.pending;
-  return BED_COLORS.free;
+  if (free === 0) return BED_COLORS.occupied;          // all filled → green
+  if (free / beds.length <= 0.35) return BED_COLORS.pending; // mostly filled → orange
+  return BED_COLORS.free;                               // mostly empty → red
 }
 
 export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick, filterType }: Props) {

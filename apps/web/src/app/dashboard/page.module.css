@@ -917,6 +917,8 @@
   .headerLeft { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
   .pgName { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .pgMeta { font-size: 11px; flex-shrink: 0; }
+  /* Hide FAB on small screens — search is inside sidebar */
+  .searchFab { display: none; }
 }
 
 /* Small screens (phones ≤400px) */
@@ -1370,6 +1372,31 @@
 .permanentExitBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 /* ─── Search FAB ─── */
+/* Search sidebar FAB — green circle pinned inside sidebar bottom-right */
+.sidebarSearchFab {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 52px;
+  height: 52px;
+  background: var(--brand-green);
+  color: #000;
+  border: none;
+  border-radius: 50%;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(45,198,83,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.sidebarSearchFab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 24px rgba(45,198,83,0.65);
+}
+
 .searchFab {
   position: fixed; bottom: 28px; right: 22px;
   width: 56px; height: 56px;

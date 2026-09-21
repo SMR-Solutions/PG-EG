@@ -64,9 +64,9 @@ function floorStats(rooms: Room[], floor: number) {
 
 function floorColor(free: number, total: number) {
   if (total === 0) return "empty";
-  if (free === 0) return "full";
-  if (free / total <= 0.3) return "almost";
-  return "available";
+  if (free === 0) return "full";        // all filled → green
+  if (free === total) return "available"; // all empty → red
+  return "almost";                      // partial → orange
 }
 
 function roomHasPendingRent(room: Room) {
@@ -177,6 +177,15 @@ export default function DashboardPage() {
   const [searchResults, setSearchResults] = useState<TenantWithHistory[]>([]);
   const [searching, setSearching] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Viewport — FAB only shows on large screens; search on small screens is inside sidebar
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
+  useEffect(() => {
+    const check = () => setIsSmallScreen(window.innerWidth <= 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   // Room history state
   const [roomHistoryRoom, setRoomHistoryRoom] = useState<Room | null>(null);
@@ -437,13 +446,13 @@ export default function DashboardPage() {
             </div>
             <div className={styles.statDivider} />
             <div className={styles.overallStat}>
-              <span className={styles.overallNum} style={{ color: (totalBeds - occupiedBeds) > 0 ? "var(--brand-green)" : "#e63946" }}>{totalBeds - occupiedBeds}</span>
-              <span className={styles.overallLabel}>free</span>
+              <span className={styles.overallNum} style={{ color: "var(--brand-green)" }}>{occupiedBeds}</span>
+              <span className={styles.overallLabel}>filled</span>
             </div>
             <div className={styles.statDivider} />
             <div className={styles.overallStat}>
-              <span className={styles.overallNum} style={{ color: "#e63946" }}>{occupiedBeds}</span>
-              <span className={styles.overallLabel}>filled</span>
+              <span className={styles.overallNum} style={{ color: "#e63946" }}>{totalBeds - occupiedBeds}</span>
+              <span className={styles.overallLabel}>free</span>
             </div>
             {pendingRentCount > 0 && (
               <>
@@ -581,8 +590,18 @@ export default function DashboardPage() {
                     <div className={styles.sidebarActionDesc}>Log out of your account</div>
                   </div>
                 </button>
+
               </div>
             </div>
+            {/* Green search FAB pinned inside sidebar — only visible while sidebar is open */}
+            <button
+              className={styles.sidebarSearchFab}
+              id="btn-sidebar-search-fab"
+              onClick={() => { setProfileOpen(false); setSearchOpen(true); }}
+              aria-label="Search tenant"
+            >
+              🔍
+            </button>
           </div>
         )}
 
@@ -712,8 +731,8 @@ export default function DashboardPage() {
                     const colorKey = floorColor(all.free, all.totalBeds);
                     const isActive = activeFloor === floor;
                     const floorColor3d =
-                      colorKey === "full" ? "#e63946" :
-                      colorKey === "almost" ? "#f4a261" : "#2dc653";
+                      colorKey === "full" ? "#2dc653" :
+                      colorKey === "almost" ? "#f4a261" : "#e63946";
                     const allBeds = all.rooms.flatMap(r => r.beds);
                     // Filter highlighting
                     const isFloorDimmed = !!filterType && !all.rooms.some(r => r.sharingType === filterType);
@@ -749,8 +768,8 @@ export default function DashboardPage() {
                               {allBeds.slice(0, 10).map((bed, i) => (
                                 <div key={i} className={`${styles.window} ${
                                   bed.isOccupied
-                                    ? (bed.tenant?.rent?.status === "pending" ? styles.windowOrange : styles.windowRed)
-                                    : styles.windowGreen
+                                    ? (bed.tenant?.rent?.status === "pending" ? styles.windowOrange : styles.windowGreen)
+                                    : styles.windowRed
                                 }`} />
                               ))}
                             </div>
@@ -769,6 +788,10 @@ export default function DashboardPage() {
                               const isDimmed = filterType && room.sharingType !== filterType;
                               const roomFree = room.beds.filter(b => !b.isOccupied).length;
                               const hasPending = roomHasPendingRent(room);
+                              // Green=full, Red=all empty, Orange=partial
+                              const roomCardColor =
+                                roomFree === 0 ? "#2dc653" :
+                                roomFree === room.beds.length ? "#e63946" : "#f4a261";
                               return (
                                 <button key={room.id}
                                   className={`${styles.roomCard3d} ${isDimmed ? styles.roomCard3dDimmed : ""}`}
@@ -778,6 +801,7 @@ export default function DashboardPage() {
                                     setSelectedRoom(room);
                                   }}
                                   id={`room3d-${room.id}`}
+                                  style={{ borderColor: roomCardColor, boxShadow: `0 0 8px ${roomCardColor}33` }}
                                 >
                                   <div className={styles.roomCard3dHeader}>
                                     <span className={styles.roomCard3dName}>{room.roomNumber}</span>
@@ -786,11 +810,11 @@ export default function DashboardPage() {
                                   <div className={styles.roomBedDots3d}>
                                     {room.beds.map(bed => (
                                       <span key={bed.id} className={`${styles.bedDot3d} ${bed.isOccupied
-                                        ? (bed.tenant?.rent?.status === "pending" ? styles.bedDotOrange : styles.bedDotRed)
-                                        : styles.bedDotGreen}`} />
+                                        ? (bed.tenant?.rent?.status === "pending" ? styles.bedDotOrange : styles.bedDotGreen)
+                                        : styles.bedDotRed}`} />
                                     ))}
                                   </div>
-                                  <span className={styles.roomCard3dSub}>
+                                  <span className={styles.roomCard3dSub} style={{ color: roomCardColor }}>
                                     {roomFree === 0 ? "Full" : `${roomFree} free`}
                                   </span>
                                 </button>
@@ -1628,8 +1652,8 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/* ─── Search FAB ─── */}
-      {!searchOpen && !checkoutModal && !roomHistoryRoom && (
+      {/* ─── Search FAB (large screens only — small screens use sidebar) ─── */}
+      {!isSmallScreen && !searchOpen && !checkoutModal && !roomHistoryRoom && (
         <button className={styles.searchFab} onClick={() => setSearchOpen(true)} id="btn-search-fab">
           🔍
         </button>
