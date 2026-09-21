@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import styles from "./page.module.css";
 import AppLogo from "@/components/AppLogo";
 import Building3DView from "@/components/Building3DView";
+// R3F version — dynamically imported so Three.js is never loaded unless the user picks it
+const Building3DViewR3F = dynamic(() => import("@/components/Building3DViewR3F"), { ssr: false });
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -149,6 +152,14 @@ export default function DashboardPage() {
     return "list";
   });
   const [viewDropOpen, setViewDropOpen] = useState(false);
+  // Building style — which 3D engine renders the building
+  const [buildingStyle, setBuildingStyle] = useState<"css" | "r3f">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("pg-eg-building-style") as "css" | "r3f") || "css";
+    }
+    return "css";
+  });
+  const [buildingStylePickerOpen, setBuildingStylePickerOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [detailTenant, setDetailTenant] = useState<{ tenant: Tenant; bed: Bed; room: Room } | null>(null);
 
@@ -579,6 +590,24 @@ export default function DashboardPage() {
 
                 <div className={styles.sidebarDivider} />
 
+                {/* Building Structures picker */}
+                <button
+                  className={styles.sidebarAction}
+                  id="btn-building-structure"
+                  onClick={() => { setBuildingStylePickerOpen(true); }}
+                >
+                  <div className={styles.sidebarActionIcon}>🏗️</div>
+                  <div style={{ flex: 1 }}>
+                    <div className={styles.sidebarActionTitle}>Building Structure</div>
+                    <div className={styles.sidebarActionDesc}>
+                      {buildingStyle === "css" ? "Classic 3D" : "Full 3D (Modern)"}
+                    </div>
+                  </div>
+                  <span className={styles.sidebarActionChevron}>›</span>
+                </button>
+
+                <div className={styles.sidebarDivider} />
+
                 <button
                   className={`${styles.sidebarAction} ${styles.sidebarActionDanger}`}
                   id="btn-sign-out"
@@ -603,6 +632,81 @@ export default function DashboardPage() {
               🔍
             </button>
           </div>
+        )}
+
+        {/* ─── Building Style Picker ─── */}
+        {buildingStylePickerOpen && (
+          <>
+            <div className={styles.sidebarBackdrop} onClick={() => setBuildingStylePickerOpen(false)} />
+            <div className={styles.buildingPickerSheet}>
+              <div className={styles.buildingPickerHandle} />
+              <div className={styles.buildingPickerHeader}>
+                <span className={styles.buildingPickerTitle}>🏢 Choose your PG building style</span>
+                <button
+                  className={styles.buildingPickerClose}
+                  onClick={() => setBuildingStylePickerOpen(false)}
+                  aria-label="Close"
+                >✕</button>
+              </div>
+              <p className={styles.buildingPickerDesc}>
+                Choose your PG building style.
+              </p>
+              <div className={styles.buildingPickerGrid}>
+
+                {/* Option 1 — CSS 3D (current) */}
+                <button
+                  id="btn-style-css"
+                  className={`${styles.buildingStyleCard} ${buildingStyle === "css" ? styles.buildingStyleCardActive : ""}`}
+                  onClick={() => {
+                    setBuildingStyle("css");
+                    localStorage.setItem("pg-eg-building-style", "css");
+                    playWhoosh(true);
+                    setBuildingStylePickerOpen(false);
+                  }}
+                >
+                  <div className={styles.bscPreview}>
+                    <img
+                      src="/classic3d-preview.jpg"
+                      alt="Classic 3D preview"
+                      style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+                    />
+                  </div>
+                  <div className={styles.bscInfo}>
+                    <div className={styles.bscName}>Classic 3D</div>
+                  </div>
+                  {buildingStyle === "css" && <span className={styles.bscActiveTag}>✓ Active</span>}
+                </button>
+
+                {/* Option 2 — React Three Fiber */}
+                <button
+                  id="btn-style-r3f"
+                  className={`${styles.buildingStyleCard} ${buildingStyle === "r3f" ? styles.buildingStyleCardActive : ""}`}
+                  onClick={() => {
+                    setBuildingStyle("r3f");
+                    localStorage.setItem("pg-eg-building-style", "r3f");
+                    playWhoosh(true);
+                    setBuildingStylePickerOpen(false);
+                  }}
+                >
+                  <div className={styles.bscPreview}>
+                    <img
+                      src="/modern3d-preview.jpg"
+                      alt="Full 3D Modern preview"
+                      style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }}
+                    />
+                  </div>
+                  <div className={styles.bscInfo}>
+                    <div className={styles.bscName}>Full 3D <span className={styles.bscBadge}>Modern ✨</span></div>
+                  </div>
+                  {buildingStyle === "r3f" && <span className={styles.bscActiveTag}>✓ Active</span>}
+                </button>
+
+              </div>
+              <p className={styles.buildingPickerNote}>
+                💡 The 3D view always stays fully interactive with all your PG data.
+              </p>
+            </div>
+          </>
         )}
 
         {/* ─── Sharing Cards — only show types with rooms ─── */}
@@ -712,15 +816,36 @@ export default function DashboardPage() {
             </div>
           </div>
           {buildingView === "3d" ? (
-            /* Full 3D rotatable building — no dark wrapper, component is self-contained */
-            <Building3DView
-              pgName={pg.name}
-              totalFloors={pg.totalFloors}
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              rooms={data.rooms as any}
-              onRoomClick={(room) => setSelectedRoom(room as any)}
-              filterType={filterType}
-            />
+            /* Full 3D building — CSS or R3F based on user's Building Structure preference */
+            buildingStyle === "r3f" ? (
+              <Building3DViewR3F
+                pgName={pg.name}
+                totalFloors={pg.totalFloors}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                rooms={data.rooms as any}
+                onRoomClick={(room) => setSelectedRoom(room as any)}
+                filterType={filterType}
+              />
+            ) : (
+              /* Classic 3D — same outer container so it has background/space like R3F */
+              <div style={{
+                background: "linear-gradient(135deg, #0a1628 0%, #0d1f3c 50%, #081020 100%)",
+                borderRadius: "18px",
+                padding: "12px",
+                margin: "8px 0",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.07)",
+              }}>
+                <Building3DView
+                  pgName={pg.name}
+                  totalFloors={pg.totalFloors}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  rooms={data.rooms as any}
+                  onRoomClick={(room) => setSelectedRoom(room as any)}
+                  filterType={filterType}
+                />
+              </div>
+            )
           ) : (
             /* ── List View (slab building) ── */
             <div className={`${styles.building3dOuter} ${styles.buildingDark}`}>
