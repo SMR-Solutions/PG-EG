@@ -431,7 +431,14 @@ export default function DashboardPage() {
         {/* ─── PG-EG Logo Bar ─── */}
         <div className={styles.logoBar}>
           <AppLogo size="sm" />
-          {/* Profile button — top-right, boxy, same height as logo */}
+          {/* Crown above profile button — both absolute in logoBar (position:relative) */}
+          <span style={{
+            position: "absolute", right: "0", top: "-16px",
+            width: "40px", textAlign: "center",
+            fontSize: "32px", lineHeight: 1,
+            filter: "drop-shadow(0 2px 8px rgba(255,200,0,0.95))",
+            pointerEvents: "none", zIndex: 2,
+          }}>👑</span>
           <button
             className={styles.topProfileBtn}
             onClick={() => setProfileOpen(true)}
@@ -588,25 +595,7 @@ export default function DashboardPage() {
                   </button>
                 )}
 
-                <div className={styles.sidebarDivider} />
 
-                {/* Building Structures picker */}
-                <button
-                  className={styles.sidebarAction}
-                  id="btn-building-structure"
-                  onClick={() => { setBuildingStylePickerOpen(true); }}
-                >
-                  <div className={styles.sidebarActionIcon}>🏗️</div>
-                  <div style={{ flex: 1 }}>
-                    <div className={styles.sidebarActionTitle}>Building Structure</div>
-                    <div className={styles.sidebarActionDesc}>
-                      {buildingStyle === "css" ? "Classic 3D" : "Full 3D (Modern)"}
-                    </div>
-                  </div>
-                  <span className={styles.sidebarActionChevron}>›</span>
-                </button>
-
-                <div className={styles.sidebarDivider} />
 
                 <button
                   className={`${styles.sidebarAction} ${styles.sidebarActionDanger}`}
@@ -620,17 +609,27 @@ export default function DashboardPage() {
                   </div>
                 </button>
 
-              </div>
+              </div>{/* end sidebarBody */}
+
+              {/* Building style FAB — bottom-left inside sidebar */}
+              <button
+                className={styles.sidebarBuildingFab}
+                id="btn-sidebar-building-fab"
+                onClick={() => { setProfileOpen(false); setBuildingStylePickerOpen(true); }}
+                aria-label="Choose building style"
+              >
+                🏢
+              </button>
+              {/* Search FAB — bottom-right inside sidebar */}
+              <button
+                className={styles.sidebarSearchFab}
+                id="btn-sidebar-search-fab"
+                onClick={() => { setProfileOpen(false); setSearchOpen(true); }}
+                aria-label="Search tenant"
+              >
+                🔍
+              </button>
             </div>
-            {/* Green search FAB pinned inside sidebar — only visible while sidebar is open */}
-            <button
-              className={styles.sidebarSearchFab}
-              id="btn-sidebar-search-fab"
-              onClick={() => { setProfileOpen(false); setSearchOpen(true); }}
-              aria-label="Search tenant"
-            >
-              🔍
-            </button>
           </div>
         )}
 
@@ -778,7 +777,10 @@ export default function DashboardPage() {
         {/* ─── 3D Building ─── */}
         <section className={styles.buildingSection}>
           <div className={styles.buildingSectionHeader}>
-            <p className={`${styles.sectionLabel} ${styles.buildingLabel}`} style={{ margin: 0 }}>🏢 {pg.name.toUpperCase()} — LIVE MAP</p>
+            <p className={`${styles.sectionLabel} ${styles.buildingLabel}`} style={{ margin: 0 }}>
+                <span className={styles.liveDot} />
+                Your Building
+              </p>
 
             {/* View toggle dropdown */}
             <div className={styles.viewDropWrap} id="view-drop-wrap">

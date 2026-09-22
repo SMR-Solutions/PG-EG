@@ -366,6 +366,12 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
                 </div>
                 <div className={styles.stairsLine} />
                 <span className={styles.groundTxt}>ENTRANCE</span>
+                {/* Vehicles on groundFront — rotate with building */}
+                <span className={styles.sceneBike} style={{ position: "absolute", left: "18px", bottom: 0 }}>🏍️</span>
+                <span className={styles.sceneCar} style={{ position: "absolute", right: "18px", bottom: 0 }}>🚗</span>
+                {/* Trees just outside building walls — same front face, same height */}
+                <span className={styles.sceneTree} style={{ position: "absolute", left: "-70px", bottom: 0 }}>🌳</span>
+                <span className={styles.sceneTree} style={{ position: "absolute", right: "-70px", bottom: 0 }}>🌳</span>
               </div>
               <div className={styles.groundRight}
                 style={{ transform: `translateX(${W / 2}px) rotateY(90deg) translateZ(${-D / 2}px)`, width: D }} />

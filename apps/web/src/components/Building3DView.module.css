@@ -250,10 +250,28 @@
   position: absolute; height: 42px; width: 280px;
   background: linear-gradient(180deg, #141926, #0e1320);
   border: 1px solid rgba(255,255,255,0.06);
-  border-top: none;
+  border-top: 2px solid rgba(45,198,83,0.35);
   display: flex; align-items: flex-end; justify-content: center;
-  padding-bottom: 0; overflow: hidden;
+  padding-bottom: 0; overflow: visible;
+  box-shadow: 0 -2px 12px rgba(45,198,83,0.08);
 }
+
+/* entrance scene — cars, trees — outside 3D context, below building */
+.entranceScene {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin: -6px auto 8px;
+  pointer-events: none;
+}
+.entranceVehicles {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.sceneTree  { display: block; font-size: 68px; line-height: 1; filter: drop-shadow(0 5px 12px rgba(0,60,0,0.9)); }
+.sceneCar   { display: block; font-size: 40px; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.9)); }
+.sceneBike  { display: block; font-size: 36px; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.9)); }
 
 .doorGroup { display: flex; gap: 6px; align-items: flex-end; }
 .door {
@@ -275,9 +293,17 @@
   background: rgba(255,255,255,0.05);
 }
 .groundTxt {
-  position: absolute; bottom: 3px; right: 10px;
-  font-size: 7px; font-weight: 800;
-  color: rgba(255,255,255,0.12); letter-spacing: 2.5px;
+  position: absolute; bottom: 5px;
+  left: 50%; transform: translateX(-50%);
+  font-size: 9px; font-weight: 900;
+  color: rgba(45,198,83,0.9); letter-spacing: 3px;
+  text-shadow: 0 0 8px rgba(45,198,83,0.8), 0 0 20px rgba(45,198,83,0.4);
+  white-space: nowrap;
+  animation: entranceGlow 2.4s ease-in-out infinite;
+}
+@keyframes entranceGlow {
+  0%,100% { opacity: 1; text-shadow: 0 0 8px rgba(45,198,83,0.8), 0 0 20px rgba(45,198,83,0.4); }
+  50%      { opacity: 0.65; text-shadow: 0 0 4px rgba(45,198,83,0.5), 0 0 10px rgba(45,198,83,0.2); }
 }
 
 .groundRight {
