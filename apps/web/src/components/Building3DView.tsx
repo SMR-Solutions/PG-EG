@@ -115,6 +115,13 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
   const floors = Array.from({ length: totalFloors }, (_, i) => totalFloors - i); // 5→1
   const totalH = totalFloors * FH;
 
+  // Scene sizing: perspBox center placed at (totalH + 90) from scene top so:
+  //   ~60px above roof sign, ~90px below entrance — equal visual margins regardless of floor count.
+  // Math: center = paddingTop + (height - paddingTop)/2  →  paddingTop = totalH - 40
+  //       height = totalH + 220
+  const sceneH    = Math.max(400, totalH + 220);
+  const scenePadT = Math.max(80, totalH - 40);
+
   function handleFloorClick(floor: number) {
     playWhoosh();
     setActiveFloor(activeFloor === floor ? null : floor);
@@ -128,7 +135,7 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
       {/* ── 3D BUILDING SCENE ── */}
       <div
         className={styles.scene}
-        style={{ height: totalH + 260, paddingTop: 190 }}
+        style={{ height: sceneH, paddingTop: scenePadT }}
         onMouseDown={onMouseDown}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}

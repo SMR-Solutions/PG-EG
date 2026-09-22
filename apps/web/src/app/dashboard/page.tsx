@@ -827,14 +827,14 @@ export default function DashboardPage() {
                 filterType={filterType}
               />
             ) : (
-              /* Classic 3D — same outer container so it has background/space like R3F */
+              /* Classic 3D — dark styled wrapper; centering/height handled inside Building3DView */
               <div style={{
                 background: "linear-gradient(135deg, #0a1628 0%, #0d1f3c 50%, #081020 100%)",
                 borderRadius: "18px",
-                padding: "12px",
                 margin: "8px 0",
                 boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.07)",
+                overflow: "hidden",
               }}>
                 <Building3DView
                   pgName={pg.name}

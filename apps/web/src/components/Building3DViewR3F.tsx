@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -349,11 +349,8 @@ function FloorMesh({floor,rooms,isActive,filterType,onFloorClick,onRoomClick,set
       ))}
       {/* FL-X sign */}
       <mesh position={[-FW/2+FL_W/2+0.04,FH/2+SLAB,FD/2+0.018]}><boxGeometry args={[FL_W,FH*0.70,0.028]}/><meshStandardMaterial color="#0d1820" roughness={0.7}/></mesh>
-      <Html position={[-FW/2+FL_W/2+0.04,FH/2+SLAB,FD/2+0.038]} center distanceFactor={9} style={{pointerEvents:"none"}}>
-        <div style={{textAlign:"center",lineHeight:1}}>
-          <div style={{fontSize:"7px",fontWeight:900,color:"rgba(255,255,255,0.4)",letterSpacing:"0.1em",fontFamily:"system-ui,sans-serif",marginBottom:"2px"}}>FLOOR</div>
-          <div style={{fontSize:"13px",fontWeight:900,color:fc,textShadow:`0 0 8px ${fc}`,letterSpacing:"0.04em",fontFamily:"system-ui,sans-serif"}}>FL-{floor}</div>
-        </div>
+      <Html position={[-FW/2+FL_W/2+0.04,FH/2+SLAB,FD/2+0.038]} center distanceFactor={9} zIndexRange={[0,10]} style={{pointerEvents:"none"}}>
+        <div style={{fontSize:"22px",fontWeight:900,color:fc,textShadow:`0 0 6px ${fc}`,letterSpacing:"0.06em",fontFamily:"system-ui,sans-serif",whiteSpace:"nowrap",lineHeight:1}}>FL-{floor}</div>
       </Html>
       {/* Room windows */}
       {floorRooms.slice(0,6).map((room,i)=>{
@@ -371,9 +368,9 @@ function FloorMesh({floor,rooms,isActive,filterType,onFloorClick,onRoomClick,set
               <meshStandardMaterial color={C.winGlass} emissive={new THREE.Color("#ff8800")} emissiveIntensity={isFloorDimmed?0.04:0.5} roughness={0.18} transparent opacity={isFloorDimmed?0.2:0.82}/>
             </mesh>
             {!isFloorDimmed&&(
-              <Html position={[wx,FH/2+SLAB,FD/2+0.06]} center distanceFactor={9} style={{pointerEvents:"none"}}>
-                <div style={{background:signBg,border:`1.5px solid ${rc}`,borderRadius:"5px",padding:"3px 6px",boxShadow:`0 0 8px ${rc}55`}}>
-                  <span style={{fontSize:"10px",fontWeight:900,color:rc,letterSpacing:"0.05em",whiteSpace:"nowrap",fontFamily:"system-ui,sans-serif"}}>[{room.roomNumber}]</span>
+              <Html position={[wx,FH/2+SLAB,FD/2+0.06]} center distanceFactor={9} zIndexRange={[0,10]} style={{pointerEvents:"none"}}>
+                <div style={{background:signBg,border:`1.5px solid ${rc}`,borderRadius:"5px",padding:"3px 7px",boxShadow:`0 0 8px ${rc}55`}}>
+                  <span style={{fontSize:"24px",fontWeight:900,color:rc,letterSpacing:"0.05em",whiteSpace:"nowrap",fontFamily:"system-ui,sans-serif"}}>{room.roomNumber}</span>
                 </div>
               </Html>
             )}
@@ -392,7 +389,7 @@ function EntranceMesh({totalFloors}:{totalFloors:number}) {
       <mesh position={[0,0,0]}><boxGeometry args={[FW+0.06,SLAB,FD+0.04]}/><meshStandardMaterial color={C.slab} roughness={0.85}/></mesh>
       <mesh position={[0,0.22,FD/2]}><boxGeometry args={[FW,0.44,WT]}/><meshStandardMaterial color={C.wall} roughness={0.8}/></mesh>
       <mesh position={[-FW/2+0.35,0.22,FD/2+0.018]}><boxGeometry args={[0.62,0.44*0.70,0.028]}/><meshStandardMaterial color="#0d1820" roughness={0.7}/></mesh>
-      <Html position={[-FW/2+0.35,0.22,FD/2+0.038]} center distanceFactor={9} style={{pointerEvents:"none"}}>
+      <Html position={[-FW/2+0.35,0.22,FD/2+0.038]} center distanceFactor={9} zIndexRange={[0,10]} style={{pointerEvents:"none"}}>
         <div style={{textAlign:"center",lineHeight:1}}>
           <div style={{fontSize:"7px",fontWeight:900,color:"rgba(255,255,255,0.4)",letterSpacing:"0.1em",fontFamily:"system-ui,sans-serif",marginBottom:"2px"}}>FLOOR</div>
           <div style={{fontSize:"13px",fontWeight:900,color:"#ffc04a",textShadow:"0 0 8px #ffc04a",letterSpacing:"0.04em",fontFamily:"system-ui,sans-serif"}}>G</div>
@@ -432,8 +429,23 @@ function RoofMesh({totalFloors,pgName}:{totalFloors:number;pgName:string}) {
         </group>
       ))}
       <SolarPanels position={[0.6,0.07,0.3]}/>
-      <Html position={[0,0.26,FD/2+0.08]} center distanceFactor={9} style={{pointerEvents:"none"}}>
-        <span style={{background:"rgba(255,255,255,0.97)",color:"#111",fontSize:"11px",fontWeight:900,padding:"4px 16px",borderRadius:"6px",boxShadow:"0 2px 14px rgba(0,0,0,0.5)",whiteSpace:"nowrap",letterSpacing:"0.04em",fontFamily:"system-ui,sans-serif",border:"1px solid rgba(0,0,0,0.08)"}}>{pgName}</span>
+      <Html position={[0,0.26,FD/2+0.08]} center distanceFactor={9} zIndexRange={[0,10]} style={{pointerEvents:"none"}}>
+        <span style={{
+          background:"rgba(255,255,255,0.97)",
+          color:"#111",
+          fontSize:"22px",
+          fontWeight:900,
+          padding:"5px 32px",
+          borderRadius:"6px",
+          boxShadow:"0 2px 14px rgba(0,0,0,0.5)",
+          whiteSpace:"nowrap",
+          letterSpacing:"0.04em",
+          fontFamily:"system-ui,sans-serif",
+          border:"1px solid rgba(0,0,0,0.08)",
+          display:"block",
+          minWidth:"280px",
+          textAlign:"center",
+        }}>{pgName}</span>
       </Html>
     </group>
   );
@@ -455,10 +467,59 @@ function CameraRig({targetFloor,totalFloors}:CRP) {
   return null;
 }
 
+/**
+ * ScrollWhenClamped — when OrbitControls reaches its vertical polar limit
+ * and the user keeps dragging, scroll the page instead of blocking.
+ *
+ * Drag UP  (dy<0) → hits minPolarAngle → page scrolls DOWN (to content below building)
+ * Drag DOWN (dy>0) → hits maxPolarAngle (sees terrace) → page scrolls UP (to top stats)
+ */
+function ScrollWhenClamped({ controlsRef }: { controlsRef: React.RefObject<any> }) {
+  const { gl } = useThree();
+  useEffect(() => {
+    const el = gl.domElement;
+    let active = false;
+    let lastY = 0;
+
+    const onDown = (e: PointerEvent) => { active = true; lastY = e.clientY; };
+    const onMove = (e: PointerEvent) => {
+      if (!active || !controlsRef.current) return;
+      const dy = e.clientY - lastY;
+      lastY = e.clientY;
+      if (Math.abs(dy) < 1) return;
+
+      const oc = controlsRef.current;
+      const polar   = oc.getPolarAngle ? oc.getPolarAngle() : Math.PI / 2;
+      const atMin   = polar <= (oc.minPolarAngle ?? 0) + 0.004;
+      const atMax   = polar >= (oc.maxPolarAngle ?? Math.PI) - 0.004;
+
+      // dragging up (dy<0) and already at min → scroll page DOWN
+      if (dy < 0 && atMin)  window.scrollBy({ top:  Math.abs(dy) * 3.5, behavior: 'auto' });
+      // dragging down (dy>0) and already at max → scroll page UP
+      if (dy > 0 && atMax)  window.scrollBy({ top: -Math.abs(dy) * 3.5, behavior: 'auto' });
+    };
+    const onUp = () => { active = false; };
+
+    el.addEventListener('pointerdown', onDown);
+    // listen on window so drag outside canvas still counts
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup',   onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      el.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup',   onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+  }, [gl, controlsRef]);
+  return null;
+}
+
 interface SP{pgName:string;totalFloors:number;rooms:Room[];activeFloor:number|null;filterType?:number|null;onFloorClick:(f:number)=>void;onRoomClick:(r:Room)=>void;setHovered:(v:boolean)=>void;}
 function Scene({pgName,totalFloors,rooms,activeFloor,filterType,onFloorClick,onRoomClick,setHovered}:SP) {
   const floors=Array.from({length:totalFloors},(_,i)=>i+1);
   const cY=((totalFloors+1)*FH)/2;  // center includes G floor
+  const controlsRef = useRef<any>(null);
   return (
     <>
       <ambientLight intensity={0.72} color="#fff8f0"/>
@@ -484,7 +545,22 @@ function Scene({pgName,totalFloors,rooms,activeFloor,filterType,onFloorClick,onR
       ))}
       <RoofMesh totalFloors={totalFloors} pgName={pgName}/>
       <CameraRig targetFloor={activeFloor} totalFloors={totalFloors}/>
-      <OrbitControls target={[0,cY,0]} enablePan={false} minDistance={4.5} maxDistance={26} makeDefault/>
+      <OrbitControls
+        ref={controlsRef}
+        target={[0,cY,0]}
+        enablePan={false}
+        minDistance={4.5}
+        maxDistance={26}
+        makeDefault
+        /* 360° horizontal rotation — no azimuth limits */
+        minAzimuthAngle={-Infinity}
+        maxAzimuthAngle={Infinity}
+        /* Vertical fully locked — any vertical drag scrolls page via ScrollWhenClamped */
+        minPolarAngle={Math.PI / 2}
+        maxPolarAngle={Math.PI / 2}
+      />
+      {/* Scroll page when vertical polar limit is hit */}
+      <ScrollWhenClamped controlsRef={controlsRef}/>
     </>
   );
 }
@@ -499,10 +575,15 @@ export default function Building3DViewR3F({pgName,totalFloors,rooms,onRoomClick,
   function handleFloorClick(floor:number){playWhoosh();setActiveFloor(prev=>prev===floor?null:floor);}
 
   return (
-    <div style={{width:"100%",position:"relative",userSelect:"none"}}>
-      <div style={{display:"flex",gap:"16px",justifyContent:"center",padding:"8px 0 4px",fontSize:"10px",fontWeight:700,color:"rgba(255,255,255,0.35)",flexWrap:"wrap"}}>
-        <span>🖱️ Drag to rotate</span><span>🔍 Scroll to zoom</span><span>👆 Tap floor / room</span>
-      </div>
+    <div style={{
+      width:"100%",position:"relative",userSelect:"none",
+      background:"linear-gradient(135deg, #0a1628 0%, #0d1f3c 50%, #081020 100%)",
+      borderRadius:"18px",
+      margin:"8px 0",
+      boxShadow:"0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
+      border:"1px solid rgba(255,255,255,0.07)",
+      overflow:"hidden",
+    }}>
       <div style={{width:"100%",height:canvasH+"px",cursor:hovered?"pointer":"grab"}}>
         <Canvas frameloop="demand" dpr={[1,1.5]} camera={{position:[0.8,camY,camZ],fov:42}}
           gl={{antialias:false,powerPreference:"low-power",alpha:true}} style={{background:"transparent"}}
