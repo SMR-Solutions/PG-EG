@@ -50,7 +50,7 @@
    LIGHT MODE OVERRIDES
 ───────────────────────────────────────── */
 [data-theme="light"] {
-  --bg-base: #f0f4f8;
+  --bg-base: #ffffff;
   --bg-card: #ffffff;
   --bg-card-hover: #f1f5f9;
   --bg-overlay: #e8edf5;

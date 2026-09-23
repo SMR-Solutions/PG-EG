@@ -954,7 +954,21 @@ export default function DashboardPage() {
                   })}
                 </div>
                 <div className={styles.entrance3d}>
-                  <div className={styles.entranceDoor} />
+                  {/* Left tree */}
+                  <span className={styles.listSceneTree}>🌳</span>
+                  {/* Vehicles beside entrance gates */}
+                  <div className={styles.listSceneVehicles}>
+                    <span className={styles.listSceneBike}>🏍️</span>
+                    <span className={styles.listSceneCar}>🚗</span>
+                  </div>
+                  {/* Right tree */}
+                  <span className={styles.listSceneTree}>🌳</span>
+                  {/* Doors behind ENTRANCE label */}
+                  <div className={styles.listEntranceDoors}>
+                    <div className={styles.listDoor}><div className={styles.listDoorKnob} /></div>
+                    <div className={styles.listDoor}><div className={styles.listDoorKnob} /></div>
+                  </div>
+                  {/* Glowing ENTRANCE label */}
                   <span className={styles.entranceLabel}>ENTRANCE</span>
                 </div>
               </div>

@@ -549,13 +549,12 @@ function Scene({pgName,totalFloors,rooms,activeFloor,filterType,onFloorClick,onR
         ref={controlsRef}
         target={[0,cY,0]}
         enablePan={false}
-        minDistance={4.5}
-        maxDistance={26}
+        enableZoom={false}
         makeDefault
         /* 360° horizontal rotation — no azimuth limits */
         minAzimuthAngle={-Infinity}
         maxAzimuthAngle={Infinity}
-        /* Vertical fully locked — any vertical drag scrolls page via ScrollWhenClamped */
+        /* Vertical fully locked — any vertical drag scrolls page */
         minPolarAngle={Math.PI / 2}
         maxPolarAngle={Math.PI / 2}
       />
@@ -569,8 +568,10 @@ export default function Building3DViewR3F({pgName,totalFloors,rooms,onRoomClick,
   const [activeFloor,setActiveFloor]=useState<number|null>(null);
   const [hovered,setHovered]=useState(false);
   const activeFloorRooms=activeFloor!==null?rooms.filter(r=>r.floor===activeFloor):[];
-  const canvasH=Math.max(380,(totalFloors+1)*82+180);
-  const camY=(totalFloors+1)*FH*0.52, camZ=Math.max(9.5,(totalFloors+1)*FH*2.0);
+  const canvasH = Math.min(Math.max(440, totalFloors * 64 + 220), 700);
+  // Camera pulls back proportionally so taller buildings always fit in frame
+  const camZ = Math.max(16, totalFloors * 1.6 + 4);
+  const cYPos = ((totalFloors + 1) * FH) / 2; // same as Scene's cY — vertical center
 
   function handleFloorClick(floor:number){playWhoosh();setActiveFloor(prev=>prev===floor?null:floor);}
 
@@ -583,9 +584,12 @@ export default function Building3DViewR3F({pgName,totalFloors,rooms,onRoomClick,
       boxShadow:"0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
       border:"1px solid rgba(255,255,255,0.07)",
       overflow:"hidden",
+      display:"flex",
+      alignItems:"center",
+      justifyContent:"center",
     }}>
       <div style={{width:"100%",height:canvasH+"px",cursor:hovered?"pointer":"grab"}}>
-        <Canvas frameloop="demand" dpr={[1,1.5]} camera={{position:[0.8,camY,camZ],fov:42}}
+        <Canvas frameloop="demand" dpr={[1,1.5]} camera={{position:[0, cYPos, camZ], fov:44}}
           gl={{antialias:false,powerPreference:"low-power",alpha:true}} style={{background:"transparent"}}
           onPointerMissed={()=>setHovered(false)}>
           <Scene pgName={pgName} totalFloors={totalFloors} rooms={rooms} activeFloor={activeFloor}

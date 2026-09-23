@@ -25,6 +25,16 @@
   pointer-events: none; z-index: 0;
 }
 
+/* Light mode — stronger glows on pure white */
+[data-theme="light"] .orb1 {
+  background: radial-gradient(circle, rgba(45,198,83,0.18) 0%, rgba(45,198,83,0.06) 40%, transparent 70%);
+  filter: blur(2px);
+}
+[data-theme="light"] .orb2 {
+  background: radial-gradient(circle, rgba(230,57,70,0.14) 0%, rgba(230,57,70,0.05) 40%, transparent 70%);
+  filter: blur(2px);
+}
+
 .content {
   width: 100%; max-width: 560px;
   display: flex; flex-direction: column; gap: 20px;
@@ -116,8 +126,8 @@
   padding: 8px 16px;
   min-width: 58px;
 }
-.overallNum { font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1; }
-.overallLabel { font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 600; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+.overallNum { font-size: 26px; font-weight: 800; color: #fff; line-height: 1; }
+.overallLabel { font-size: 10px; color: rgba(255,255,255,0.85); font-weight: 600; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
 .statDivider { display: none; }
 
 /* Avatar button */
@@ -793,12 +803,15 @@
 
 /* ─── Entrance ─── */
 .entrance3d {
-  height: 52px; margin: 0 16px;
-  background: linear-gradient(180deg, rgba(45,198,83,0.04) 0%, rgba(0,0,0,0) 100%);
-  border: 1px solid rgba(45,198,83,0.12);
-  border-top: none;
+  height: 80px; margin: 0 16px;
+  background: linear-gradient(180deg, rgba(45,198,83,0.06) 0%, rgba(0,0,0,0) 100%);
+  border: 1px solid rgba(45,198,83,0.15);
+  border-top: 2px solid rgba(45,198,83,0.35);
   border-radius: 0 0 12px 12px;
-  display: flex; align-items: center; justify-content: center; gap: 14px;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 0 0 6px;
+  position: relative; overflow: visible;
+  box-shadow: 0 -2px 12px rgba(45,198,83,0.08);
 }
 .entranceDoor {
   width: 28px; height: 38px;
@@ -808,8 +821,38 @@
   border-radius: 3px 3px 0 0;
 }
 .entranceLabel {
-  font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.3);
-  letter-spacing: 2px;
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  font-size: 9px; font-weight: 900;
+  color: rgba(45,198,83,0.9); letter-spacing: 3px;
+  text-shadow: 0 0 8px rgba(45,198,83,0.8), 0 0 20px rgba(45,198,83,0.4);
+  white-space: nowrap; z-index: 1;
+  animation: entranceGlow 2.4s ease-in-out infinite;
+}
+@keyframes entranceGlow {
+  0%,100% { opacity: 1; text-shadow: 0 0 8px rgba(45,198,83,0.8), 0 0 20px rgba(45,198,83,0.4); }
+  50%      { opacity: 0.6; text-shadow: 0 0 4px rgba(45,198,83,0.5), 0 0 10px rgba(45,198,83,0.2); }
+}
+/* entrance scene items */
+.listSceneTree   { font-size: 58px; line-height: 1; filter: drop-shadow(0 4px 8px rgba(0,60,0,0.9)); }
+.listSceneVehicles { display: flex; align-items: flex-end; gap: 68px; padding-bottom: 4px; }
+.listSceneBike   { font-size: 34px; line-height: 1; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.8)); }
+.listSceneCar    { font-size: 38px; line-height: 1; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.8)); }
+.listEntranceDoors {
+  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 6px; align-items: flex-end; z-index: 0;
+}
+.listDoor {
+  width: 26px; height: 38px;
+  background: rgba(45,198,83,0.08);
+  border: 1px solid rgba(45,198,83,0.28);
+  border-bottom: none; border-radius: 3px 3px 0 0;
+}
+.listDoorKnob {
+  position: absolute; right: 4px; top: 50%;
+  width: 4px; height: 4px; border-radius: 50%;
+  background: rgba(45,198,83,0.5);
+  transform: translateY(-50%);
+  box-shadow: 0 0 4px rgba(45,198,83,0.5);
 }
 
 /* ─── keep old names so nothing else breaks ─── */
@@ -964,7 +1007,7 @@
   .headerLeft { flex: 1 1 100%; }
   .pgName { font-size: 20px; }
   .pgMeta { font-size: 11px; }
-  .headerRight { flex: 1 1 100%; justify-content: flex-start; gap: 8px; flex-wrap: wrap; }
+  .headerRight { flex: 1 1 100%; justify-content: space-around; gap: 8px; flex-wrap: wrap; }
   .overallStat { padding: 6px 12px; min-width: 50px; }
   .overallNum { font-size: 22px; }
   .overallLabel { font-size: 9px; }
