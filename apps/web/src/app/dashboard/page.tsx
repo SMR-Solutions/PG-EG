@@ -579,6 +579,18 @@ export default function DashboardPage() {
                   </div>
                 </button>
 
+                <button
+                  className={styles.sidebarAction}
+                  id="btn-rents"
+                  onClick={() => { setProfileOpen(false); router.push("/rents"); }}
+                >
+                  <div className={styles.sidebarActionIcon}>💵</div>
+                  <div>
+                    <div className={styles.sidebarActionTitle}>Rents</div>
+                    <div className={styles.sidebarActionDesc}>Monthly rent overview & collection</div>
+                  </div>
+                </button>
+
                 {allPgs.length > 1 && (
                   <button
                     className={styles.sidebarAction}
@@ -953,16 +965,8 @@ export default function DashboardPage() {
                     );
                   })}
                 </div>
+
                 <div className={styles.entrance3d}>
-                  {/* Left tree */}
-                  <span className={styles.listSceneTree}>🌳</span>
-                  {/* Vehicles beside entrance gates */}
-                  <div className={styles.listSceneVehicles}>
-                    <span className={styles.listSceneBike}>🏍️</span>
-                    <span className={styles.listSceneCar}>🚗</span>
-                  </div>
-                  {/* Right tree */}
-                  <span className={styles.listSceneTree}>🌳</span>
                   {/* Doors behind ENTRANCE label */}
                   <div className={styles.listEntranceDoors}>
                     <div className={styles.listDoor}><div className={styles.listDoorKnob} /></div>
@@ -1020,41 +1024,87 @@ export default function DashboardPage() {
                     <div className={styles.bedActionGroup}>
                       {bed.isOccupied && bed.tenant ? (
                         <>
-                          {/* Top row: pencil icon + Details side by side */}
-                          <div className={styles.bedActionTopRow}>
-                            <button
-                              className={styles.editContactBtn}
-                              title="Edit contact details"
-                              id={`edit-${bed.id}`}
-                              onClick={() => {
-                                const t = bed.tenant!;
-                                setEditModal({
-                                  tenantId: t.id, name: t.name,
-                                  phone: t.phone || "",
-                                  altPhone: t.altPhone || "",
-                                  emergencyContact: t.emergencyContact || "",
-                                  emergencyRelation: t.emergencyRelation || "",
-                                  idPhotoUrl: t.idPhotoUrl || null,
-                                });
-                                setEditError("");
-                              }}
-                            >✏️</button>
-                            <button className={styles.detailsBtn}
-                              onClick={() => router.push(`/tenants/profile?id=${bed.tenant!.id}`)}
-                              id={`details-${bed.id}`}>Details</button>
-                          </div>
-                          <button className={styles.moveBtn}
-                            onClick={() => {
-                              setMovingTenant({ tenant: bed.tenant!, bed, room: selectedRoom });
-                              setMoveFloor(null); setMoveTargetRoom(null); setMoveTargetBed(null); setMoveFilterType(null);
-                            }}
-                            id={`move-${bed.id}`}>🔁 Move</button>
-                          <button className={styles.checkoutBtn}
-                            onClick={() => openCheckout(bed, selectedRoom)}
-                            id={`checkout-${bed.id}`}>
-                            Check Out
-                          </button>
-                        </>
+                          <div className={styles.iconStack}>
+                              <button
+                                className={styles.editContactBtn}
+                                title="Edit contact details"
+                                id={`edit-${bed.id}`}
+                                onClick={() => {
+                                  const t = bed.tenant!;
+                                  setEditModal({
+                                    tenantId: t.id, name: t.name,
+                                    phone: t.phone || "",
+                                    altPhone: t.altPhone || "",
+                                    emergencyContact: t.emergencyContact || "",
+                                    emergencyRelation: t.emergencyRelation || "",
+                                    idPhotoUrl: t.idPhotoUrl || null,
+                                  });
+                                  setEditError("");
+                                }}
+                              >✏️</button>
+                              {/* WhatsApp reminder — only when rent is unpaid */}
+                              {bed.tenant.rent && bed.tenant.rent.status !== "paid" && (() => {
+                                const rent = bed.tenant.rent!;
+                                const due = rent.amount - (rent.paidAmount ?? 0);
+                                const rawPhone = (bed.tenant.phone || "").replace(/\D/g, "");
+                                const waPhone = rawPhone.startsWith("91") ? rawPhone : `91${rawPhone}`;
+                                const rawOwner = (owner?.phone || "").replace(/\D/g, "");
+                                const ownerDisplay = rawOwner ? `+91${rawOwner.replace(/^91/, "")}` : "";
+                                const mo = data.currentMonth ?? "";
+                                const [yr, m] = mo.split("-");
+                                const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+                                const monthStr = m ? `${MONTHS[parseInt(m)-1]} ${yr}` : mo;
+                                const pgName = data.pg.name;
+                                // Emoji-free message to avoid encoding issues
+                                const msg = [
+                                  `*${pgName}*`,
+                                  ``,
+                                  `Hello *${bed.tenant.name}*,`,
+                                  ``,
+                                  `This is a gentle reminder that your rent for *${monthStr}* is due.`,
+                                  ``,
+                                  `Amount Due: *Rs. ${due.toLocaleString("en-IN")}*`,
+                                  ``,
+                                  `Kindly make the payment at your earliest convenience.`,
+                                  `Online Payment (pay to this number) - ${ownerDisplay}`,
+                                  ``,
+                                  `Thank you!`,
+                                ].join("\n");
+                                const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`;
+                                return (
+                                  <a
+                                    href={waUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={styles.waBtnIcon}
+                                    title="Send WhatsApp reminder"
+                                    id={`wa-${bed.id}`}
+                                  >
+                                    <svg viewBox="0 0 32 32" width="22" height="22" xmlns="http://www.w3.org/2000/svg">
+                                      <circle cx="16" cy="16" r="16" fill="#25D366"/>
+                                      <path fill="#fff" d="M23.5 8.5A10.44 10.44 0 0 0 16 5.5C10.2 5.5 5.5 10.2 5.5 16a10.4 10.4 0 0 0 1.4 5.2L5.5 26.5l5.4-1.4a10.5 10.5 0 0 0 5.1 1.3c5.8 0 10.5-4.7 10.5-10.5a10.4 10.4 0 0 0-3-7.4zm-7.5 16.1a8.7 8.7 0 0 1-4.5-1.2l-.3-.2-3.2.8.9-3.1-.2-.3A8.7 8.7 0 0 1 7.3 16a8.7 8.7 0 0 1 8.7-8.7 8.7 8.7 0 0 1 8.7 8.7 8.7 8.7 0 0 1-8.7 8.6zm4.8-6.5c-.3-.1-1.6-.8-1.8-.9s-.4-.1-.6.1-.7.9-.8 1-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7 7 0 0 1-1.3-1.6c-.1-.3 0-.4.1-.6l.4-.5.3-.4v-.4l-.9-2.1c-.2-.5-.5-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8c.1.2 1.5 2.4 3.8 3.3a13 13 0 0 0 1.3.5 3.1 3.1 0 0 0 1.4.1c.4-.1 1.3-.5 1.5-1s.2-1 .1-1a.5.5 0 0 0-.4-.3z"/>
+                                    </svg>
+                                  </a>
+                                );
+                              })()}
+                            </div>
+                            <div className={styles.actionBtnStack}>
+                              <button className={styles.detailsBtn}
+                                onClick={() => router.push(`/tenants/profile?id=${bed.tenant!.id}`)}
+                                id={`details-${bed.id}`}>Details</button>
+                              <button className={styles.moveBtn}
+                                onClick={() => {
+                                  setMovingTenant({ tenant: bed.tenant!, bed, room: selectedRoom });
+                                  setMoveFloor(null); setMoveTargetRoom(null); setMoveTargetBed(null); setMoveFilterType(null);
+                                }}
+                                id={`move-${bed.id}`}>🔁 Move</button>
+                              <button className={styles.checkoutBtn}
+                                onClick={() => openCheckout(bed, selectedRoom)}
+                                id={`checkout-${bed.id}`}>
+                                Check Out
+                              </button>
+                            </div>
+                          </>
                       ) : (
                         <button className={styles.checkInBtn}
                           onClick={() => router.push(`/tenants/add?bedId=${bed.id}&roomId=${selectedRoom.id}`)}

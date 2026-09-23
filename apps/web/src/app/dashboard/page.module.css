@@ -310,7 +310,7 @@
 /* Dark mode: white capsule with black arrow */
 .sidebarPillTab {
   position: absolute;
-  top: 50%;
+  top: 62%;
   left: 10px;
   transform: translateY(-50%);
   width: 50px;
@@ -1050,8 +1050,8 @@
 }
 
 /* ─── Bed action group ─── */
-.bedActionGroup { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; flex-shrink: 0; }
-.bedActionTopRow { display: flex; flex-direction: row; gap: 6px; align-items: center; }
+.bedActionGroup { display: flex; flex-direction: row; gap: 10px; justify-content: flex-end; align-items: flex-start; flex-shrink: 0; }
+.actionBtnStack { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
 
 .detailsBtn {
   padding: 7px 14px;
@@ -1066,18 +1066,31 @@
 .detailsBtn:hover { background: var(--border-hover); color: var(--text-primary); border-color: var(--border-hover); }
 
 .editContactBtn {
-  width: 32px; height: 32px;
+  width: 36px; height: 36px;
   display: flex; align-items: center; justify-content: center;
   background: var(--border);
   border: 1.5px solid var(--border-hover);
   border-radius: var(--radius-sm);
-  font-size: 14px; cursor: pointer;
+  font-size: 16px; cursor: pointer;
   transition: var(--transition);
   flex-shrink: 0;
 }
 .editContactBtn:hover { background: rgba(255,200,50,0.12); border-color: rgba(255,200,50,0.35); }
+.iconStack { display: flex; flex-direction: column; gap: 6px; }
 
-/* Orange bed badge for pending rent */
+.waBtnIcon {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer; text-decoration: none;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+.waBtnIcon:hover { transform: scale(1.12); filter: brightness(1.1); }
+
+
 .bedBadgeOrange {
   background: rgba(244,162,97,0.15);
   border: 1.5px solid rgba(244,162,97,0.4);

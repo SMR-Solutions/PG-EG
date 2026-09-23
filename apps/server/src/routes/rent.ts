@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { eq, and, inArray, desc } from "drizzle-orm";
-import { createDb, rentPayments, rentPaymentTransactions, tenants, pgs } from "../db";
+import { createDb, rentPayments, rentPaymentTransactions, tenants, pgs, rooms, beds } from "../db";
 import { requireAuth, verifyPgOwnership } from "../middleware/auth";
 
 const router = Router();
@@ -25,6 +25,7 @@ async function verifyRentOwnership(
 }
 
 // GET /api/rent?pgId=xxx&month=2026-09
+// Returns enriched payments: each record includes tenant name/photo and room floor/number
 router.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
     const { pgId, month } = req.query as { pgId: string; month?: string };
@@ -35,13 +36,41 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 
     const db = createDb(process.env.DATABASE_URL!);
     const m = month || currentMonth();
-    const records = await db.select().from(rentPayments)
+
+    // Join rentPayments → tenants → beds → rooms
+    const rows = await db
+      .select({
+        id: rentPayments.id,
+        tenantId: rentPayments.tenantId,
+        bedId: rentPayments.bedId,
+        month: rentPayments.month,
+        amount: rentPayments.amount,
+        paidAmount: rentPayments.paidAmount,
+        status: rentPayments.status,
+        paymentMode: rentPayments.paymentMode,
+        paidAt: rentPayments.paidAt,
+        createdAt: rentPayments.createdAt,
+        // tenant fields
+        tenantName: tenants.name,
+        tenantPhone: tenants.phone,
+        tenantPhoto: tenants.photoUrl,
+        // room fields (via beds → rooms)
+        roomNumber: rooms.roomNumber,
+        floor: rooms.floor,
+      })
+      .from(rentPayments)
+      .leftJoin(tenants, eq(rentPayments.tenantId, tenants.id))
+      .leftJoin(beds, eq(rentPayments.bedId, beds.id))
+      .leftJoin(rooms, eq(beds.roomId, rooms.id))
       .where(and(eq(rentPayments.pgId, pgId), eq(rentPayments.month, m)));
-    res.json({ month: m, payments: records });
-  } catch {
+
+    res.json({ month: m, payments: rows });
+  } catch (err) {
+    console.error("Rent fetch error:", err);
     res.status(500).json({ error: "Failed to fetch rent records" });
   }
 });
+
 
 // POST /api/rent/generate?pgId=xxx
 router.post("/generate", requireAuth, async (req: Request, res: Response) => {
