@@ -468,51 +468,54 @@ function CameraRig({targetFloor,totalFloors}:CRP) {
 }
 
 /**
- * ScrollWhenClamped — when OrbitControls reaches its vertical polar limit
- * and the user keeps dragging, scroll the page instead of blocking.
- *
- * Drag UP  (dy<0) → hits minPolarAngle → page scrolls DOWN (to content below building)
- * Drag DOWN (dy>0) → hits maxPolarAngle (sees terrace) → page scrolls UP (to top stats)
+ * TouchDirectionRouter — attached directly on the canvas wrapper div.
+ * Detects swipe direction on first move after touchstart:
+ *   - Vertical swipe  → scroll the page (don't pass to OrbitControls)
+ *   - Horizontal swipe → OrbitControls handles azimuth rotation
+ * Works on mobile (touch) + desktop (wheel/pointer).
  */
-function ScrollWhenClamped({ controlsRef }: { controlsRef: React.RefObject<any> }) {
-  const { gl } = useThree();
+function useTouchDirectionRouter(wrapperRef: React.RefObject<HTMLDivElement | null>) {
   useEffect(() => {
-    const el = gl.domElement;
-    let active = false;
-    let lastY = 0;
+    const el = wrapperRef.current;
+    if (!el) return;
 
-    const onDown = (e: PointerEvent) => { active = true; lastY = e.clientY; };
-    const onMove = (e: PointerEvent) => {
-      if (!active || !controlsRef.current) return;
-      const dy = e.clientY - lastY;
-      lastY = e.clientY;
-      if (Math.abs(dy) < 1) return;
+    let startX = 0, startY = 0;
+    let dirLocked: 'h' | 'v' | null = null;
+    let startScrollY = 0;
 
-      const oc = controlsRef.current;
-      const polar   = oc.getPolarAngle ? oc.getPolarAngle() : Math.PI / 2;
-      const atMin   = polar <= (oc.minPolarAngle ?? 0) + 0.004;
-      const atMax   = polar >= (oc.maxPolarAngle ?? Math.PI) - 0.004;
-
-      // dragging up (dy<0) and already at min → scroll page DOWN
-      if (dy < 0 && atMin)  window.scrollBy({ top:  Math.abs(dy) * 3.5, behavior: 'auto' });
-      // dragging down (dy>0) and already at max → scroll page UP
-      if (dy > 0 && atMax)  window.scrollBy({ top: -Math.abs(dy) * 3.5, behavior: 'auto' });
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      startX = t.clientX; startY = t.clientY;
+      startScrollY = window.scrollY;
+      dirLocked = null;
     };
-    const onUp = () => { active = false; };
 
-    el.addEventListener('pointerdown', onDown);
-    // listen on window so drag outside canvas still counts
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup',   onUp);
-    window.addEventListener('pointercancel', onUp);
+    const onTouchMove = (e: TouchEvent) => {
+      const t = e.touches[0];
+      const dx = Math.abs(t.clientX - startX);
+      const dy = Math.abs(t.clientY - startY);
+
+      if (dirLocked === null && (dx > 4 || dy > 4)) {
+        dirLocked = dy > dx ? 'v' : 'h';
+      }
+
+      if (dirLocked === 'v') {
+        // Vertical — scroll page, suppress canvas rotation
+        e.stopPropagation();
+        const delta = t.clientY - startY;
+        window.scrollTo({ top: startScrollY - delta, behavior: 'instant' as ScrollBehavior });
+      }
+      // Horizontal — let it fall through to OrbitControls naturally
+    };
+
+    // Must use { passive: false } so we can call stopPropagation
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
     return () => {
-      el.removeEventListener('pointerdown', onDown);
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup',   onUp);
-      window.removeEventListener('pointercancel', onUp);
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
     };
-  }, [gl, controlsRef]);
-  return null;
+  }, [wrapperRef]);
 }
 
 interface SP{pgName:string;totalFloors:number;rooms:Room[];activeFloor:number|null;filterType?:number|null;onFloorClick:(f:number)=>void;onRoomClick:(r:Room)=>void;setHovered:(v:boolean)=>void;}
@@ -554,12 +557,10 @@ function Scene({pgName,totalFloors,rooms,activeFloor,filterType,onFloorClick,onR
         /* Horizontal rotation allowed — 360° spin */
         minAzimuthAngle={-Infinity}
         maxAzimuthAngle={Infinity}
-        /* Vertical fully locked — no tilt, touch drag scrolls page */
+        /* Vertical fully locked — no tilt */
         minPolarAngle={Math.PI / 2}
         maxPolarAngle={Math.PI / 2}
       />
-      {/* Scroll page when vertical polar limit is hit */}
-      <ScrollWhenClamped controlsRef={controlsRef}/>
     </>
   );
 }
@@ -569,9 +570,10 @@ export default function Building3DViewR3F({pgName,totalFloors,rooms,onRoomClick,
   const [hovered,setHovered]=useState(false);
   const activeFloorRooms=activeFloor!==null?rooms.filter(r=>r.floor===activeFloor):[];
   const canvasH = Math.min(Math.max(480, totalFloors * 110 + 260), 820);
-  // Camera pulls back proportionally so taller buildings always fit in frame
   const camZ = Math.max(18, totalFloors * 2.4 + 6);
-  const cYPos = ((totalFloors + 1) * FH) / 2; // same as Scene's cY — vertical center
+  const cYPos = ((totalFloors + 1) * FH) / 2;
+  const canvasWrapperRef = useRef<HTMLDivElement>(null);
+  useTouchDirectionRouter(canvasWrapperRef);
 
   function handleFloorClick(floor:number){playWhoosh();setActiveFloor(prev=>prev===floor?null:floor);}
 
@@ -588,7 +590,10 @@ export default function Building3DViewR3F({pgName,totalFloors,rooms,onRoomClick,
       alignItems:"center",
       justifyContent:"center",
     }}>
-      <div style={{width:"100%",height:canvasH+"px",cursor:hovered?"pointer":"grab"}}>
+      <div ref={canvasWrapperRef}
+        style={{width:"100%",height:canvasH+"px",cursor:hovered?"pointer":"grab",
+          touchAction:"pan-y"  /* browser handles vertical scroll natively */
+        }}>
         <Canvas frameloop="demand" dpr={[1,1.5]} camera={{position:[0, cYPos, camZ], fov:44}}
           gl={{antialias:false,powerPreference:"low-power",alpha:true}} style={{background:"transparent"}}
           onPointerMissed={()=>setHovered(false)}>
