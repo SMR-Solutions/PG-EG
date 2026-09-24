@@ -18,7 +18,7 @@ interface Props {
   filterType?: number | null;
 }
 
-const FW=5.4, FD=2.2, FH=0.9, SLAB=0.06, WT=0.06;
+const FW=5.4, FD=2.2, FH=1.6, SLAB=0.08, WT=0.06;
 
 const C = {
   wall:"#c8bfae", wallBack:"#b0a898", wallSide:"#b8af9e",
@@ -262,7 +262,7 @@ function FloorMesh({floor,rooms,isActive,filterType,onFloorClick,onRoomClick,set
   const y=floor*FH, alpha=isFloorDimmed?0.28:1;  // floor 1 starts at FH, above the entrance level
   const FL_W=0.62, roomStart=-FW/2+FL_W+0.1, roomEnd=FW/2-0.12, roomAreaW=roomEnd-roomStart;
   const maxR=Math.max(floorRooms.length,1), winSp=roomAreaW/maxR;
-  const winW=Math.min(winSp*0.60,0.86), winH=FH*0.50;
+  const winW=Math.min(winSp*0.60,0.86), winH=FH*0.52;
   const allBeds=floorRooms.flatMap(r=>r.beds), showBeds=allBeds.slice(0,6), bedSZ=FD*0.68;
 
   return (
@@ -349,8 +349,8 @@ function FloorMesh({floor,rooms,isActive,filterType,onFloorClick,onRoomClick,set
       ))}
       {/* FL-X sign */}
       <mesh position={[-FW/2+FL_W/2+0.04,FH/2+SLAB,FD/2+0.018]}><boxGeometry args={[FL_W,FH*0.70,0.028]}/><meshStandardMaterial color="#0d1820" roughness={0.7}/></mesh>
-      <Html position={[-FW/2+FL_W/2+0.04,FH/2+SLAB,FD/2+0.038]} center distanceFactor={9} zIndexRange={[0,10]} style={{pointerEvents:"none"}}>
-        <div style={{fontSize:"18px",fontWeight:900,color:fc,textShadow:`0 0 6px ${fc}`,letterSpacing:"0.06em",fontFamily:"system-ui,sans-serif",whiteSpace:"nowrap",lineHeight:1}}>FL-{floor}</div>
+      <Html position={[-FW/2+FL_W/2+0.04,FH/2+SLAB,FD/2+0.038]} center transform occlude zIndexRange={[0,10]} style={{pointerEvents:"none"}}>
+        <div style={{fontSize:"15px",fontWeight:900,color:fc,textShadow:`0 0 6px ${fc}`,letterSpacing:"0.06em",fontFamily:"system-ui,sans-serif",whiteSpace:"nowrap",lineHeight:1}}>FL-{floor}</div>
       </Html>
       {/* Room windows */}
       {floorRooms.slice(0,6).map((room,i)=>{
@@ -368,9 +368,9 @@ function FloorMesh({floor,rooms,isActive,filterType,onFloorClick,onRoomClick,set
               <meshStandardMaterial color={C.winGlass} emissive={new THREE.Color("#ff8800")} emissiveIntensity={isFloorDimmed?0.04:0.5} roughness={0.18} transparent opacity={isFloorDimmed?0.2:0.82}/>
             </mesh>
             {!isFloorDimmed&&(
-              <Html position={[wx,FH/2+SLAB,FD/2+0.06]} center distanceFactor={9} zIndexRange={[0,10]} style={{pointerEvents:"none"}}>
+              <Html position={[wx,FH/2+SLAB,FD/2+0.06]} center transform occlude zIndexRange={[0,10]} style={{pointerEvents:"none"}}>
                 <div style={{background:signBg,border:`1.5px solid ${rc}`,borderRadius:"5px",padding:"3px 7px",boxShadow:`0 0 8px ${rc}55`}}>
-                  <span style={{fontSize:"18px",fontWeight:900,color:rc,letterSpacing:"0.05em",whiteSpace:"nowrap",fontFamily:"system-ui,sans-serif"}}>{room.roomNumber}</span>
+                  <span style={{fontSize:"15px",fontWeight:900,color:rc,letterSpacing:"0.05em",whiteSpace:"nowrap",fontFamily:"system-ui,sans-serif"}}>{room.roomNumber}</span>
                 </div>
               </Html>
             )}
@@ -389,10 +389,10 @@ function EntranceMesh({totalFloors}:{totalFloors:number}) {
       <mesh position={[0,0,0]}><boxGeometry args={[FW+0.06,SLAB,FD+0.04]}/><meshStandardMaterial color={C.slab} roughness={0.85}/></mesh>
       <mesh position={[0,0.22,FD/2]}><boxGeometry args={[FW,0.44,WT]}/><meshStandardMaterial color={C.wall} roughness={0.8}/></mesh>
       <mesh position={[-FW/2+0.35,0.22,FD/2+0.018]}><boxGeometry args={[0.62,0.44*0.70,0.028]}/><meshStandardMaterial color="#0d1820" roughness={0.7}/></mesh>
-      <Html position={[-FW/2+0.35,0.22,FD/2+0.038]} center distanceFactor={9} zIndexRange={[0,10]} style={{pointerEvents:"none"}}>
+      <Html position={[-FW/2+0.35,0.22,FD/2+0.038]} center transform occlude zIndexRange={[0,10]} style={{pointerEvents:"none"}}>
         <div style={{textAlign:"center",lineHeight:1}}>
-          <div style={{fontSize:"7px",fontWeight:900,color:"rgba(255,255,255,0.4)",letterSpacing:"0.1em",fontFamily:"system-ui,sans-serif",marginBottom:"2px"}}>FLOOR</div>
-          <div style={{fontSize:"13px",fontWeight:900,color:"#ffc04a",textShadow:"0 0 8px #ffc04a",letterSpacing:"0.04em",fontFamily:"system-ui,sans-serif"}}>G</div>
+          <div style={{fontSize:"6px",fontWeight:900,color:"rgba(255,255,255,0.4)",letterSpacing:"0.1em",fontFamily:"system-ui,sans-serif",marginBottom:"2px"}}>FLOOR</div>
+          <div style={{fontSize:"11px",fontWeight:900,color:"#ffc04a",textShadow:"0 0 8px #ffc04a",letterSpacing:"0.04em",fontFamily:"system-ui,sans-serif"}}>G</div>
         </div>
       </Html>
       <mesh position={[0,0.2,FD/2+0.018]}><boxGeometry args={[1.06,0.42,0.03]}/><meshStandardMaterial color={C.doorFrame} roughness={0.8}/></mesh>
@@ -429,13 +429,13 @@ function RoofMesh({totalFloors,pgName}:{totalFloors:number;pgName:string}) {
         </group>
       ))}
       <SolarPanels position={[0.6,0.07,0.3]}/>
-      <Html position={[0,0.26,FD/2+0.08]} center distanceFactor={9} zIndexRange={[0,10]} style={{pointerEvents:"none"}}>
+      <Html position={[0,0.26,FD/2+0.08]} center transform occlude zIndexRange={[0,10]} style={{pointerEvents:"none"}}>
         <span style={{
           background:"rgba(255,255,255,0.97)",
           color:"#111",
-          fontSize:"20px",
+          fontSize:"16px",
           fontWeight:900,
-          padding:"5px 32px",
+          padding:"5px 28px",
           borderRadius:"6px",
           boxShadow:"0 2px 14px rgba(0,0,0,0.5)",
           whiteSpace:"nowrap",
@@ -443,7 +443,7 @@ function RoofMesh({totalFloors,pgName}:{totalFloors:number;pgName:string}) {
           fontFamily:"system-ui,sans-serif",
           border:"1px solid rgba(0,0,0,0.08)",
           display:"block",
-          minWidth:"280px",
+          minWidth:"200px",
           textAlign:"center",
         }}>{pgName}</span>
       </Html>
@@ -568,9 +568,9 @@ export default function Building3DViewR3F({pgName,totalFloors,rooms,onRoomClick,
   const [activeFloor,setActiveFloor]=useState<number|null>(null);
   const [hovered,setHovered]=useState(false);
   const activeFloorRooms=activeFloor!==null?rooms.filter(r=>r.floor===activeFloor):[];
-  const canvasH = Math.min(Math.max(440, totalFloors * 64 + 220), 700);
+  const canvasH = Math.min(Math.max(480, totalFloors * 110 + 260), 820);
   // Camera pulls back proportionally so taller buildings always fit in frame
-  const camZ = Math.max(16, totalFloors * 1.6 + 4);
+  const camZ = Math.max(18, totalFloors * 2.4 + 6);
   const cYPos = ((totalFloors + 1) * FH) / 2; // same as Scene's cY — vertical center
 
   function handleFloorClick(floor:number){playWhoosh();setActiveFloor(prev=>prev===floor?null:floor);}
