@@ -433,9 +433,9 @@ export default function DashboardPage() {
           <AppLogo size="sm" />
           {/* Crown above profile button — both absolute in logoBar (position:relative) */}
           <span style={{
-            position: "absolute", right: "0", top: "-16px",
-            width: "40px", textAlign: "center",
-            fontSize: "32px", lineHeight: 1,
+            position: "absolute", right: "0", top: "-12px",
+            width: "48px", textAlign: "center",
+            fontSize: "26px", lineHeight: 1,
             filter: "drop-shadow(0 2px 8px rgba(255,200,0,0.95))",
             pointerEvents: "none", zIndex: 2,
           }}>👑</span>

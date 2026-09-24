@@ -40,7 +40,7 @@
 /* ─── Header ─── */
 .header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px;
+  padding: 8px 16px;
   position: sticky; top: 0; z-index: 50;
   background: rgba(10,10,15,0.85);
   backdrop-filter: blur(12px);
@@ -316,3 +316,24 @@
 
 /* ─── ID card (legacy, kept for safety) ─── */
 .idCard { width: 100%; border-radius: 12px; border: 1px solid var(--border); }
+
+/* ─── WhatsApp Now reminder button ─── */
+.waNowBtn {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 10px;
+  padding: 10px 18px;
+  background: #25D366;
+  color: #fff; font-size: 14px; font-weight: 700;
+  border-radius: 24px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+  box-shadow: 0 4px 16px rgba(37,211,102,0.35);
+  font-family: inherit;
+  letter-spacing: 0.01em;
+}
+.waNowBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(37,211,102,0.5);
+  filter: brightness(1.08);
+}

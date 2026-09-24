@@ -104,37 +104,110 @@
 }
 
 /* ─── Photo boxes ─── */
-.photoRow { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.photoRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: 340px;
+  margin: 0 auto;
+  padding: 4px 0;
+}
 
 .photoBox {
-  aspect-ratio: 1;
-  background: var(--border);
-  border: 2px dashed var(--border-hover);
-  border-radius: var(--radius-lg);
+  aspect-ratio: 3/4;
+  background: linear-gradient(160deg, rgba(255,255,255,0.04) 0%, rgba(0,0,0,0.12) 100%);
+  border: 2px dashed rgba(255,255,255,0.15);
+  border-radius: 20px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; cursor: pointer; transition: var(--transition); font-family: inherit;
+  gap: 12px; cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease, border-color 0.2s;
+  font-family: inherit;
   position: relative; overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+}
+.photoBox::before {
+  content: '';
+  position: absolute; inset: 0; border-radius: 20px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(45,198,83,0.08) 0%, transparent 70%);
+  pointer-events: none;
 }
 .photoBox:hover {
-  border-color: var(--brand-green);
+  border-color: rgba(45,198,83,0.6);
   border-style: dashed;
-  background: rgba(45,198,83,0.06);
-  transform: translateY(-1px);
+  background: linear-gradient(160deg, rgba(45,198,83,0.07) 0%, rgba(0,0,0,0.1) 100%);
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.35), 0 0 0 1px rgba(45,198,83,0.15);
 }
 .photoBoxFilled { border-style: solid; border-color: rgba(45,198,83,0.5); }
 
-.photoIcon { font-size: 32px; }
-.photoLabel { font-size: 13px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.5px; }
-.photoHint { font-size: 10px; color: var(--text-primary); opacity: 0.55; text-align: center; }
+/* Icon with glowing circular background */
+.photoIconWrap {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: linear-gradient(135deg, rgba(45,198,83,0.18) 0%, rgba(45,198,83,0.06) 100%);
+  border: 1.5px solid rgba(45,198,83,0.25);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(45,198,83,0.12);
+  transition: box-shadow 0.2s;
+}
+.photoBox:hover .photoIconWrap {
+  box-shadow: 0 4px 24px rgba(45,198,83,0.28);
+}
+.photoIcon { font-size: 28px; line-height: 1; }
+.photoLabel {
+  font-size: 12px; font-weight: 900;
+  color: var(--text-primary);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+.photoHint {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 0 8px;
+  line-height: 1.4;
+}
 
-.photoThumb { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+.photoThumb { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; border-radius: 18px; }
 .photoOverlay {
   position: absolute; bottom: 0; left: 0; right: 0;
-  background: rgba(0,0,0,0.6); color: white;
-  font-size: 11px; font-weight: 700; text-align: center; padding: 6px;
+  background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
+  color: white;
+  font-size: 11px; font-weight: 700; text-align: center; padding: 12px 6px 8px;
+  border-radius: 0 0 18px 18px;
 }
 
 .hiddenInput { display: none; }
+
+
+/* ─── Photo source picker popup ─── */
+.pickerPopup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%; transform: translateX(-50%);
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  z-index: 100;
+  min-width: 160px;
+  animation: pickerIn 0.18s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes pickerIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0)   scale(1); }
+}
+.pickerBtn {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 13px 18px;
+  background: none; border: none;
+  color: var(--text-primary); font-size: 14px; font-weight: 600;
+  font-family: inherit; cursor: pointer; text-align: left;
+  transition: background 0.12s;
+}
+.pickerBtn:hover { background: var(--bg-overlay); }
+.pickerDivider { height: 1px; background: var(--border); margin: 0; }
+
 
 /* ─── Inputs ─── */
 .input {

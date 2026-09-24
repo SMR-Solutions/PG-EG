@@ -48,7 +48,7 @@ function TenantProfileInner() {
   const router = useRouter();
   const params = useSearchParams();
   const tenantId = params.get("id");
-  const { token, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { token, owner, isLoading: authLoading, isAuthenticated } = useAuth();
 
   const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -304,6 +304,39 @@ function TenantProfileInner() {
                     <span style={{ color: "#2dc653" }}>Paid: ₹{(currentRent.paidAmount || 0).toLocaleString()}</span>
                     <span style={{ color: "#e63946" }}>Remaining: ₹{remaining.toLocaleString()}</span>
                   </div>
+                  {/* WhatsApp reminder button — only when rent is unpaid */}
+                  {remaining > 0 && (() => {
+                    const rawPhone = (tenant.phone || "").replace(/\D/g, "");
+                    const waPhone  = rawPhone.startsWith("91") ? rawPhone : `91${rawPhone}`;
+                    const rawOwner = (owner?.phone || "").replace(/\D/g, "");
+                    const ownerDisplay = rawOwner ? `+91${rawOwner.replace(/^91/, "")}` : "";
+                    const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+                    const [yr, m] = currentMonth.split("-");
+                    const monthStr = m ? `${MONTHS[parseInt(m)-1]} ${yr}` : currentMonth;
+                    const msg = [
+                      `*${tenant.name}*,`,
+                      ``,
+                      `This is a gentle reminder that your rent for *${monthStr}* is due.`,
+                      ``,
+                      `Amount Due: *Rs. ${remaining.toLocaleString("en-IN")}*`,
+                      ``,
+                      `Kindly make the payment at your earliest convenience.`,
+                      `Online Payment (pay to this number) - ${ownerDisplay}`,
+                      ``,
+                      `Thank you!`,
+                    ].join("\n");
+                    const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`;
+                    return (
+                      <a href={waUrl} target="_blank" rel="noopener noreferrer"
+                        className={styles.waNowBtn} id="btn-wa-reminder">
+                        <svg viewBox="0 0 32 32" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="16" cy="16" r="16" fill="#25D366"/>
+                          <path fill="#fff" d="M23.5 8.5A10.44 10.44 0 0 0 16 5.5C10.2 5.5 5.5 10.2 5.5 16a10.4 10.4 0 0 0 1.4 5.2L5.5 26.5l5.4-1.4a10.5 10.5 0 0 0 5.1 1.3c5.8 0 10.5-4.7 10.5-10.5a10.4 10.4 0 0 0-3-7.4zm-7.5 16.1a8.7 8.7 0 0 1-4.5-1.2l-.3-.2-3.2.8.9-3.1-.2-.3A8.7 8.7 0 0 1 7.3 16a8.7 8.7 0 0 1 8.7-8.7 8.7 8.7 0 0 1 8.7 8.7 8.7 8.7 0 0 1-8.7 8.6zm4.8-6.5c-.3-.1-1.6-.8-1.8-.9s-.4-.1-.6.1-.7.9-.8 1-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7 7 0 0 1-1.3-1.6c-.1-.3 0-.4.1-.6l.4-.5.3-.4v-.4l-.9-2.1c-.2-.5-.5-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8c.1.2 1.5 2.4 3.8 3.3a13 13 0 0 0 1.3.5 3.1 3.1 0 0 0 1.4.1c.4-.1 1.3-.5 1.5-1s.2-1 .1-1a.5.5 0 0 0-.4-.3z"/>
+                        </svg>
+                        WhatsApp Now
+                      </a>
+                    );
+                  })()}
                 </div>
 
                 {/* Partial payment form */}
