@@ -1059,7 +1059,7 @@ export default function DashboardPage() {
                                 const msg = [
                                   `*${pgName}*`,
                                   ``,
-                                  `Hello *${bed.tenant.name}*,`,
+                                  `*${bed.tenant.name}*,`,
                                   ``,
                                   `This is a gentle reminder that your rent for *${monthStr}* is due.`,
                                   ``,

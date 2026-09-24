@@ -350,7 +350,7 @@ function FloorMesh({floor,rooms,isActive,filterType,onFloorClick,onRoomClick,set
       {/* FL-X sign */}
       <mesh position={[-FW/2+FL_W/2+0.04,FH/2+SLAB,FD/2+0.018]}><boxGeometry args={[FL_W,FH*0.70,0.028]}/><meshStandardMaterial color="#0d1820" roughness={0.7}/></mesh>
       <Html position={[-FW/2+FL_W/2+0.04,FH/2+SLAB,FD/2+0.038]} center distanceFactor={9} zIndexRange={[0,10]} style={{pointerEvents:"none"}}>
-        <div style={{fontSize:"22px",fontWeight:900,color:fc,textShadow:`0 0 6px ${fc}`,letterSpacing:"0.06em",fontFamily:"system-ui,sans-serif",whiteSpace:"nowrap",lineHeight:1}}>FL-{floor}</div>
+        <div style={{fontSize:"18px",fontWeight:900,color:fc,textShadow:`0 0 6px ${fc}`,letterSpacing:"0.06em",fontFamily:"system-ui,sans-serif",whiteSpace:"nowrap",lineHeight:1}}>FL-{floor}</div>
       </Html>
       {/* Room windows */}
       {floorRooms.slice(0,6).map((room,i)=>{
@@ -370,7 +370,7 @@ function FloorMesh({floor,rooms,isActive,filterType,onFloorClick,onRoomClick,set
             {!isFloorDimmed&&(
               <Html position={[wx,FH/2+SLAB,FD/2+0.06]} center distanceFactor={9} zIndexRange={[0,10]} style={{pointerEvents:"none"}}>
                 <div style={{background:signBg,border:`1.5px solid ${rc}`,borderRadius:"5px",padding:"3px 7px",boxShadow:`0 0 8px ${rc}55`}}>
-                  <span style={{fontSize:"24px",fontWeight:900,color:rc,letterSpacing:"0.05em",whiteSpace:"nowrap",fontFamily:"system-ui,sans-serif"}}>{room.roomNumber}</span>
+                  <span style={{fontSize:"18px",fontWeight:900,color:rc,letterSpacing:"0.05em",whiteSpace:"nowrap",fontFamily:"system-ui,sans-serif"}}>{room.roomNumber}</span>
                 </div>
               </Html>
             )}
@@ -433,7 +433,7 @@ function RoofMesh({totalFloors,pgName}:{totalFloors:number;pgName:string}) {
         <span style={{
           background:"rgba(255,255,255,0.97)",
           color:"#111",
-          fontSize:"22px",
+          fontSize:"20px",
           fontWeight:900,
           padding:"5px 32px",
           borderRadius:"6px",
@@ -551,10 +551,10 @@ function Scene({pgName,totalFloors,rooms,activeFloor,filterType,onFloorClick,onR
         enablePan={false}
         enableZoom={false}
         makeDefault
-        /* 360° horizontal rotation — no azimuth limits */
+        /* Horizontal rotation allowed — 360° spin */
         minAzimuthAngle={-Infinity}
         maxAzimuthAngle={Infinity}
-        /* Vertical fully locked — any vertical drag scrolls page */
+        /* Vertical fully locked — no tilt, touch drag scrolls page */
         minPolarAngle={Math.PI / 2}
         maxPolarAngle={Math.PI / 2}
       />

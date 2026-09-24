@@ -105,16 +105,20 @@
 
 /* ─── Photo boxes ─── */
 .photoRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  width: 100%;
   max-width: 340px;
   margin: 0 auto;
   padding: 4px 0;
+  box-sizing: border-box;
 }
 
 .photoBox {
-  aspect-ratio: 3/4;
+  flex: 0 0 calc(50% - 8px); /* rigid — never shrinks or grows */
+  width: calc(50% - 8px);
+  height: 200px;
   background: linear-gradient(160deg, rgba(255,255,255,0.04) 0%, rgba(0,0,0,0.12) 100%);
   border: 2px dashed rgba(255,255,255,0.15);
   border-radius: 20px;
@@ -123,6 +127,7 @@
   transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease, border-color 0.2s;
   font-family: inherit;
   position: relative; overflow: hidden;
+  box-sizing: border-box;
   box-shadow: 0 4px 20px rgba(0,0,0,0.25);
 }
 .photoBox::before {
@@ -131,13 +136,16 @@
   background: radial-gradient(ellipse at 50% 0%, rgba(45,198,83,0.08) 0%, transparent 70%);
   pointer-events: none;
 }
+.photoBoxFilled::before { display: none; }
 .photoBox:hover {
   border-color: rgba(45,198,83,0.6);
   border-style: dashed;
-  background: linear-gradient(160deg, rgba(45,198,83,0.07) 0%, rgba(0,0,0,0.1) 100%);
+  background-color: rgba(45,198,83,0.07);
   transform: translateY(-4px) scale(1.03);
   box-shadow: 0 12px 36px rgba(0,0,0,0.35), 0 0 0 1px rgba(45,198,83,0.15);
 }
+/* Don't override background-image on hover when filled */
+.photoBoxFilled:hover { background-color: transparent; }
 .photoBoxFilled { border-style: solid; border-color: rgba(45,198,83,0.5); }
 
 /* Icon with glowing circular background */
@@ -179,34 +187,54 @@
 .hiddenInput { display: none; }
 
 
-/* ─── Photo source picker popup ─── */
+/* ─── Photo source picker — fixed centered overlay ─── */
+.pickerBackdrop {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  animation: backdropIn 0.15s ease both;
+}
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 .pickerPopup {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%; transform: translateX(-50%);
   background: var(--bg-card);
   border: 1.5px solid var(--border);
-  border-radius: 16px;
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-  z-index: 100;
-  min-width: 160px;
-  animation: pickerIn 0.18s cubic-bezier(0.22,1,0.36,1) both;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  min-width: 220px;
+  animation: pickerIn 0.2s cubic-bezier(0.22,1,0.36,1) both;
 }
 @keyframes pickerIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.95); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0)   scale(1); }
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.pickerTitle {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text-muted);
+  padding: 14px 18px 8px; text-align: center;
 }
 .pickerBtn {
-  display: flex; align-items: center; gap: 10px;
-  width: 100%; padding: 13px 18px;
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 15px 22px;
   background: none; border: none;
-  color: var(--text-primary); font-size: 14px; font-weight: 600;
+  color: var(--text-primary); font-size: 15px; font-weight: 600;
   font-family: inherit; cursor: pointer; text-align: left;
   transition: background 0.12s;
 }
 .pickerBtn:hover { background: var(--bg-overlay); }
-.pickerDivider { height: 1px; background: var(--border); margin: 0; }
+.pickerDivider { height: 1px; background: var(--border); }
+.pickerCancel {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; padding: 14px;
+  background: none; border: none; border-top: 1px solid var(--border);
+  color: var(--text-muted); font-size: 14px; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.pickerCancel:hover { background: var(--bg-overlay); color: var(--text-primary); }
 
 
 /* ─── Inputs ─── */

@@ -48,7 +48,7 @@ function TenantProfileInner() {
   const router = useRouter();
   const params = useSearchParams();
   const tenantId = params.get("id");
-  const { token, owner, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { token, owner, activePgId, allPgs, isLoading: authLoading, isAuthenticated } = useAuth();
 
   const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -313,7 +313,11 @@ function TenantProfileInner() {
                     const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
                     const [yr, m] = currentMonth.split("-");
                     const monthStr = m ? `${MONTHS[parseInt(m)-1]} ${yr}` : currentMonth;
+                    const activePg = allPgs.find(p => p.id === activePgId);
+                    const pgName   = activePg?.name ?? "";
                     const msg = [
+                      pgName ? `*${pgName}*` : null,
+                      ``,
                       `*${tenant.name}*,`,
                       ``,
                       `This is a gentle reminder that your rent for *${monthStr}* is due.`,
@@ -324,7 +328,7 @@ function TenantProfileInner() {
                       `Online Payment (pay to this number) - ${ownerDisplay}`,
                       ``,
                       `Thank you!`,
-                    ].join("\n");
+                    ].filter(l => l !== null).join("\n");
                     const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`;
                     return (
                       <a href={waUrl} target="_blank" rel="noopener noreferrer"

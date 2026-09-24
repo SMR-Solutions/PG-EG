@@ -192,6 +192,30 @@ function CheckInForm() {
   return (
     <main className={styles.main}>
       <div className={styles.orb1} /><div className={styles.orb2} />
+
+      {/* ── Photo picker overlay — fixed, above everything ── */}
+      {photoPicker && (
+        <div className={styles.pickerBackdrop} onClick={() => setPhotoPicker(null)}>
+          <div className={styles.pickerPopup} onClick={e => e.stopPropagation()}>
+            <div className={styles.pickerTitle}>
+              {photoPicker === "selfie" ? "Add Selfie" : "Add ID Photo"}
+            </div>
+            <button className={styles.pickerBtn}
+              onClick={() => { setPhotoPicker(null); photoPicker === "selfie" ? selfieCamRef.current?.click() : idCardCamRef.current?.click(); }}>
+              <span>📷</span> Camera
+            </button>
+            <div className={styles.pickerDivider} />
+            <button className={styles.pickerBtn}
+              onClick={() => { setPhotoPicker(null); photoPicker === "selfie" ? selfieRef.current?.click() : idCardRef.current?.click(); }}>
+              <span>🖼️</span> Upload from Gallery
+            </button>
+            <button className={styles.pickerCancel} onClick={() => setPhotoPicker(null)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className={styles.content}>
 
         {/* Header */}
@@ -221,72 +245,46 @@ function CheckInForm() {
             <span className={styles.sectionNum}>1</span>
             <span className={styles.sectionTitle}>Tenant Photo &amp; ID</span>
           </div>
-          <div className={styles.photoRow}>
-            {/* ── Selfie ── */}
-            <div style={{ position: "relative" }}>
-              <button className={`${styles.photoBox} ${selfiePreview ? styles.photoBoxFilled : ""}`}
-                onClick={() => setPhotoPicker(p => p === "selfie" ? null : "selfie")} id="btn-selfie">
-                {uploadingPhoto
-                  ? <span className={styles.spinner} />
-                  : selfiePreview
-                    ? <img src={selfiePreview} alt="Selfie" className={styles.photoThumb} />
-                    : <><div className={styles.photoIconWrap}><span className={styles.photoIcon}>📸</span></div><span className={styles.photoLabel}>SELFIE</span><span className={styles.photoHint}>Tap to add photo</span></>}
-                {selfiePreview && !uploadingPhoto && <div className={styles.photoOverlay}>✓ Change</div>}
-              </button>
-              {/* Camera / Upload picker */}
-              {photoPicker === "selfie" && (
-                <div className={styles.pickerPopup}>
-                  <button className={styles.pickerBtn} onClick={() => { setPhotoPicker(null); selfieCamRef.current?.click(); }}>
-                    <span>📷</span> Camera
-                  </button>
-                  <div className={styles.pickerDivider} />
-                  <button className={styles.pickerBtn} onClick={() => { setPhotoPicker(null); selfieRef.current?.click(); }}>
-                    <span>🖼️</span> Upload
-                  </button>
-                </div>
-              )}
-              {/* Hidden inputs */}
-              <input ref={selfieCamRef} type="file" accept="image/*" capture="user"
-                className={styles.hiddenInput}
-                onChange={(e) => { if (e.target.files?.[0]) { handlePhoto(e.target.files[0], "selfie"); e.target.value = ""; } }} />
-              <input ref={selfieRef} type="file" accept="image/*"
-                className={styles.hiddenInput}
-                onChange={(e) => { if (e.target.files?.[0]) { handlePhoto(e.target.files[0], "selfie"); e.target.value = ""; } }} />
-            </div>
 
-            {/* ── ID Card ── */}
-            <div style={{ position: "relative" }}>
-              <button className={`${styles.photoBox} ${idPreview ? styles.photoBoxFilled : ""}`}
-                onClick={() => setPhotoPicker(p => p === "id" ? null : "id")} id="btn-id-card">
-                {uploadingId
-                  ? <span className={styles.spinner} />
-                  : idPreview
-                    ? <img src={idPreview} alt="ID Card" className={styles.photoThumb} />
-                    : <><div className={styles.photoIconWrap}><span className={styles.photoIcon}>🪪</span></div><span className={styles.photoLabel}>ID CARD</span><span className={styles.photoHint}>Tap to add photo</span></>}
-                {idPreview && !uploadingId && <div className={styles.photoOverlay}>✓ Change</div>}
-              </button>
-              {/* Camera / Upload picker */}
-              {photoPicker === "id" && (
-                <div className={styles.pickerPopup}>
-                  <button className={styles.pickerBtn} onClick={() => { setPhotoPicker(null); idCardCamRef.current?.click(); }}>
-                    <span>📷</span> Camera
-                  </button>
-                  <div className={styles.pickerDivider} />
-                  <button className={styles.pickerBtn} onClick={() => { setPhotoPicker(null); idCardRef.current?.click(); }}>
-                    <span>🖼️</span> Upload
-                  </button>
-                </div>
-              )}
-              {/* Hidden inputs */}
-              <input ref={idCardCamRef} type="file" accept="image/*" capture="environment"
-                className={styles.hiddenInput}
-                onChange={(e) => { if (e.target.files?.[0]) { handlePhoto(e.target.files[0], "id"); e.target.value = ""; } }} />
-              <input ref={idCardRef} type="file" accept="image/*"
-                className={styles.hiddenInput}
-                onChange={(e) => { if (e.target.files?.[0]) { handlePhoto(e.target.files[0], "id"); e.target.value = ""; } }} />
-            </div>
+          <div className={styles.photoRow}>
+            {/* Selfie */}
+            <button
+              className={`${styles.photoBox} ${selfiePreview ? styles.photoBoxFilled : ""}`}
+              style={selfiePreview ? { backgroundImage: `url(${selfiePreview})`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" } : undefined}
+              onClick={() => setPhotoPicker(p => p === "selfie" ? null : "selfie")} id="btn-selfie">
+              {uploadingPhoto
+                ? <span className={styles.spinner} />
+                : !selfiePreview && <><div className={styles.photoIconWrap}><span className={styles.photoIcon}>📸</span></div><span className={styles.photoLabel}>SELFIE</span><span className={styles.photoHint}>Tap to add photo</span></>}
+              {selfiePreview && !uploadingPhoto && <div className={styles.photoOverlay}>✓ Change</div>}
+            </button>
+
+            {/* ID Card */}
+            <button
+              className={`${styles.photoBox} ${idPreview ? styles.photoBoxFilled : ""}`}
+              style={idPreview ? { backgroundImage: `url(${idPreview})`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" } : undefined}
+              onClick={() => setPhotoPicker(p => p === "id" ? null : "id")} id="btn-id-card">
+              {uploadingId
+                ? <span className={styles.spinner} />
+                : !idPreview && <><div className={styles.photoIconWrap}><span className={styles.photoIcon}>🪪</span></div><span className={styles.photoLabel}>ID CARD</span><span className={styles.photoHint}>Tap to add photo</span></>}
+              {idPreview && !uploadingId && <div className={styles.photoOverlay}>✓ Change</div>}
+            </button>
           </div>
+
+          {/* ── All hidden inputs — outside grid, no layout effect ── */}
+          <input ref={selfieCamRef} type="file" accept="image/*" capture="user"
+            className={styles.hiddenInput}
+            onChange={(e) => { if (e.target.files?.[0]) { handlePhoto(e.target.files[0], "selfie"); e.target.value = ""; } }} />
+          <input ref={selfieRef} type="file" accept="image/*"
+            className={styles.hiddenInput}
+            onChange={(e) => { if (e.target.files?.[0]) { handlePhoto(e.target.files[0], "selfie"); e.target.value = ""; } }} />
+          <input ref={idCardCamRef} type="file" accept="image/*" capture="environment"
+            className={styles.hiddenInput}
+            onChange={(e) => { if (e.target.files?.[0]) { handlePhoto(e.target.files[0], "id"); e.target.value = ""; } }} />
+          <input ref={idCardRef} type="file" accept="image/*"
+            className={styles.hiddenInput}
+            onChange={(e) => { if (e.target.files?.[0]) { handlePhoto(e.target.files[0], "id"); e.target.value = ""; } }} />
         </div>
+
 
         {/* ── 2. Basic Details ── */}
         <div className={`${styles.section} animate-fade-up delay-2`}>
