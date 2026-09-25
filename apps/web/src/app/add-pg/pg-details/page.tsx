@@ -1,11 +1,19 @@
 "use client";
 import AppLogo from "@/components/AppLogo";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import styles from "./page.module.css";
+import { auth } from "@/lib/firebase";
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  type ConfirmationResult,
+} from "firebase/auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -17,62 +25,78 @@ const PG_TYPES = [
 
 const SHARING_OPTIONS = [1, 2, 3, 4, 5];
 
+// ─── Inline sign-in step ─────────────────────────────────────────────────────
+type SignInStep = "idle" | "phone-form" | "otp";
+
 function PGDetailsInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // ?new=true → always blank form, always POST a brand-new PG
   const isNew = searchParams.get("new") === "true";
-  // ?pgId= → explicit PG to edit (set by building page's Prev button)
   const urlPgId = searchParams.get("pgId");
 
-  const { isAuthenticated, isLoading: authLoading, owner, activePgId, token, refreshAuth, setActivePg } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, owner, activePgId, token, refreshAuth, setActivePg, signIn } = useAuth();
 
-  // ── Manager Details (per-PG) ─────────────
-  const [managerName, setManagerName] = useState("");
-  const [managerPhone, setManagerPhone] = useState("");
-
-  // ── PG Details ───────────────────────────
-  const [pgName, setPgName]           = useState("");
-  const [pgType, setPgType]           = useState("gents");
-  const [totalFloors, setTotalFloors] = useState(1);
-  const [address, setAddress]         = useState("");
-  const [locationLink, setLocationLink] = useState("");
+  // ── PG Form fields ────────────────────────────────────────────────
+  const [managerName, setManagerName]     = useState("");
+  const [managerPhone, setManagerPhone]   = useState("");
+  const [pgName, setPgName]               = useState("");
+  const [pgType, setPgType]               = useState("gents");
+  const [totalFloors, setTotalFloors]     = useState(1);
+  const [address, setAddress]             = useState("");
+  const [locationLink, setLocationLink]   = useState("");
   const [selectedSharings, setSelectedSharings] = useState<number[]>([1, 2]);
-  const [showCustom, setShowCustom]   = useState(false);
-  const [customValue, setCustomValue] = useState("");
+  const [showCustom, setShowCustom]       = useState(false);
+  const [customValue, setCustomValue]     = useState("");
+  const [coordStatus, setCoordStatus]     = useState<"idle" | "found" | "failed">("idle");
 
-  const [saving, setSaving]           = useState(false);
-  const [loading, setLoading]         = useState(!isNew);
-  const [error, setError]             = useState("");
-  const [alreadySaved, setAlreadySaved] = useState(false);
+  const [saving, setSaving]               = useState(false);
+  const [loading, setLoading]             = useState(!isNew);
+  const [error, setError]                 = useState("");
+  const [alreadySaved, setAlreadySaved]   = useState(false);
 
-  // Guard — must be signed in
+  // ── Inline sign-in state (shown when isNew & not authenticated) ───
+  const [signInStep, setSignInStep]       = useState<SignInStep>("idle");
+  const [inlineName, setInlineName]       = useState("");
+  const [inlinePhone, setInlinePhone]     = useState("");
+  const [inlineOtp, setInlineOtp]         = useState(["", "", "", "", "", ""]);
+  const [inlineSending, setInlineSending] = useState(false);
+  const [inlineVerifying, setInlineVerifying] = useState(false);
+  const [inlineGoogleLoading, setInlineGoogleLoading] = useState(false);
+  const [inlineCountdown, setInlineCountdown] = useState(0);
+  const [signInError, setSignInError]     = useState("");
+  const [confirmation, setConfirmation]   = useState<ConfirmationResult | null>(null);
+  const recaptchaRef                      = useRef<RecaptchaVerifier | null>(null);
+  const otpRefs                           = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Countdown for OTP resend
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (inlineCountdown <= 0) return;
+    const t = setTimeout(() => setInlineCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [inlineCountdown]);
+
+  // ── Auth guard: only redirect for EDIT mode ───────────────────────
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated && !isNew) {
       router.replace("/sign-in?from=/add-pg/pg-details");
     }
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, isNew, router]);
 
-  // Pre-fill manager details from account owner (user can change them)
+  // Pre-fill manager from authenticated owner
   useEffect(() => {
     if (isNew && owner && !managerName) {
-      // Pre-fill with account-level details as convenience defaults
       const accountName  = owner.name  || "";
       const accountPhone = owner.phone || "";
-      // Don't pre-fill if it looks like a Google email (placeholder phone)
       const isGooglePlaceholder = accountPhone.includes("@");
       if (accountName)  setManagerName(accountName);
       if (!isGooglePlaceholder && accountPhone) setManagerPhone(accountPhone);
     }
-  // only run once when owner loads
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [owner]);
 
-  // Load existing PG data only when NOT creating a new PG
+  // Load existing PG data for edit mode
   useEffect(() => {
     if (isNew) { setLoading(false); return; }
-
-    // urlPgId (from building's Prev button) takes priority over activePgId
     const pgId = urlPgId || activePgId
       || localStorage.getItem("pg_eg_active_pg_id")
       || localStorage.getItem("pg_eg_pg_id");
@@ -90,6 +114,8 @@ function PGDetailsInner() {
           setTotalFloors(pg.totalFloors);
           setAddress(pg.address || "");
           setLocationLink(pg.locationLink || "");
+          if (pg.latitude && pg.longitude) setCoordStatus("found");
+          else if (pg.locationLink) setCoordStatus("failed");
           const standardSharings = pg.sharings.filter((s: number) => s <= 5);
           const custom = pg.sharings.find((s: number) => s > 5);
           setSelectedSharings(standardSharings.length ? standardSharings : [1, 2]);
@@ -111,26 +137,27 @@ function PGDetailsInner() {
     setTotalFloors((prev) => Math.max(1, Math.min(50, prev + delta)));
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-
-    if (managerName.trim().length < 2) { setError("Please enter the manager's name"); return; }
-    if (managerPhone.trim().length < 6) { setError("Please enter a valid phone number"); return; }
-    if (pgName.trim().length < 2)       { setError("Please enter your PG name"); return; }
-
+  // ── Validate form fields before submit ───────────────────────────
+  function validateForm(): string | null {
+    if (managerName.trim().length < 2) return "Please enter the manager's name";
+    if (managerPhone.trim().length < 6) return "Please enter a valid phone number";
+    if (pgName.trim().length < 2)       return "Please enter your PG name";
+    if (!locationLink.trim())           return "Google Maps link is required — students use it to find your PG";
     const allSharings = [...selectedSharings];
     const customNum = parseInt(customValue);
     if (showCustom && customNum > 0 && !allSharings.includes(customNum)) allSharings.push(customNum);
-    if (allSharings.length === 0) { setError("Select at least one sharing type"); return; }
+    if (allSharings.length === 0)       return "Select at least one sharing type";
+    return null;
+  }
 
-    const ownerId = owner?.id;
-    if (!ownerId) { setError("Please sign in first."); return; }
+  // ── Submit PG (called after auth is confirmed) ────────────────────
+  async function submitPG(authToken: string, ownerId: string) {
+    const allSharings = [...selectedSharings];
+    const customNum = parseInt(customValue);
+    if (showCustom && customNum > 0 && !allSharings.includes(customNum)) allSharings.push(customNum);
 
     setSaving(true);
     try {
-      // urlPgId = explicit PG (coming back from building); activePgId = currently selected PG
-      // isNew=true → always POST a brand-new PG, never PATCH
       const existingPgId = isNew
         ? null
         : (urlPgId || activePgId || localStorage.getItem("pg_eg_active_pg_id") || localStorage.getItem("pg_eg_pg_id"));
@@ -144,7 +171,7 @@ function PGDetailsInner() {
         method,
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           ownerId,
@@ -163,8 +190,6 @@ function PGDetailsInner() {
       if (!res.ok) throw new Error(data.error || "Failed to save");
 
       const newPgId = data.pg.id;
-
-      // If this was a new PG, switch active to it immediately
       if (isNew) {
         localStorage.setItem("pg_eg_active_pg_id", newPgId);
         setActivePg(newPgId);
@@ -174,18 +199,144 @@ function PGDetailsInner() {
       router.push(`/add-pg/building?pgId=${newPgId}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
       setSaving(false);
     }
   }
 
-  if (authLoading || loading) {
+  // ── For already-authenticated submit (edit mode) ──────────────────
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const validationError = validateForm();
+    if (validationError) { setError(validationError); return; }
+    const ownerId = owner?.id;
+    if (!ownerId || !token) { setError("Please sign in first."); return; }
+    setError("");
+    await submitPG(token, ownerId);
+  }
+
+  // ─── Google Sign-In (inline) ────────────────────────────────────
+  async function handleInlineGoogle() {
+    const validationError = validateForm();
+    if (validationError) { setError(validationError); return; }
+    setError(""); setSignInError(""); setInlineGoogleLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const idToken = await result.user.getIdToken();
+
+      const res = await fetch(`${API_URL}/api/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken, role: "owner" }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Google sign-in failed");
+      }
+      const data = await res.json();
+      signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs, "owner");
+      await submitPG(data.token, data.owner.id);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (!msg.includes("popup-closed-by-user") && !msg.includes("cancelled-popup-request")) {
+        setSignInError(msg || "Google sign-in failed. Please try again.");
+      }
+    } finally {
+      setInlineGoogleLoading(false);
+    }
+  }
+
+  // ─── Phone OTP — Setup Recaptcha ────────────────────────────────
+  function setupRecaptcha() {
+    if (!recaptchaRef.current) {
+      recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container-pg", {
+        size: "invisible",
+        callback: () => {},
+      });
+    }
+    return recaptchaRef.current;
+  }
+
+  async function handleSendOTP(e: React.FormEvent) {
+    e.preventDefault();
+    const validationError = validateForm();
+    if (validationError) { setError(validationError); return; }
+    if (inlineName.trim().length < 2) { setSignInError("Please enter your name"); return; }
+    if (inlinePhone.length !== 10) { setSignInError("Enter a valid 10-digit mobile number"); return; }
+    setSignInError(""); setInlineSending(true);
+    try {
+      const appVerifier = setupRecaptcha();
+      const result = await signInWithPhoneNumber(auth, `+91${inlinePhone}`, appVerifier);
+      setConfirmation(result);
+      setSignInStep("otp");
+      setInlineCountdown(30);
+    } catch (err: unknown) {
+      recaptchaRef.current = null;
+      setSignInError(err instanceof Error ? err.message : "Failed to send OTP");
+    } finally {
+      setInlineSending(false);
+    }
+  }
+
+  async function handleVerifyOTP() {
+    const code = inlineOtp.join("");
+    if (code.length !== 6 || !confirmation) return;
+    setSignInError(""); setInlineVerifying(true);
+    try {
+      const userCredential = await confirmation.confirm(code);
+      const idToken = await userCredential.user.getIdToken();
+
+      const res = await fetch(`${API_URL}/api/auth/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken, name: inlineName.trim(), role: "owner" }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Verification failed");
+      }
+      const data = await res.json();
+      signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs, "owner");
+      await submitPG(data.token, data.owner.id);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("invalid-verification-code")) setSignInError("Wrong OTP. Please check and try again.");
+      else if (msg.includes("code-expired")) setSignInError("OTP expired. Please request a new one.");
+      else setSignInError(msg || "Verification failed.");
+      setInlineOtp(["", "", "", "", "", ""]);
+      otpRefs.current[0]?.focus();
+    } finally {
+      setInlineVerifying(false);
+    }
+  }
+
+  function handleOtpInput(index: number, value: string) {
+    const digit = value.replace(/\D/g, "").slice(-1);
+    const next = [...inlineOtp];
+    next[index] = digit;
+    setInlineOtp(next);
+    if (digit && index < 5) otpRefs.current[index + 1]?.focus();
+  }
+
+  function handleOtpKeyDown(index: number, e: React.KeyboardEvent) {
+    if (e.key === "Backspace" && !inlineOtp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  }
+
+  // Show spinner only in edit-mode loading
+  if ((authLoading && !isNew) || loading) {
     return (
       <main className={styles.main}>
         <div className={styles.loadingScreen}><span className={styles.spinner} /></div>
       </main>
     );
   }
+
+  // For edit mode (already authenticated required)
+  if (!isNew && !isAuthenticated) return null;
+
+  const showInlineSignIn = isNew && !isAuthenticated;
 
   return (
     <main className={styles.main}>
@@ -195,16 +346,16 @@ function PGDetailsInner() {
       <div className={styles.content}>
         {/* Header */}
         <div className={`${styles.header} animate-fade-up`}>
-          <Link href="/add-pg" className={styles.backBtn} id="btn-back">← Back</Link>
+          <Link href="/" className={styles.backBtn} id="btn-back">← Back</Link>
           <AppLogo />
         </div>
 
         {/* Step label */}
         <div className="animate-fade-up">
           <p className={styles.stepLabel}>STEP 02</p>
-          <h2 className={styles.title}>{isNew ? "New PG Details" : "PG Details"}</h2>
+          <h2 className={styles.title}>{isNew ? "PG Details" : "PG Details"}</h2>
           <p className={styles.subtitle}>
-            {isNew ? "Set up your new property." : "Update your PG information."}
+            {isNew ? "Fill in your PG info, then sign in to save." : "Update your PG information."}
           </p>
         </div>
 
@@ -214,7 +365,7 @@ function PGDetailsInner() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={isAuthenticated ? handleSubmit : (e) => e.preventDefault()}>
 
           {/* ── Manager Details ───────────────── */}
           <div className={`${styles.section} animate-fade-up delay-1`}>
@@ -327,34 +478,191 @@ function PGDetailsInner() {
           {/* ── Google Maps Link ──────────────── */}
           <div className={`${styles.section} animate-fade-up delay-2`} style={{ marginTop: 16 }}>
             <p className={styles.sectionLabel}>
-              Google Maps Link <span className={styles.optional}>(optional)</span>
+              Google Maps Link <span style={{ color: "var(--brand-red)", fontSize: 11 }}>* Required</span>
+            </p>
+            <p className={styles.subtitle} style={{ fontSize: 12, marginTop: -4, marginBottom: 8 }}>
+              Students find your PG using this link. Open Google Maps → tap Share → Copy Link.
             </p>
             <input
               id="pg-location" type="url" className={`${styles.input} ${styles.locationInput}`}
-              placeholder="https://maps.google.com/..."
-              value={locationLink} onChange={(e) => setLocationLink(e.target.value)}
+              placeholder="https://maps.app.goo.gl/... or full URL"
+              value={locationLink} onChange={(e) => { setLocationLink(e.target.value); setCoordStatus("idle"); }}
               disabled={saving}
             />
+            {locationLink.trim() && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, fontSize: 12 }}>
+                {coordStatus === "found" && <span style={{ color: "var(--brand-green)" }}>✅ Location detected — your PG will appear in Find PG search!</span>}
+                {coordStatus === "failed" && <span style={{ color: "var(--partial)" }}>⚠️ Try the full URL from your browser address bar.</span>}
+              </div>
+            )}
           </div>
 
+          {/* ── Form-level error ─────────────── */}
           {error && (
             <div className={`${styles.error} animate-fade-up`} style={{ marginTop: 12 }}>
               {error}
             </div>
           )}
 
-          <button
-            type="submit"
-            className={styles.primaryBtn}
-            disabled={saving}
-            id="btn-save-pg"
-            style={{ marginTop: 20 }}
-          >
-            {saving
-              ? <span className={styles.btnLoading}><span className={styles.spinner} /> Saving…</span>
-              : isNew ? "Save & Set Up Rooms →" : "Save & Continue →"}
-          </button>
+          {/* ═══════════════════════════════════════════════════════════
+              AUTHENTICATED: normal save button
+              NOT AUTHENTICATED (new PG): inline sign-in
+          ════════════════════════════════════════════════════════════ */}
+          {isAuthenticated ? (
+            <button
+              type="submit"
+              className={styles.primaryBtn}
+              disabled={saving}
+              id="btn-save-pg"
+              style={{ marginTop: 20 }}
+            >
+              {saving
+                ? <span className={styles.btnLoading}><span className={styles.spinner} /> Saving…</span>
+                : isNew ? "Save & Set Up Rooms →" : "Save & Continue →"}
+            </button>
+          ) : (
+            /* ── Inline Sign-In (new PG flow) ── */
+            <div className={styles.signInBox} id="inline-signin">
+              <div className={styles.signInDivider}>
+                <span>Sign in to save your PG</span>
+              </div>
+
+              {/* Google Button */}
+              <button
+                type="button"
+                className={styles.googleBtn}
+                onClick={handleInlineGoogle}
+                disabled={inlineGoogleLoading || saving}
+                id="btn-google-signin"
+              >
+                {inlineGoogleLoading ? (
+                  <><span className={styles.spinner} /> Signing in…</>
+                ) : (
+                  <>
+                    <svg width="18" height="18" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Continue with Google
+                  </>
+                )}
+              </button>
+
+              {/* OR divider */}
+              <div className={styles.orDivider}><span>OR</span></div>
+
+              {/* Phone OTP */}
+              {signInStep === "idle" && (
+                <button
+                  type="button"
+                  className={styles.phoneToggleBtn}
+                  onClick={() => setSignInStep("phone-form")}
+                  id="btn-show-phone"
+                >
+                  📱 Sign in with Phone OTP
+                </button>
+              )}
+
+              {signInStep === "phone-form" && (
+                <form onSubmit={handleSendOTP} className={styles.phoneForm}>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    placeholder="Your Name (e.g. Rajesh Kumar)"
+                    value={inlineName}
+                    onChange={(e) => setInlineName(e.target.value)}
+                    autoComplete="name"
+                    id="input-inline-name"
+                  />
+                  <div className={styles.phoneRow} style={{ marginTop: 10 }}>
+                    <div className={styles.countryCode}>🇮🇳 +91</div>
+                    <input
+                      type="tel" inputMode="numeric" maxLength={10}
+                      className={`${styles.input} ${styles.phoneInput}`}
+                      placeholder="98765 43210"
+                      value={inlinePhone}
+                      onChange={(e) => setInlinePhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                      autoComplete="tel"
+                      id="input-inline-phone"
+                    />
+                  </div>
+                  {signInError && <p className={styles.signInError}>{signInError}</p>}
+                  <button
+                    type="submit"
+                    className={styles.primaryBtn}
+                    disabled={inlineSending}
+                    style={{ marginTop: 12 }}
+                    id="btn-send-otp"
+                  >
+                    {inlineSending ? <><span className={styles.spinner} /> Sending…</> : "Send OTP →"}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.cancelPhoneBtn}
+                    onClick={() => { setSignInStep("idle"); setSignInError(""); }}
+                  >
+                    ← Use Google instead
+                  </button>
+                </form>
+              )}
+
+              {signInStep === "otp" && (
+                <div className={styles.phoneForm}>
+                  <p style={{ fontSize: 13, color: "var(--text-secondary)", textAlign: "center", marginBottom: 12 }}>
+                    OTP sent to +91 {inlinePhone}
+                  </p>
+                  <div className={styles.otpRow}>
+                    {inlineOtp.map((digit, i) => (
+                      <input
+                        key={i}
+                        ref={(el) => { otpRefs.current[i] = el; }}
+                        type="tel" inputMode="numeric" maxLength={1}
+                        className={styles.otpBox}
+                        value={digit}
+                        onChange={(e) => handleOtpInput(i, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                        id={`otp-box-${i}`}
+                      />
+                    ))}
+                  </div>
+                  {signInError && <p className={styles.signInError}>{signInError}</p>}
+                  <button
+                    type="button"
+                    className={styles.primaryBtn}
+                    onClick={handleVerifyOTP}
+                    disabled={inlineVerifying || inlineOtp.join("").length < 6}
+                    style={{ marginTop: 12 }}
+                    id="btn-verify-otp"
+                  >
+                    {inlineVerifying ? <><span className={styles.spinner} /> Verifying…</> : "Verify & Create PG →"}
+                  </button>
+                  {inlineCountdown > 0 ? (
+                    <p style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", marginTop: 8 }}>
+                      Resend in {inlineCountdown}s
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.cancelPhoneBtn}
+                      onClick={() => { setSignInStep("phone-form"); setInlineOtp(["","","","","",""]); setSignInError(""); recaptchaRef.current = null; setConfirmation(null); }}
+                    >
+                      ← Resend OTP
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {signInError && signInStep === "idle" && (
+                <p className={styles.signInError}>{signInError}</p>
+              )}
+            </div>
+          )}
         </form>
+
+        {/* Invisible recaptcha container */}
+        <div id="recaptcha-container-pg" />
       </div>
     </main>
   );

@@ -13,18 +13,24 @@ interface BeforeInstallPromptEvent extends Event {
 
 export default function HomePage() {
   const router = useRouter();
-  const { isAuthenticated, hasPG, isLoading } = useAuth();
+  const { isAuthenticated, hasPG, isLoading, role } = useAuth();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const [ownerMsg, setOwnerMsg] = useState(false); // show toast when owner tries Find PG
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
 
-  // If already logged in, go straight to the right place
+  // If already logged in, auto-redirect based on role
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace(hasPG ? "/dashboard" : "/add-pg");
+      if (role === "user") {
+        router.replace("/find-pg");
+      } else {
+        // owner
+        router.replace(hasPG ? "/dashboard" : "/add-pg");
+      }
     }
-  }, [isLoading, isAuthenticated, hasPG, router]);
+  }, [isLoading, isAuthenticated, hasPG, role, router]);
 
   // Capture the PWA install prompt
   useEffect(() => {
@@ -92,11 +98,11 @@ export default function HomePage() {
 
         {/* Action Cards */}
         <div className={`${styles.cards} animate-fade-up delay-2`}>
-          {/* ADD PG Card — goes to sign-in first */}
+          {/* ADD PG Card */}
           <button
             className={styles.actionCard}
             id="btn-add-pg"
-            onClick={() => router.push("/sign-in?from=/add-pg")}
+            onClick={() => router.push("/add-pg/pg-details?new=true")}
           >
             <div className={styles.cardIcon}>🏠</div>
             <div className={styles.cardInfo}>
@@ -106,18 +112,19 @@ export default function HomePage() {
             <div className={styles.cardArrow}>→</div>
           </button>
 
-          {/* FIND PG Card — coming soon */}
-          <div className={`${styles.actionCard} ${styles.actionCardDisabled}`} id="btn-find-pg">
+          {/* FIND PG Card */}
+          <button
+            className={styles.actionCard}
+            id="btn-find-pg"
+            onClick={() => router.push("/sign-in?from=/find-pg&role=user")}
+          >
             <div className={styles.cardIcon}>🔍</div>
             <div className={styles.cardInfo}>
-              <span className={styles.cardTitle}>
-                FIND PG
-                <span className={styles.comingSoonBadge}>Coming Soon</span>
-              </span>
+              <span className={styles.cardTitle}>FIND PG</span>
               <span className={styles.cardDesc}>I&apos;m looking for a PG to stay in</span>
             </div>
             <div className={styles.cardArrow}>→</div>
-          </div>
+          </button>
         </div>
 
         {/* Footer */}

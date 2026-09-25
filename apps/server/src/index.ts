@@ -11,6 +11,7 @@ import dashboardRouter from "./routes/dashboard";
 import uploadRouter from "./routes/upload";
 import tenantsRouter from "./routes/tenants";
 import rentRouter from "./routes/rent";
+import publicRouter from "./routes/public";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -44,6 +45,7 @@ app.use("/api/dashboard", dashboardRouter);
 app.use("/api/upload", uploadRouter);
 app.use("/api/tenants", tenantsRouter);
 app.use("/api/rent", rentRouter);
+app.use("/api/public", publicRouter);
 
 // ─── Start ────────────────────────────────
 app.listen(PORT, () => {

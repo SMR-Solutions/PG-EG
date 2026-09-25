@@ -12,7 +12,6 @@ const FIREBASE_JWKS = createRemoteJWKSet(
   )
 );
 
-// Read env lazily so dotenv.config() has already run by the time these are used
 function getProjectId() {
   const id = process.env.FIREBASE_PROJECT_ID;
   if (!id) throw new Error("FIREBASE_PROJECT_ID env var not set");
@@ -43,9 +42,10 @@ async function verifyFirebaseToken(idToken: string) {
   };
 }
 
-function makeJwt(ownerId: string, phone: string) {
+// Include role in JWT so we can read it without a DB round-trip
+function makeJwt(ownerId: string, phone: string, role: string) {
   return jwt.sign(
-    { ownerId, phone },
+    { ownerId, phone, role },
     getJwtSecret(),
     { expiresIn: JWT_EXPIRES_IN() } as jwt.SignOptions
   );
@@ -54,7 +54,7 @@ function makeJwt(ownerId: string, phone: string) {
 // ─── POST /api/auth/verify (Phone OTP) ───────────────────────────
 router.post("/verify", async (req: Request, res: Response) => {
   try {
-    const { idToken, name } = req.body as { idToken: string; name?: string };
+    const { idToken, name, role } = req.body as { idToken: string; name?: string; role?: string };
     if (!idToken) { res.status(400).json({ error: "idToken is required" }); return; }
 
     let firebasePayload: Awaited<ReturnType<typeof verifyFirebaseToken>>;
@@ -76,8 +76,10 @@ router.post("/verify", async (req: Request, res: Response) => {
       if (!name || name.trim().length < 2) {
         res.status(400).json({ error: "Name is required for new users" }); return;
       }
+      // Use provided role or default to 'owner'
+      const assignedRole = role === "user" ? "user" : "owner";
       const [newOwner] = await db.insert(owners)
-        .values({ name: name.trim(), phone, firebaseUid }).returning();
+        .values({ name: name.trim(), phone, firebaseUid, role: assignedRole }).returning();
       owner = newOwner;
     } else if (owner.firebaseUid !== firebaseUid) {
       await db.update(owners).set({ firebaseUid, updatedAt: new Date() }).where(eq(owners.id, owner.id));
@@ -86,13 +88,14 @@ router.post("/verify", async (req: Request, res: Response) => {
     const ownerPGs = await db.select({ id: pgs.id, name: pgs.name }).from(pgs)
       .where(eq(pgs.ownerId, owner.id)).orderBy(asc(pgs.createdAt));
     const hasPG = ownerPGs.length > 0;
-    const token = makeJwt(owner.id, owner.phone);
+    const token = makeJwt(owner.id, owner.phone, owner.role);
 
     res.json({
       token,
-      owner: { id: owner.id, name: owner.name, phone: owner.phone },
+      owner: { id: owner.id, name: owner.name, phone: owner.phone, role: owner.role },
       isNewUser,
       hasPG,
+      role: owner.role,
       pgId: ownerPGs[0]?.id || null,
       pgs: ownerPGs,
     });
@@ -105,7 +108,7 @@ router.post("/verify", async (req: Request, res: Response) => {
 // ─── POST /api/auth/google (Google Sign-In) ───────────────────────
 router.post("/google", async (req: Request, res: Response) => {
   try {
-    const { idToken } = req.body as { idToken: string };
+    const { idToken, role } = req.body as { idToken: string; role?: string };
     if (!idToken) { res.status(400).json({ error: "idToken is required" }); return; }
 
     let payload: Awaited<ReturnType<typeof verifyFirebaseToken>>;
@@ -130,11 +133,14 @@ router.post("/google", async (req: Request, res: Response) => {
     const isNewUser = !owner;
 
     if (isNewUser) {
+      // Use provided role or default to 'owner'
+      const assignedRole = role === "user" ? "user" : "owner";
       const [newOwner] = await db.insert(owners).values({
         name: googleName || email.split("@")[0],
         phone: email, // Google-only owners; phone can be linked later
         email,
         firebaseUid,
+        role: assignedRole,
       }).returning();
       owner = newOwner;
     } else {
@@ -147,13 +153,14 @@ router.post("/google", async (req: Request, res: Response) => {
     const ownerPGs = await db.select({ id: pgs.id, name: pgs.name }).from(pgs)
       .where(eq(pgs.ownerId, owner.id)).orderBy(asc(pgs.createdAt));
     const hasPG = ownerPGs.length > 0;
-    const token = makeJwt(owner.id, owner.phone);
+    const token = makeJwt(owner.id, owner.phone, owner.role);
 
     res.json({
       token,
-      owner: { id: owner.id, name: owner.name, phone: owner.phone, email: owner.email },
+      owner: { id: owner.id, name: owner.name, phone: owner.phone, email: owner.email, role: owner.role },
       isNewUser,
       hasPG,
+      role: owner.role,
       pgId: ownerPGs[0]?.id || null,
       pgs: ownerPGs,
     });
@@ -183,8 +190,9 @@ router.get("/me", async (req: Request, res: Response) => {
       .where(eq(pgs.ownerId, owner.id)).orderBy(asc(pgs.createdAt));
 
     res.json({
-      owner: { id: owner.id, name: owner.name, phone: owner.phone, email: owner.email, photoUrl: owner.photoUrl, createdAt: owner.createdAt },
+      owner: { id: owner.id, name: owner.name, phone: owner.phone, email: owner.email, photoUrl: owner.photoUrl, role: owner.role, createdAt: owner.createdAt },
       hasPG: ownerPGs.length > 0,
+      role: owner.role,
       pgId: ownerPGs[0]?.id || null,
       pgs: ownerPGs,
     });

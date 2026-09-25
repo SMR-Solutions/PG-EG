@@ -15,6 +15,7 @@ interface Owner {
   phone: string;
   email?: string | null;
   photoUrl?: string | null;
+  role?: string | null; // 'owner' | 'user'
 }
 
 interface PGSummary {
@@ -29,12 +30,13 @@ interface AuthState {
   activePgId: string | null;   // currently selected/viewing PG
   allPgs: PGSummary[];         // all PGs for this owner
   hasPG: boolean;
+  role: string | null;         // 'owner' | 'user'
   isLoading: boolean;
   isAuthenticated: boolean;
 }
 
 interface AuthContextType extends AuthState {
-  signIn: (token: string, owner: Owner, hasPG: boolean, pgId?: string | null, allPgs?: PGSummary[]) => void;
+  signIn: (token: string, owner: Owner, hasPG: boolean, pgId?: string | null, allPgs?: PGSummary[], role?: string) => void;
   signOut: () => void;
   refreshAuth: () => Promise<void>;
   setActivePg: (pgId: string) => void;
@@ -42,6 +44,7 @@ interface AuthContextType extends AuthState {
 
 const TOKEN_KEY = "pg_eg_token";
 const ACTIVE_PG_KEY = "pg_eg_active_pg_id";
+const ROLE_KEY = "pg_eg_role";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -54,15 +57,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     activePgId: null,
     allPgs: [],
     hasPG: false,
+    role: null,
     isLoading: true,
     isAuthenticated: false,
   });
 
   const signIn = useCallback(
-    (token: string, owner: Owner, hasPG: boolean, pgId?: string | null, allPgs?: PGSummary[]) => {
+    (token: string, owner: Owner, hasPG: boolean, pgId?: string | null, allPgs?: PGSummary[], role?: string) => {
+      const resolvedRole = role || owner.role || "owner";
       localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(ROLE_KEY, resolvedRole);
       const pgsArr = allPgs || (pgId ? [{ id: pgId, name: "My PG" }] : []);
-      // Respect existing activePgId if it's in the pgsArr
       const savedActive = localStorage.getItem(ACTIVE_PG_KEY);
       const activePgId = (savedActive && pgsArr.find((p) => p.id === savedActive))
         ? savedActive
@@ -75,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         activePgId,
         allPgs: pgsArr,
         hasPG,
+        role: resolvedRole,
         isLoading: false,
         isAuthenticated: true,
       });
@@ -86,10 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem("pg_eg_pg_id");
     localStorage.removeItem(ACTIVE_PG_KEY);
+    localStorage.removeItem(ROLE_KEY);
     setState({
       owner: null, token: null,
       pgId: null, activePgId: null, allPgs: [],
-      hasPG: false, isLoading: false, isAuthenticated: false,
+      hasPG: false, role: null, isLoading: false, isAuthenticated: false,
     });
   }, []);
 
@@ -115,14 +122,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem("pg_eg_pg_id");
         localStorage.removeItem(ACTIVE_PG_KEY);
-        setState({ owner: null, token: null, pgId: null, activePgId: null, allPgs: [], hasPG: false, isLoading: false, isAuthenticated: false });
+        localStorage.removeItem(ROLE_KEY);
+        setState({ owner: null, token: null, pgId: null, activePgId: null, allPgs: [], hasPG: false, role: null, isLoading: false, isAuthenticated: false });
         return;
       }
 
       const data = await res.json();
       const allPgs: PGSummary[] = data.pgs || [];
       const pgId = data.pgId || null;
+      const role = data.role || data.owner?.role || "owner";
       if (pgId) localStorage.setItem("pg_eg_pg_id", pgId);
+      localStorage.setItem(ROLE_KEY, role);
 
       // Resolve activePgId: prefer saved choice if still valid, else primary
       const savedActive = localStorage.getItem(ACTIVE_PG_KEY);
@@ -138,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         activePgId,
         allPgs,
         hasPG: data.hasPG,
+        role,
         isLoading: false,
         isAuthenticated: true,
       });

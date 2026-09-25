@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { eq, asc, and, gt, inArray } from "drizzle-orm";
 import { createDb, pgs, owners, rooms, beds } from "../db";
 import { requireAuth, verifyPgOwnership } from "../middleware/auth";
+import { resolveMapsLink } from "../utils/maps";
 
 const router = Router();
 
@@ -10,7 +11,9 @@ function formatPg(pg: typeof pgs.$inferSelect) {
     id: pg.id, ownerId: pg.ownerId, name: pg.name, type: pg.type,
     totalFloors: pg.totalFloors, address: pg.address, locationLink: pg.locationLink,
     sharings: JSON.parse(pg.sharings), managerName: pg.managerName || null,
-    managerPhone: pg.managerPhone || null, createdAt: pg.createdAt, updatedAt: pg.updatedAt,
+    managerPhone: pg.managerPhone || null,
+    latitude: pg.latitude || null, longitude: pg.longitude || null,
+    createdAt: pg.createdAt, updatedAt: pg.updatedAt,
   };
 }
 
@@ -40,10 +43,20 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
     if (!ownerResult[0]) { res.status(404).json({ error: "Owner not found" }); return; }
 
     const sharingJson = JSON.stringify(sharings.sort((a, b) => a - b));
+
+    // Auto-extract coordinates from locationLink
+    let latitude: number | null = null;
+    let longitude: number | null = null;
+    if (locationLink) {
+      const coords = await resolveMapsLink(locationLink);
+      if (coords) { latitude = coords.lat; longitude = coords.lng; }
+    }
+
     const [pg] = await db.insert(pgs).values({
       ownerId, name: name.trim(), type, totalFloors,
       address: address.trim(), locationLink: locationLink || null,
       sharings: sharingJson, managerName: managerName.trim(), managerPhone: managerPhone.trim(),
+      latitude, longitude,
     }).returning();
 
     res.status(201).json({ pg: formatPg(pg) });
@@ -131,7 +144,16 @@ router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
     if (type !== undefined) updates.type = type;
     if (totalFloors !== undefined) updates.totalFloors = totalFloors;
     if (address !== undefined) updates.address = address.trim();
-    if (locationLink !== undefined) updates.locationLink = locationLink;
+    if (locationLink !== undefined) {
+      updates.locationLink = locationLink;
+      // Re-extract coordinates if locationLink changed
+      if (locationLink) {
+        const coords = await resolveMapsLink(locationLink);
+        if (coords) { updates.latitude = coords.lat; updates.longitude = coords.lng; }
+      } else {
+        updates.latitude = null; updates.longitude = null;
+      }
+    }
     if (sharings !== undefined) updates.sharings = JSON.stringify(sharings.sort((a, b) => a - b));
     if (managerName !== undefined) updates.managerName = managerName.trim();
     if (managerPhone !== undefined) updates.managerPhone = managerPhone.trim();

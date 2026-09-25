@@ -5,6 +5,7 @@ import {
   timestamp,
   boolean,
   integer,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 
 // ─────────────────────────────────────────
@@ -16,6 +17,8 @@ export const owners = pgTable("owners", {
   phone: text("phone").notNull().unique(), // +91XXXXXXXXXX — single source of truth
   firebaseUid: text("firebase_uid").unique(), // Firebase UID for token verification
   email: text("email"),
+  photoUrl: text("photo_url"),
+  role: text("role").default("owner").notNull(), // 'owner' | 'user' (tenant/student)
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -39,6 +42,8 @@ export const pgs = pgTable("pgs", {
   description: text("description"),
   coverImageUrl: text("cover_image_url"),
   rules: text("rules"),
+  latitude: doublePrecision("latitude"),   // extracted from locationLink
+  longitude: doublePrecision("longitude"),  // extracted from locationLink
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

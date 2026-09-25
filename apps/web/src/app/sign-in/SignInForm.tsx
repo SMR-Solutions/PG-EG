@@ -35,16 +35,19 @@ export default function SignInForm() {
   const [confirmationResult, setConfirmationResult] =
     useState<ConfirmationResult | null>(null);
 
+  // role=user → student/job-holder coming from FIND PG
+  const isUserRole = searchParams.get("role") === "user";
+  const fromPath = searchParams.get("from") || (isUserRole ? "/find-pg" : "/dashboard");
+
   const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Redirect if already authenticated
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      const from = searchParams.get("from") || "/dashboard";
-      router.replace(from);
+      router.replace(fromPath);
     }
-  }, [isAuthenticated, isLoading, router, searchParams]);
+  }, [isAuthenticated, isLoading, router, fromPath]);
 
   // Countdown timer for resend OTP
   useEffect(() => {
@@ -55,7 +58,7 @@ export default function SignInForm() {
 
 
 
-  // ─── Google Sign-In (┊ popup — works on all hosted domains) ─────
+  // ─── Google Sign-In ─────────────────────────────────────────────
   async function handleGoogleSignIn() {
     setError("");
     setGoogleLoading(true);
@@ -67,22 +70,24 @@ export default function SignInForm() {
       const res = await fetch(`${API_URL}/api/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
+        body: JSON.stringify({ idToken, role: isUserRole ? "user" : "owner" }),
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Google sign-in failed");
       }
       const data = await res.json();
-      signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs);
+      signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs, data.role || (isUserRole ? "user" : "owner"));
 
-      const from = searchParams.get("from") || "/dashboard";
-      if (!data.hasPG) {
+      // User flow (student/job-holder) → always go to fromPath (e.g. /find-pg)
+      if (isUserRole || data.role === "user") {
+        router.replace(fromPath);
+      } else if (!data.hasPG) {
         router.replace("/add-pg");
       } else if ((data.pgs || []).length > 1) {
         router.replace("/select-pg");
       } else {
-        router.replace(from);
+        router.replace(fromPath);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
@@ -164,7 +169,7 @@ export default function SignInForm() {
       const res = await fetch(`${API_URL}/api/auth/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken, name: name.trim() }),
+        body: JSON.stringify({ idToken, name: name.trim(), role: isUserRole ? "user" : "owner" }),
       });
 
       if (!res.ok) {
@@ -173,10 +178,13 @@ export default function SignInForm() {
       }
 
       const data = await res.json();
-      signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs);
+      signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs, data.role || (isUserRole ? "user" : "owner"));
 
-      if (!data.hasPG) {
-        router.replace(searchParams.get("from") || "/add-pg");
+      // User flow (student/job-holder) → always go to fromPath (e.g. /find-pg)
+      if (isUserRole || data.role === "user") {
+        router.replace(fromPath);
+      } else if (!data.hasPG) {
+        router.replace(fromPath !== "/dashboard" ? fromPath : "/add-pg");
       } else if ((data.pgs || []).length > 1) {
         router.replace("/select-pg");
       } else {
@@ -220,14 +228,22 @@ export default function SignInForm() {
         {/* Logo */}
         <div className={`${styles.header} animate-fade-up`}>
           <AppLogo />
-          <p className={styles.logoTagline}>PG Management, simplified.</p>
+          <p className={styles.logoTagline}>
+            {isUserRole ? "Find PGs near your college." : "PG Management, simplified."}
+          </p>
         </div>
 
         {step === "details" ? (
           <div className={`${styles.form} animate-fade-up delay-1`}>
             <div className={styles.titleBlock}>
-              <h2 className={styles.title}>Welcome 👋</h2>
-              <p className={styles.subtitle}>Sign in to manage your PG from anywhere.</p>
+              <h2 className={styles.title}>
+                {isUserRole ? "Find Your PG 🔍" : "Welcome 👋"}
+              </h2>
+              <p className={styles.subtitle}>
+                {isUserRole
+                  ? "Sign in to search PGs near your college or workplace."
+                  : "Sign in to manage your PG from anywhere."}
+              </p>
             </div>
 
             {/* ─── Google Button ─── */}

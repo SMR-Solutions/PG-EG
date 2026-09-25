@@ -171,9 +171,16 @@ function EditDetailsInner() {
 
           {/* Location link */}
           <div className={styles.field}>
-            <label className={styles.label}>Google Maps Link <span className={styles.optional}>(optional)</span></label>
+            <label className={styles.label}>
+              Google Maps Link{" "}
+              <span style={{ color: "var(--brand-red)", fontSize: 11 }}>* Required for Find PG</span>
+            </label>
             <input className={styles.input} value={locationLink}
-              onChange={(e) => setLocationLink(e.target.value)} placeholder="https://maps.google.com/..." />
+              onChange={(e) => setLocationLink(e.target.value)}
+              placeholder="https://maps.app.goo.gl/... or full URL" />
+            <p style={{ marginTop: 5, fontSize: 12, color: "var(--text-muted)" }}>
+              Students find your PG using this link. Open Google Maps → tap Share → Copy Link.
+            </p>
           </div>
 
           {error && <p className={styles.error}>{error}</p>}

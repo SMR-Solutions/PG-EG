@@ -130,7 +130,7 @@ function DonutRing({ pct, free, total }: { pct: number; free: number; total: num
 export default function DashboardPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { activePgId, allPgs, setActivePg, token, isAuthenticated, isLoading: authLoading, owner, signOut } = useAuth();
+  const { activePgId, allPgs, setActivePg, token, isAuthenticated, isLoading: authLoading, owner, signOut, role } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -139,8 +139,13 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.replace("/sign-in?from=/dashboard");
+      return;
     }
-  }, [authLoading, isAuthenticated, router]);
+    // Users (students/tenants) don't have a dashboard — send to Find PG
+    if (!authLoading && isAuthenticated && role === "user") {
+      router.replace("/find-pg");
+    }
+  }, [authLoading, isAuthenticated, role, router]);
 
   // UI state
   const [filterType, setFilterType] = useState<number | null>(null);

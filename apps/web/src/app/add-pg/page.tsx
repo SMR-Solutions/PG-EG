@@ -13,7 +13,7 @@ function AddPGInner() {
   // ?new=true → adding a NEW PG to an existing account (don't redirect to dashboard)
   const isNew = searchParams.get("new") === "true";
 
-  const { isAuthenticated, isLoading, owner, pgId, hasPG } = useAuth();
+  const { isAuthenticated, isLoading, owner, pgId, hasPG, role } = useAuth();
 
   // Redirect to sign-in if not logged in
   useEffect(() => {
@@ -22,12 +22,19 @@ function AddPGInner() {
     }
   }, [isLoading, isAuthenticated, router]);
 
+  // Users (students/tenants) cannot add PGs — send them to Find PG
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && role === "user") {
+      router.replace("/find-pg");
+    }
+  }, [isLoading, isAuthenticated, role, router]);
+
   // If owner already has a PG AND this is NOT the "add new" flow, go to dashboard
   useEffect(() => {
-    if (!isLoading && isAuthenticated && hasPG && !isNew) {
+    if (!isLoading && isAuthenticated && hasPG && !isNew && role !== "user") {
       router.replace("/dashboard");
     }
-  }, [isLoading, isAuthenticated, hasPG, isNew, router]);
+  }, [isLoading, isAuthenticated, hasPG, isNew, role, router]);
 
   if (isLoading || !isAuthenticated) return null;
 

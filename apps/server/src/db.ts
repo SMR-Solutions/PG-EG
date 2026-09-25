@@ -7,6 +7,7 @@ import {
   timestamp,
   boolean,
   integer,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 
 // ─── Schema ───────────────────────────────
@@ -17,6 +18,7 @@ export const owners = pgTable("owners", {
   firebaseUid: text("firebase_uid").unique(),
   email: text("email"),
   photoUrl: text("photo_url"),
+  role: text("role").default("owner").notNull(), // 'owner' | 'user' (tenant/student)
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -35,6 +37,8 @@ export const pgs = pgTable("pgs", {
   description: text("description"),
   coverImageUrl: text("cover_image_url"),
   rules: text("rules"),
+  latitude: doublePrecision("latitude"),   // extracted from locationLink
+  longitude: doublePrecision("longitude"),  // extracted from locationLink
   // Per-PG manager contact — can differ from the Google account holder
   managerName: text("manager_name"),
   managerPhone: text("manager_phone"),
