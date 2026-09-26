@@ -10,7 +10,7 @@ import AppLogo from "@/components/AppLogo";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 // ─── Fallback hardcoded list (used only if GPS denied / Overpass fails) ───
-const FALLBACK_PLACES = [
+const FALLBACK_PLACES: Place[] = [
   { name: "JSS Academy of Technical Education", short: "JSS College", lat: 12.9021, lng: 77.5047 },
   { name: "RV College of Engineering", short: "RVCE", lat: 12.9237, lng: 77.4988 },
   { name: "BMS College of Engineering", short: "BMSCE", lat: 12.9440, lng: 77.5640 },
@@ -33,6 +33,8 @@ interface PGResult {
   sharings: number[];
   distanceKm: number;
   managerPhone: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 type Step = "search" | "results";
@@ -55,6 +57,21 @@ function walkOrRide(km: number) {
   if (km <= 2) return "🚲 Quick bike ride";
   if (km <= 5) return "🛺 Short auto ride";
   return "🚗 By vehicle";
+}
+
+// Build Google Maps directions URL: origin (user) → destination (PG)
+function getDirectionsUrl(
+  pg: PGResult,
+  userCoords: { lat: number; lng: number } | null
+): string {
+  // Prefer DB coordinates for destination (reliable, won't be a wrong pasted link)
+  if (pg.latitude && pg.longitude) {
+    const dest = `${pg.latitude},${pg.longitude}`;
+    const origin = userCoords ? `&origin=${userCoords.lat},${userCoords.lng}` : "";
+    return `https://www.google.com/maps/dir/?api=1${origin}&destination=${dest}&travelmode=driving`;
+  }
+  // Fallback: open the stored link if no coordinates
+  return pg.locationLink || "#";
 }
 
 export default function FindPGPage() {
@@ -808,18 +825,18 @@ export default function FindPGPage() {
                       )}
                     </div>
 
-                    {/* Location Button */}
-                    {pg.locationLink && (
+                    {/* Location Button — opens Directions (user → PG) */}
+                    {(pg.latitude && pg.longitude) || pg.locationLink ? (
                       <a
-                        href={pg.locationLink}
+                        href={getDirectionsUrl(pg, searchCoords || userCoords)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={styles.locationBtn}
                         id={`btn-map-${pg.id}`}
                       >
-                        🗺️ Open Map
+                        🗺️ Get Directions
                       </a>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               ))}
