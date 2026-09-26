@@ -28,39 +28,61 @@ export function extractCoordsFromUrl(url: string): { lat: number; lng: number } 
 
 /**
  * Resolve any Google Maps link (short or long) and return coordinates.
- * For short links (maps.app.goo.gl/...) we follow the redirect header.
- * Returns null if coordinates cannot be extracted.
+ * Follows up to 5 redirect hops — maps.app.goo.gl typically takes 2-3 hops
+ * before reaching a full URL containing coordinates.
  */
 export async function resolveMapsLink(url: string): Promise<{ lat: number; lng: number } | null> {
   if (!url || !url.trim()) return null;
-  const trimmed = url.trim();
+  let current = url.trim();
 
-  // First try to extract directly (full URL case)
-  const direct = extractCoordsFromUrl(trimmed);
+  // First try to extract directly (already a full URL)
+  const direct = extractCoordsFromUrl(current);
   if (direct) return direct;
 
-  // If short link or no coords found → follow redirect
-  try {
-    const res = await fetch(trimmed, {
-      method: "GET",
-      redirect: "manual",
-      signal: AbortSignal.timeout(8000),
-      headers: { "User-Agent": "Mozilla/5.0" },
-    });
+  // Follow redirect chain (up to 5 hops)
+  for (let hop = 0; hop < 5; hop++) {
+    try {
+      const res = await fetch(current, {
+        method: "GET",
+        redirect: "manual",           // Don't auto-follow — we do it manually
+        signal: AbortSignal.timeout(8000),
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,*/*",
+        },
+      });
 
-    // 301/302/307/308 → Location header contains the expanded URL
-    const expanded = res.headers.get("location");
-    if (expanded) {
-      const fromExpanded = extractCoordsFromUrl(expanded);
-      if (fromExpanded) return fromExpanded;
+      // Try coords in the current URL before checking redirect
+      const fromCurrent = extractCoordsFromUrl(current);
+      if (fromCurrent) return fromCurrent;
+
+      // 3xx → follow Location header
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers.get("location");
+        if (!location) break;
+
+        // Resolve relative Location headers
+        try {
+          current = new URL(location, current).href;
+        } catch {
+          current = location;
+        }
+
+        // Try extracting from this new URL immediately
+        const fromRedirect = extractCoordsFromUrl(current);
+        if (fromRedirect) return fromRedirect;
+        continue; // follow next hop
+      }
+
+      // 200 response — try body text as last resort
+      const body = await res.text().catch(() => "");
+      const fromBody = extractCoordsFromUrl(body);
+      if (fromBody) return fromBody;
+
+      break; // Non-redirect 200 but no coords found
+    } catch {
+      break; // Network error or timeout
     }
-
-    // Some short links do a chain of redirects; try the body text as fallback
-    const body = await res.text().catch(() => "");
-    const fromBody = extractCoordsFromUrl(body);
-    if (fromBody) return fromBody;
-  } catch {
-    // Network error or timeout — silently return null
   }
 
   return null;

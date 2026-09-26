@@ -53,6 +53,7 @@ function PGDetailsInner() {
   const [loading, setLoading]             = useState(!isNew);
   const [error, setError]                 = useState("");
   const [alreadySaved, setAlreadySaved]   = useState(false);
+  const [linkResolving, setLinkResolving] = useState(false);
 
   // ── Inline sign-in state (shown when isNew & not authenticated) ───
   const [signInStep, setSignInStep]       = useState<SignInStep>("idle");
@@ -135,6 +136,36 @@ function PGDetailsInner() {
 
   function adjustFloors(delta: number) {
     setTotalFloors((prev) => Math.max(1, Math.min(50, prev + delta)));
+  }
+
+  // Auto-resolve short Maps links on paste/type
+  const resolveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function handleLocationLinkChange(val: string) {
+    setLocationLink(val);
+    setCoordStatus("idle");
+    if (resolveTimerRef.current) clearTimeout(resolveTimerRef.current);
+    const trimmed = val.trim();
+    if (!trimmed) return;
+    // Debounce 800ms then resolve
+    resolveTimerRef.current = setTimeout(async () => {
+      setLinkResolving(true);
+      try {
+        const res = await fetch(`${API_URL}/api/public/resolve-link`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: trimmed }),
+        });
+        if (res.ok) {
+          setCoordStatus("found");
+        } else {
+          setCoordStatus("failed");
+        }
+      } catch {
+        setCoordStatus("failed");
+      } finally {
+        setLinkResolving(false);
+      }
+    }, 800);
   }
 
   // ── Validate form fields before submit ───────────────────────────
@@ -533,13 +564,28 @@ function PGDetailsInner() {
             <input
               id="pg-location" type="url" className={`${styles.input} ${styles.locationInput}`}
               placeholder="https://maps.app.goo.gl/... or full URL"
-              value={locationLink} onChange={(e) => { setLocationLink(e.target.value); setCoordStatus("idle"); }}
+              value={locationLink}
+              onChange={(e) => handleLocationLinkChange(e.target.value)}
               disabled={saving}
             />
             {locationLink.trim() && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, fontSize: 12 }}>
-                {coordStatus === "found" && <span style={{ color: "var(--brand-green)" }}>✅ Location detected — your PG will appear in Find PG search!</span>}
-                {coordStatus === "failed" && <span style={{ color: "var(--partial)" }}>⚠️ Try the full URL from your browser address bar.</span>}
+                {linkResolving && (
+                  <><span className={styles.spinner} style={{ width: 12, height: 12 }} />
+                  <span style={{ color: "var(--text-muted)" }}>Verifying link…</span></>
+                )}
+                {!linkResolving && coordStatus === "found" && (
+                  <span style={{ color: "var(--brand-green)" }}>
+                    ✅ Location found — your PG will appear in searches!
+                  </span>
+                )}
+                {!linkResolving && coordStatus === "failed" && (
+                  <span style={{ color: "var(--partial)" }}>
+                    ⚠️ Short link not resolved. Try the full URL from your browser address bar.
+                    <br />
+                    <span style={{ opacity: 0.7 }}>Tip: On mobile, open Maps in Chrome → Menu → Desktop site → copy URL</span>
+                  </span>
+                )}
               </div>
             )}
           </div>
