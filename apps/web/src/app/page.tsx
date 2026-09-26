@@ -17,7 +17,6 @@ export default function HomePage() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
   const [installing, setInstalling] = useState(false);
-  const [ownerMsg, setOwnerMsg] = useState(false); // show toast when owner tries Find PG
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
 
   // If already logged in, auto-redirect based on role
@@ -26,7 +25,6 @@ export default function HomePage() {
       if (role === "user") {
         router.replace("/find-pg");
       } else {
-        // owner
         router.replace(hasPG ? "/dashboard" : "/add-pg");
       }
     }
@@ -34,7 +32,6 @@ export default function HomePage() {
 
   // Capture the PWA install prompt
   useEffect(() => {
-    // Check if already installed (standalone mode)
     if (window.matchMedia("(display-mode: standalone)").matches) {
       setInstalled(true);
       return;
@@ -70,6 +67,7 @@ export default function HomePage() {
     <main className={styles.main}>
       <div className={styles.orb1} />
       <div className={styles.orb2} />
+      <div className={styles.orb3} />
 
       {/* ── PWA Install Banner ── */}
       {installPrompt && !installed && (
@@ -86,52 +84,99 @@ export default function HomePage() {
         </div>
       )}
 
-      <div className={styles.content}>
+      {/* ════════════════════ HERO ════════════════════ */}
+      <div className={styles.hero}>
+
         {/* Logo */}
-        <div className={`${styles.logo} animate-fade-up`} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+        <div className={`${styles.logoWrap} animate-fade-up`}>
           <AppLogo size="lg" />
-          <p className={styles.tagline}>Making PG maintenance Easy</p>
+          <p className={styles.tagline}>Searching PG?🧐 — It&apos;s Very Easy😎.</p>
         </div>
 
-        {/* Divider */}
-        <div className={`${styles.divider} animate-fade-up delay-1`} />
-
-        {/* Action Cards */}
-        <div className={`${styles.cards} animate-fade-up delay-2`}>
-          {/* ADD PG Card */}
+        {/* ── FIND PG — main CTA ── */}
+        <div className={`${styles.ctaWrap} animate-fade-up delay-1`}>
           <button
-            className={styles.actionCard}
-            id="btn-add-pg"
-            onClick={() => router.push("/add-pg/pg-details?new=true")}
-          >
-            <div className={styles.cardIcon}>🏠</div>
-            <div className={styles.cardInfo}>
-              <span className={styles.cardTitle}>ADD PG</span>
-              <span className={styles.cardDesc}>I own a PG and want to manage it</span>
-            </div>
-            <div className={styles.cardArrow}>→</div>
-          </button>
-
-          {/* FIND PG Card */}
-          <button
-            className={styles.actionCard}
+            className={styles.findBtn}
             id="btn-find-pg"
             onClick={() => router.push("/sign-in?from=/find-pg&role=user")}
           >
-            <div className={styles.cardIcon}>🔍</div>
-            <div className={styles.cardInfo}>
-              <span className={styles.cardTitle}>FIND PG</span>
-              <span className={styles.cardDesc}>I&apos;m looking for a PG to stay in</span>
+            <span className={styles.findBtnIcon}>🔍</span>
+            <div className={styles.findBtnText}>
+              <span className={styles.findBtnTitle}>Find PG Near Me</span>
+              <span className={styles.findBtnSub}>For students &amp; working professionals</span>
             </div>
-            <div className={styles.cardArrow}>→</div>
+            <span className={styles.findBtnArrow}>→</span>
           </button>
+
+          <p className={styles.ctaHint}>
+            📍 Near your college · 🏢 Near your workplace · 🔗 Paste any Maps link
+          </p>
+        </div>
+      </div>
+
+      {/* ════════════════════ INFO FOOTER ════════════════════ */}
+      <footer className={styles.infoFooter}>
+
+        {/* ── For seekers ── */}
+        <div className={`${styles.footerSection} animate-fade-up delay-2`}>
+          <div className={styles.footerIcon}>🎓</div>
+          <div className={styles.footerBody}>
+            <h3 className={styles.footerTitle}>Find PGs instantly — anywhere</h3>
+            <p className={styles.footerDesc}>
+              Share your location or drop a Google Maps link of your college, office, or
+              any landmark. PG-EG instantly shows you the nearest registered PGs with
+              distances, sharing types, and a one-tap route to each one.
+              No sign-up needed to browse — just search and go.
+            </p>
+            <div className={styles.footerChips}>
+              <span className={styles.chip}>📍 GPS search</span>
+              <span className={styles.chip}>🏫 Near college</span>
+              <span className={styles.chip}>🏢 Near office</span>
+              <span className={styles.chip}>🔗 Maps link</span>
+              <span className={styles.chip}>🗺️ One-tap directions</span>
+            </div>
+          </div>
         </div>
 
-        {/* Footer */}
-        <p className={`${styles.footer} animate-fade-up delay-3`}>
-          Built for PG owners &amp; tenants across India 🇮🇳
-        </p>
-      </div>
+        <div className={styles.footerDivider} />
+
+        {/* ── For owners ── */}
+        <div className={`${styles.footerSection} animate-fade-up delay-3`}>
+          <div className={styles.footerIcon}>🏗️</div>
+          <div className={styles.footerBody}>
+            <h3 className={styles.footerTitle}>PG Owners — manage everything digitally</h3>
+            <p className={styles.footerDesc}>
+              Register your PG once and let students find you automatically. Build your
+              PG as a real <strong>3D digital structure</strong> — floors, rooms, beds and
+              tenants — all in your mobile. Know exactly which bed is occupied, which rent
+              is due, and who lives where, from anywhere.
+            </p>
+            <div className={styles.footerChips}>
+              <span className={styles.chip}>🏢 3D building view</span>
+              <span className={styles.chip}>🛏️ Beds &amp; rooms</span>
+              <span className={styles.chip}>👤 Tenant records</span>
+              <span className={styles.chip}>💰 Rent tracking</span>
+              <span className={styles.chip}>🔒 Data safety</span>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.footerDivider} />
+
+        {/* ── Bottom strip ── */}
+        <div className={styles.footerBottom}>
+          <p className={styles.footerMeta}>Built for PG owners &amp; tenants across India 🇮🇳</p>
+
+          {/* Hidden-in-plain-sight ADD PG button — only owners know to look */}
+          <button
+            className={styles.addPgSlice}
+            id="btn-add-pg"
+            onClick={() => router.push("/add-pg/pg-details?new=true")}
+          >
+            🏠 I own a PG — Add it here
+          </button>
+        </div>
+      </footer>
     </main>
   );
 }

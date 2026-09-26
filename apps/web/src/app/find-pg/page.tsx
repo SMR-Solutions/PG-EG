@@ -448,14 +448,7 @@ export default function FindPGPage() {
               onClick={handlePresetTabClick}
               id="tab-preset"
             >
-              🏛️ College / Place
-            </button>
-            <button
-              className={`${styles.methodTab} ${method === "link" ? styles.methodTabActive : ""}`}
-              onClick={() => { setMethod("link"); setError(""); }}
-              id="tab-link"
-            >
-              🔗 Maps Link
+              🏛️ College / Work Places
             </button>
           </div>
 
@@ -667,28 +660,15 @@ export default function FindPGPage() {
                     </div>
                   )}
 
-                  {/* ─── Smart error: not found → Maps Link suggestion ─── */}
+                  {/* ─── Smart error: not found ─── */}
                   {error.startsWith("__notfound__:") && (
                     <div className={styles.notFoundCard}>
                       <div className={styles.notFoundTitle}>
-                        ❌ "{error.slice(13)}" not found on the map
+                        ❌ &quot;{error.slice(13)}&quot; not found on the map
                       </div>
                       <div className={styles.notFoundHint}>
-                        Try opening the place in Google Maps, tap
-                        <strong> Share → Copy Link</strong>, then paste it here:
+                        Try a different spelling or select a nearby landmark from the list.
                       </div>
-                      <button
-                        className={styles.mapsLinkRedirectBtn}
-                        onClick={() => {
-                          setError("");
-                          setPresetQuery("");
-                          setGeocodeResult(null);
-                          setMethod("link");
-                        }}
-                        id="btn-go-to-maps-link"
-                      >
-                        🔗 Go to Maps Link tab →
-                      </button>
                     </div>
                   )}
                   {error && !error.startsWith("__notfound__:") && (
@@ -736,36 +716,8 @@ export default function FindPGPage() {
             </div>
           )}
 
+          {/* Maps Link panel removed — tab hidden */}
 
-          {/* Maps Link Method */}
-          {method === "link" && (
-            <div className={`${styles.methodPanel} animate-fade-up`}>
-              <h2 className={styles.methodTitle}>Paste a Google Maps Link</h2>
-              <p className={styles.methodDesc}>
-                Open Google Maps, navigate to your college/office, tap <strong>Share → Copy Link</strong>, and paste it below.
-              </p>
-              <input
-                type="url"
-                className={styles.searchInput}
-                placeholder="https://maps.app.goo.gl/... or full URL"
-                value={locationLink}
-                onChange={(e) => setLocationLink(e.target.value)}
-                id="input-maps-link"
-              />
-              <p className={styles.linkHint}>
-                💡 <strong>Tip:</strong> If the short link fails, open Maps in your browser and copy the full URL from the address bar.
-              </p>
-              {error && <p className={styles.error}>{error}</p>}
-              <button
-                className={styles.primaryBtn}
-                onClick={handleResolveLink}
-                disabled={loading || !locationLink.trim()}
-                id="btn-link-search"
-              >
-                {loading ? <><span className={styles.spinner} /> Searching…</> : "🔍 Find Nearby PGs"}
-              </button>
-            </div>
-          )}
         </div>
       ) : (
         /* ─── Results Page ─── */
@@ -825,18 +777,32 @@ export default function FindPGPage() {
                       )}
                     </div>
 
-                    {/* Location Button — opens Directions (user → PG) */}
-                    {(pg.latitude && pg.longitude) || pg.locationLink ? (
-                      <a
-                        href={getDirectionsUrl(pg, searchCoords || userCoords)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={styles.locationBtn}
-                        id={`btn-map-${pg.id}`}
-                      >
-                        🗺️ Get Directions
-                      </a>
-                    ) : null}
+                    {/* Buttons row */}
+                    <div className={styles.pgCardBtns}>
+                      {/* Directions */}
+                      {(pg.latitude && pg.longitude) || pg.locationLink ? (
+                        <a
+                          href={getDirectionsUrl(pg, searchCoords || userCoords)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.locationBtn}
+                          id={`btn-map-${pg.id}`}
+                        >
+                          🗺️ Get Directions
+                        </a>
+                      ) : null}
+
+                      {/* Enquire — call manager */}
+                      {pg.managerPhone && (
+                        <a
+                          href={`tel:${pg.managerPhone.replace(/\D/g, "")}`}
+                          className={styles.enquireBtn}
+                          id={`btn-enquire-${pg.id}`}
+                        >
+                          📞 Enquire
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

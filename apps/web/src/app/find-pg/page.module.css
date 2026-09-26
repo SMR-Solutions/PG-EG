@@ -711,6 +711,38 @@
   box-shadow: 0 4px 16px rgba(45,198,83,0.4);
 }
 
+/* ─── PG Card Buttons Row ────────────────────────────────────────── */
+.pgCardBtns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+/* ─── Enquire Button ─────────────────────────────────────────────── */
+.enquireBtn {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 9px 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: var(--transition);
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(249,115,22,0.35);
+}
+.enquireBtn:hover {
+  background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(249,115,22,0.5);
+}
+
 /* ─── Empty State ────────────────────────────────────────────────── */
 .emptyState {
   display: flex;
