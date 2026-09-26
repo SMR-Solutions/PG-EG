@@ -216,8 +216,6 @@ function PGDetailsInner() {
 
   // ─── Google Sign-In (inline) ────────────────────────────────────
   async function handleInlineGoogle() {
-    const validationError = validateForm();
-    if (validationError) { setError(validationError); return; }
     setError(""); setSignInError(""); setInlineGoogleLoading(true);
     try {
       const provider = new GoogleAuthProvider();
@@ -234,7 +232,31 @@ function PGDetailsInner() {
         throw new Error(d.error || "Google sign-in failed");
       }
       const data = await res.json();
+
+      // ❌ Existing "user" (student) account trying to add PG
+      if (data.role === "user") {
+        setSignInError(
+          "This Google account is registered as a student account. " +
+          "Please use a different Google account to add your PG."
+        );
+        return;
+      }
+
       signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs, "owner");
+
+      // ✓ Returning owner who already has a PG — skip form, go to dashboard
+      if (data.hasPG) {
+        if ((data.pgs || []).length > 1) {
+          router.replace("/select-pg");
+        } else {
+          router.replace("/dashboard");
+        }
+        return;
+      }
+
+      // New owner — validate form first, then submit
+      const validationError = validateForm();
+      if (validationError) { setError(validationError); return; }
       await submitPG(data.token, data.owner.id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
@@ -296,7 +318,32 @@ function PGDetailsInner() {
         throw new Error(d.error || "Verification failed");
       }
       const data = await res.json();
+
+      // ❌ Existing "user" (student) account trying to add PG
+      if (data.role === "user") {
+        setSignInError(
+          "This phone number is registered as a student account. " +
+          "Please use a different number to add your PG."
+        );
+        setInlineOtp(["", "", "", "", "", ""]);
+        return;
+      }
+
       signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs, "owner");
+
+      // ✓ Returning owner who already has a PG — skip form, go to dashboard
+      if (data.hasPG) {
+        if ((data.pgs || []).length > 1) {
+          router.replace("/select-pg");
+        } else {
+          router.replace("/dashboard");
+        }
+        return;
+      }
+
+      // New owner — validate form first, then submit
+      const newOwnerValidation = validateForm();
+      if (newOwnerValidation) { setError(newOwnerValidation); return; }
       await submitPG(data.token, data.owner.id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
