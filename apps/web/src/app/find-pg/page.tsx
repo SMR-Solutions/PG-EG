@@ -340,7 +340,16 @@ export default function FindPGPage() {
 
       {/* ─── Logo Bar — like dashboard (no crown) ─── */}
       <div className={styles.logoBar}>
-        <AppLogo size="sm" />
+        <AppLogo
+          size="sm"
+          onClick={() => {
+            if (step !== "search") {
+              setStep("search");
+              setSelectedPreset(null);
+              setError("");
+            }
+          }}
+        />
         {/* Profile avatar — no crown for users */}
         <button
           className={styles.topProfileBtn}
@@ -437,6 +446,7 @@ export default function FindPGPage() {
           {/* Method Tabs */}
           <div className={styles.methodTabs}>
             <button
+              type="button"
               className={`${styles.methodTab} ${method === "gps" ? styles.methodTabActive : ""}`}
               onClick={() => { setMethod("gps"); setError(""); }}
               id="tab-gps"
@@ -444,6 +454,7 @@ export default function FindPGPage() {
               📍 My Location
             </button>
             <button
+              type="button"
               className={`${styles.methodTab} ${method === "preset" ? styles.methodTabActive : ""}`}
               onClick={handlePresetTabClick}
               id="tab-preset"

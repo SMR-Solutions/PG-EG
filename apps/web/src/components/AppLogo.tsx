@@ -1,11 +1,12 @@
 "use client";
 
-import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface AppLogoProps {
   size?: "sm" | "md" | "lg";
+  onClick?: () => void;
+  href?: string;
 }
 
 // Width-based sizes — height is auto via CSS (image is ~4:1 wide)
@@ -15,15 +16,44 @@ const WIDTHS = {
   lg: 260,
 };
 
-export default function AppLogo({ size = "md" }: AppLogoProps) {
+export default function AppLogo({ size = "md", onClick, href }: AppLogoProps) {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const pathname = usePathname();
+  const { isAuthenticated, role, hasPG } = useAuth();
 
   function handleClick() {
-    if (isAuthenticated) {
-      router.push("/dashboard");
+    if (onClick) {
+      onClick();
+      return;
+    }
+    if (href) {
+      router.push(href);
+      return;
+    }
+
+    if (!isAuthenticated) {
+      if (pathname !== "/") router.push("/");
+      return;
+    }
+
+    // Role-based navigation for authenticated users
+    if (role === "user") {
+      // Seekers/students stay on or go to find-pg
+      if (pathname !== "/find-pg") {
+        router.push("/find-pg");
+      }
+      return;
+    }
+
+    // Owner navigation
+    if (hasPG) {
+      if (pathname !== "/dashboard") {
+        router.push("/dashboard");
+      }
     } else {
-      router.push("/");
+      if (pathname !== "/add-pg") {
+        router.push("/add-pg");
+      }
     }
   }
 
@@ -31,9 +61,10 @@ export default function AppLogo({ size = "md" }: AppLogoProps) {
 
   return (
     <button
+      type="button"
       onClick={handleClick}
       id="app-logo-btn"
-      title={isAuthenticated ? "Go to Dashboard" : "Go to Home"}
+      title={role === "user" ? "Find PG" : isAuthenticated ? "Go to Dashboard" : "Go to Home"}
       style={{
         background: "none",
         border: "none",

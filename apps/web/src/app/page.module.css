@@ -310,10 +310,73 @@
 }
 
 /* ─── Responsive ─── */
+@media (max-width: 380px) {
+  .hero {
+    padding: 40px 14px 28px;
+    gap: 24px;
+  }
+  .findBtn {
+    padding: 16px 16px;
+    gap: 12px;
+  }
+  .findBtnIcon {
+    font-size: 24px;
+  }
+  .findBtnTitle {
+    font-size: 15px;
+  }
+  .findBtnSub {
+    font-size: 11px;
+  }
+  .infoFooter {
+    padding: 0 14px;
+  }
+  .footerSection {
+    padding: 18px 14px;
+    gap: 12px;
+  }
+  .footerIcon {
+    width: 40px;
+    height: 40px;
+    font-size: 22px;
+  }
+}
+
 @media (min-width: 640px) {
-  .hero { padding: 80px 32px 40px; }
-  .infoFooter { padding: 0 32px; }
-  .findBtnTitle { font-size: 19px; }
-  .findBtnSub { font-size: 13px; }
-  .tagline { font-size: 18px; }
+  .hero {
+    padding: 80px 32px 40px;
+    max-width: 600px;
+  }
+  .infoFooter {
+    padding: 0 32px;
+    max-width: 600px;
+  }
+  .findBtnTitle {
+    font-size: 19px;
+  }
+  .findBtnSub {
+    font-size: 13px;
+  }
+  .tagline {
+    font-size: 18px;
+  }
+}
+
+@media (min-width: 768px) {
+  .hero {
+    max-width: 680px;
+  }
+  .infoFooter {
+    max-width: 760px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .footerSection {
+    margin-bottom: 0;
+    height: 100%;
+  }
+  .footerBottom {
+    grid-column: 1 / -1;
+  }
 }

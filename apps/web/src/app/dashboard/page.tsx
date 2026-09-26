@@ -269,8 +269,9 @@ export default function DashboardPage() {
   useEffect(() => {
     if (authLoading) return;      // wait for refreshAuth() to finish
     if (!isAuthenticated) return; // redirect handled by the sign-in effect
+    if (role === "user") return;  // seekers don't load dashboard data
     load();
-  }, [load, authLoading, isAuthenticated]);
+  }, [load, authLoading, isAuthenticated, role]);
 
   // Open checkout modal instead of confirm dialog
   function openCheckout(bed: Bed, room: Room) {
@@ -416,7 +417,7 @@ export default function DashboardPage() {
     ? data.pg.sharings.sort((a, b) => a - b).filter((t) => sharingStats(data.rooms, t).totalBeds > 0)
     : [];
 
-  if (authLoading || loading) return (
+  if (authLoading || (isAuthenticated && role === "user") || loading) return (
     <main className={styles.main}><div className={styles.centered}><span className={styles.spinner} /></div></main>
   );
   if (error || !data) return (
