@@ -12,6 +12,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   title: "PG-EG — Making PG Maintenance Easy",
   description:
     "PG-EG is the simplest way for PG owners to manage their rooms, beds, and tenants — all in one place.",
@@ -52,17 +53,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Theme: apply before paint to prevent flash */}
-        <script dangerouslySetInnerHTML={{ __html: `
+        <Script id="theme-init" strategy="beforeInteractive">{`
           (function(){
             var t = localStorage.getItem('pg-eg-theme');
             document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
           })()
-        ` }} />
+        `}</Script>
         {/* PWA: Service Worker registration */}
         <Script id="sw-register" strategy="afterInteractive">{`
           if ('serviceWorker' in navigator) {
