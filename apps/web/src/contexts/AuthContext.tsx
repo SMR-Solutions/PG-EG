@@ -45,7 +45,16 @@ interface AuthContextType extends AuthState {
 const TOKEN_KEY = "pg_eg_token";
 const ACTIVE_PG_KEY = "pg_eg_active_pg_id";
 const ROLE_KEY = "pg_eg_role";
+const OWNER_KEY = "pg_eg_owner";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
+/** Safely read cached owner from localStorage (survives refresh). */
+function readCachedOwner(): Owner | null {
+  try {
+    const raw = localStorage.getItem(OWNER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -74,6 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         : (pgId || null);
       if (activePgId) localStorage.setItem(ACTIVE_PG_KEY, activePgId);
       if (pgId) localStorage.setItem("pg_eg_pg_id", pgId);
+      // Cache owner so it can be restored on next page load without waiting for API
+      try { localStorage.setItem(OWNER_KEY, JSON.stringify(owner)); } catch { /* noop */ }
       setState({
         owner, token,
         pgId: pgId || null,
@@ -93,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("pg_eg_pg_id");
     localStorage.removeItem(ACTIVE_PG_KEY);
     localStorage.removeItem(ROLE_KEY);
+    localStorage.removeItem(OWNER_KEY);
     setState({
       owner: null, token: null,
       pgId: null, activePgId: null, allPgs: [],
@@ -111,6 +123,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!token) {
       setState((s) => ({ ...s, isLoading: false }));
       return;
+    }
+
+    // Optimistic: restore cached owner immediately so the UI can show
+    // profile data without waiting for the API round-trip.
+    const cachedOwner = readCachedOwner();
+    const cachedRole = localStorage.getItem(ROLE_KEY) || "user";
+    if (cachedOwner) {
+      setState((s) => ({
+        ...s,
+        owner: cachedOwner,
+        token,
+        role: cachedRole,
+        isAuthenticated: true, // optimistic — corrected below if token is invalid
+      }));
     }
 
     try {
@@ -153,7 +179,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: true,
       });
     } catch {
-      setState((s) => ({ ...s, isLoading: false }));
+      // Network error (server unreachable, timeout, CORS, etc.)
+      // Do NOT log the user out for a transient network failure —
+      // their token is still in localStorage and may be valid.
+      // Only a server-confirmed 401/403 should revoke access.
+      const stillHasToken = !!localStorage.getItem(TOKEN_KEY);
+      setState((s) => ({ ...s, isLoading: false, isAuthenticated: stillHasToken }));
     }
   }, []);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useLayoutEffect, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -59,11 +59,11 @@ type SearchCache = {
 /** Read cache ONCE synchronously — only called client-side (ssr: false). */
 function readCacheSync(): SearchCache | null {
   try {
-    const raw = sessionStorage.getItem(CACHE_KEY);
+    const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
     const parsed: SearchCache = JSON.parse(raw);
     if (Date.now() - parsed.savedAt > CACHE_TTL_MS) {
-      sessionStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem(CACHE_KEY);
       return null;
     }
     return parsed;
@@ -89,17 +89,17 @@ type LandmarkCache = {
 function saveLandmarkCache(lat: number, lng: number, places: Place[], usingDetected: boolean) {
   try {
     const payload: LandmarkCache = { places, usingDetected, savedAt: Date.now() };
-    sessionStorage.setItem(landmarkCacheKey(lat, lng), JSON.stringify(payload));
+    localStorage.setItem(landmarkCacheKey(lat, lng), JSON.stringify(payload));
   } catch { /* noop */ }
 }
 
 function loadLandmarkCache(lat: number, lng: number): LandmarkCache | null {
   try {
-    const raw = sessionStorage.getItem(landmarkCacheKey(lat, lng));
+    const raw = localStorage.getItem(landmarkCacheKey(lat, lng));
     if (!raw) return null;
     const parsed: LandmarkCache = JSON.parse(raw);
     if (Date.now() - parsed.savedAt > LANDMARKS_CACHE_TTL) {
-      sessionStorage.removeItem(landmarkCacheKey(lat, lng));
+      localStorage.removeItem(landmarkCacheKey(lat, lng));
       return null;
     }
     return parsed;
@@ -146,9 +146,9 @@ export default function FindPGPage() {
   const { theme, setTheme } = useTheme();
   const [profileOpen, setProfileOpen] = useState(false);
 
-  // ─── Read session cache ONCE synchronously at first render ────────────────
-  // This component is ONLY rendered on the client (ssr: false in page.tsx),
-  // so sessionStorage is always available here. No effects needed.
+  // Read session cache ONCE synchronously at first render — safe because this
+  // component is ONLY rendered on the client (ssr: false in page.tsx).
+  // Uses localStorage so it persists across tab close/reopen (not just same-tab refresh).
   const [cachedData] = useState<SearchCache | null>(readCacheSync);
 
   const [step, setStep] = useState<Step>(cachedData ? "results" : "search");
@@ -193,13 +193,25 @@ export default function FindPGPage() {
   // ─── Cache helpers ────────────────────────────────────────────────────
   function saveCache(payload: Omit<SearchCache, "savedAt">) {
     try {
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ...payload, savedAt: Date.now() }));
-    } catch { /* noop */ }
+      const data = { ...payload, savedAt: Date.now() };
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[PGFind] ✅ saveCache: stored ${payload.results.length} PGs to localStorage key "${CACHE_KEY}"`);
+        // Verify it actually saved
+        const verify = localStorage.getItem(CACHE_KEY);
+        console.log("[PGFind] verify read-back:", verify ? "✓ found" : "✗ MISSING after save!");
+      }
+    } catch (e) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("[PGFind] ❌ saveCache FAILED:", e);
+      }
+    }
   }
 
   function clearCache() {
-    try { sessionStorage.removeItem(CACHE_KEY); } catch { /* noop */ }
+    try { localStorage.removeItem(CACHE_KEY); } catch { /* noop */ }
   }
+
 
   // Auth guard — redirect to sign-in if not logged in
   useEffect(() => {
@@ -207,6 +219,43 @@ export default function FindPGPage() {
       router.replace("/sign-in?from=/find-pg&role=user");
     }
   }, [isLoading, isAuthenticated, router]);
+
+  // ─── Cache restore safety-net ─────────────────────────────────────────
+  // The useState(readCacheSync) lazy initializer is the primary mechanism.
+  // This useLayoutEffect is a belt-and-suspenders fallback: if the lazy
+  // initializer returned null for any reason (Next.js quirk, timing, etc.)
+  // but localStorage DOES have fresh data, restore it synchronously before
+  // the browser paints so there's no visible flash of the search screen.
+  // Safe to use here because this component is ONLY client-side (ssr: false).
+  useLayoutEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      const raw = localStorage.getItem(CACHE_KEY);
+      console.log("[PGFind] mount | step:", step === "results" ? "results ✓" : "search | checking localStorage...");
+      if (raw) {
+        try {
+          const d = JSON.parse(raw);
+          const age = Math.round((Date.now() - d.savedAt) / 1000);
+          console.log(`[PGFind] localStorage has ${d.results?.length ?? 0} PGs, age ${age}s`);
+        } catch { console.warn("[PGFind] localStorage parse failed"); }
+      } else {
+        console.log("[PGFind] localStorage: no cache key found");
+      }
+    }
+
+    if (step !== "search") return; // lazy initializer already handled it
+
+    const cached = readCacheSync();
+    if (!cached) return;
+
+    // Restore state synchronously (before paint → no visible flash)
+    setResults(cached.results);
+    setSearchCoords(cached.searchCoords);
+    setUserCoords(cached.userCoords ?? null);
+    setSearchedFrom(cached.searchedFrom);
+    setExpandedRadius(cached.expandedRadius ?? false);
+    setStep("results");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // once on mount
 
   // Background refresh — silently re-fetch to keep cached results current
   useEffect(() => {
@@ -370,7 +419,16 @@ export default function FindPGPage() {
 
   // ─── Fetch nearby PGs given lat/lng ──────────────────────────────────
   // First search 5km. If 0 results, auto-expand to 10km.
-  async function fetchNearby(lat: number, lng: number, fromLabel: string, radius = 5) {
+  // gpsCoords: pass the live GPS position when called from handleUseGPS so
+  // the cache saves the correct userCoords (React state batching means
+  // the userCoords closure value is still null at saveCache time).
+  async function fetchNearby(
+    lat: number,
+    lng: number,
+    fromLabel: string,
+    radius = 5,
+    gpsCoords?: { lat: number; lng: number }
+  ) {
     setLoading(true);
     setError("");
     try {
@@ -395,14 +453,14 @@ export default function FindPGPage() {
       setSearchedFrom(fromLabel);
       setExpandedRadius(finalExpanded);
       setMapView(false);
-      setTypeFilter("all"); // reset filter on every new search
+      setTypeFilter("all");
       setStep("results");
 
-      // Save to cache (use finalResults so auto-expanded results are also cached)
+      // Prefer the explicitly passed gpsCoords to avoid stale-closure bug
       saveCache({
         results: finalResults,
         searchCoords: { lat, lng },
-        userCoords,
+        userCoords: gpsCoords ?? userCoords,
         searchedFrom: fromLabel,
         expandedRadius: finalExpanded,
       });
@@ -412,6 +470,7 @@ export default function FindPGPage() {
       setLoading(false);
     }
   }
+
 
   // Load more — expand radius from 5km to 10km
   async function handleExpandRadius() {
@@ -439,8 +498,11 @@ export default function FindPGPage() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
-        setUserCoords({ lat: latitude, lng: longitude }); // store for cache + blue dot
-        fetchNearby(latitude, longitude, "Your Current Location");
+        const gpsCoords = { lat: latitude, lng: longitude };
+        setUserCoords(gpsCoords); // store for blue dot on map
+        // Pass gpsCoords explicitly — state update above is async, so
+        // userCoords in the fetchNearby closure would still be the old value.
+        fetchNearby(latitude, longitude, "Your Current Location", 5, gpsCoords);
       },
       (err) => {
         setLoading(false);
