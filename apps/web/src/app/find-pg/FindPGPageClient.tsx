@@ -70,6 +70,42 @@ function readCacheSync(): SearchCache | null {
   } catch { return null; }
 }
 
+// ─── Landmarks cache ────────────────────────────────────────────────
+// Landmarks rarely change, so 30-minute TTL is fine.
+// Key is rounded lat/lng so nearby GPS readings reuse the same cache.
+const LANDMARKS_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+function landmarkCacheKey(lat: number, lng: number) {
+  // Round to 2 decimal places (~1.1 km grid) so slight GPS jitter reuses cache
+  return `pg_eg_landmarks_${lat.toFixed(2)}_${lng.toFixed(2)}`;
+}
+
+type LandmarkCache = {
+  places: Place[];
+  usingDetected: boolean;
+  savedAt: number;
+};
+
+function saveLandmarkCache(lat: number, lng: number, places: Place[], usingDetected: boolean) {
+  try {
+    const payload: LandmarkCache = { places, usingDetected, savedAt: Date.now() };
+    sessionStorage.setItem(landmarkCacheKey(lat, lng), JSON.stringify(payload));
+  } catch { /* noop */ }
+}
+
+function loadLandmarkCache(lat: number, lng: number): LandmarkCache | null {
+  try {
+    const raw = sessionStorage.getItem(landmarkCacheKey(lat, lng));
+    if (!raw) return null;
+    const parsed: LandmarkCache = JSON.parse(raw);
+    if (Date.now() - parsed.savedAt > LANDMARKS_CACHE_TTL) {
+      sessionStorage.removeItem(landmarkCacheKey(lat, lng));
+      return null;
+    }
+    return parsed;
+  } catch { return null; }
+}
+
 function typeLabel(type: string) {
   if (type === "gents") return "🚹 Gents";
   if (type === "ladies") return "🚺 Ladies";
@@ -141,6 +177,18 @@ export default function FindPGPage() {
   const [expandedRadius, setExpandedRadius] = useState(cachedData?.expandedRadius ?? false);
   // Map vs List toggle
   const [mapView, setMapView] = useState(false);
+  // Type filter for results
+  const [typeFilter, setTypeFilter] = useState<"all" | "gents" | "ladies" | "coliving">("all");
+
+  // Derived: filtered results based on typeFilter
+  const filteredResults = typeFilter === "all"
+    ? results
+    : results.filter((pg) => {
+        if (typeFilter === "gents") return pg.type === "gents";
+        if (typeFilter === "ladies") return pg.type === "ladies";
+        if (typeFilter === "coliving") return pg.type !== "gents" && pg.type !== "ladies";
+        return true;
+      });
 
   // ─── Cache helpers ────────────────────────────────────────────────────
   function saveCache(payload: Omit<SearchCache, "savedAt">) {
@@ -187,6 +235,15 @@ export default function FindPGPage() {
 
   // ─── Detect nearby landmarks — calls our server which proxies Overpass ───
   async function fetchNearbyLandmarks(lat: number, lng: number) {
+    // Check landmarks cache first — skip the API call if fresh data exists
+    const cached = loadLandmarkCache(lat, lng);
+    if (cached) {
+      setNearbyPlaces(cached.places);
+      setUsingDetected(cached.usingDetected);
+      setPlacesLoading(false);
+      return;
+    }
+
     setPlacesLoading(true);
     try {
       const res = await fetch(
@@ -197,10 +254,12 @@ export default function FindPGPage() {
       if (res.ok && data.places?.length > 0) {
         setNearbyPlaces(data.places);
         setUsingDetected(true);
+        saveLandmarkCache(lat, lng, data.places, true); // save to cache
       } else {
         // No results from OSM — use hardcoded fallback
         setNearbyPlaces(FALLBACK_PLACES);
         setUsingDetected(false);
+        saveLandmarkCache(lat, lng, FALLBACK_PLACES, false);
       }
     } catch {
       setNearbyPlaces(FALLBACK_PLACES);
@@ -210,18 +269,28 @@ export default function FindPGPage() {
     }
   }
 
-  // When preset tab is activated, ask GPS (with proper prompt this time)
+  // When preset tab is activated, check cache before asking GPS / hitting API
   function handlePresetTabClick() {
     setMethod("preset");
     setError("");
     setSelectedPreset(null);
     setGpsNeeded(false);
     setPresetQuery("");
-    // If we already have coords, re-fetch
+
+    // 1️⃣ Already have coords — check cache first, fetch if stale
     if (userCoords) {
+      const cached = loadLandmarkCache(userCoords.lat, userCoords.lng);
+      if (cached) {
+        // Instant restore — no spinner, no API call
+        setNearbyPlaces(cached.places);
+        setUsingDetected(cached.usingDetected);
+        return;
+      }
       fetchNearbyLandmarks(userCoords.lat, userCoords.lng);
       return;
     }
+
+    // 2️⃣ No coords yet — ask GPS then fetch/load cache
     if (!navigator.geolocation) {
       setNearbyPlaces(FALLBACK_PLACES);
       setUsingDetected(false);
@@ -232,10 +301,10 @@ export default function FindPGPage() {
       (pos) => {
         const { latitude, longitude } = pos.coords;
         setUserCoords({ lat: latitude, lng: longitude });
-        fetchNearbyLandmarks(latitude, longitude);
+        fetchNearbyLandmarks(latitude, longitude); // will hit cache if available
       },
       () => {
-        // GPS denied — show prompt instead of silently falling back
+        // GPS denied — show prompt
         setGpsNeeded(true);
         setPlacesLoading(false);
       },
@@ -326,6 +395,7 @@ export default function FindPGPage() {
       setSearchedFrom(fromLabel);
       setExpandedRadius(finalExpanded);
       setMapView(false);
+      setTypeFilter("all"); // reset filter on every new search
       setStep("results");
 
       // Save to cache (use finalResults so auto-expanded results are also cached)
@@ -819,7 +889,7 @@ export default function FindPGPage() {
             </button>
             <div style={{ flex: 1 }}>
               <h1 className={styles.resultsTitle}>
-                {results.length} PG{results.length !== 1 ? "s" : ""} Found
+                {filteredResults.length}{typeFilter !== "all" ? ` of ${results.length}` : ""} PG{filteredResults.length !== 1 ? "s" : ""} Found
               </h1>
               <p className={styles.resultsSubtitle}>
                 📍 Near {searchedFrom}
@@ -847,12 +917,41 @@ export default function FindPGPage() {
             )}
           </div>
 
+          {/* ─── Type Filter Chips ─── */}
+          {results.length > 0 && (
+            <div className={styles.typeFilters}>
+              {([
+                { key: "all",     label: "All",       emoji: "🏠" },
+                { key: "gents",   label: "Gents",     emoji: "🚹" },
+                { key: "ladies",  label: "Ladies",    emoji: "🚺" },
+                { key: "coliving",label: "Co-Living",  emoji: "🧑‍🤝‍🧑" },
+              ] as const).map(({ key, label, emoji }) => {
+                const count = key === "all" ? results.length
+                  : key === "gents" ? results.filter(p => p.type === "gents").length
+                  : key === "ladies" ? results.filter(p => p.type === "ladies").length
+                  : results.filter(p => p.type !== "gents" && p.type !== "ladies").length;
+                return (
+                  <button
+                    key={key}
+                    id={`btn-filter-${key}`}
+                    className={`${styles.filterChip} ${typeFilter === key ? styles.filterChipActive : ""}`}
+                    onClick={() => setTypeFilter(typeFilter === key && key !== "all" ? "all" : key)}
+                    disabled={count === 0 && key !== "all"}
+                  >
+                    {emoji} {label}
+                    <span className={styles.filterCount}>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* ─── Map View ─── */}
           {mapView && results.length > 0 && (
             <div className={styles.mapContainer}>
               <Suspense fallback={<div className={styles.mapLoading}><span className={styles.spinner} /> Loading map…</div>}>
                 <PGMap
-                  pgs={results}
+                  pgs={filteredResults}
                   userCoords={userCoords}
                   searchCoords={searchCoords}
                   theme={theme}
@@ -876,7 +975,14 @@ export default function FindPGPage() {
             </div>
           ) : (
             !mapView && <div className={styles.resultsList}>
-              {results.map((pg, i) => (
+              {filteredResults.length === 0 ? (
+                <div className={styles.emptyState} style={{ marginTop: 0 }}>
+                  <div className={styles.emptyIcon}>🔍</div>
+                  <h2 className={styles.emptyTitle}>No {typeFilter === "gents" ? "Gents" : typeFilter === "ladies" ? "Ladies" : "Co-Living"} PGs Found</h2>
+                  <p className={styles.emptyDesc}>No {typeFilter} PGs in this area. Try a different filter.</p>
+                  <button className={styles.primaryBtn} onClick={() => setTypeFilter("all")} id="btn-clear-filter">Show All PGs</button>
+                </div>
+              ) : filteredResults.map((pg, i) => (
                 <div key={pg.id} className={`${styles.pgCard} animate-fade-up`} style={{ animationDelay: `${i * 0.06}s` }}>
                   {/* Distance Badge */}
                   <div className={styles.distanceBadge}>

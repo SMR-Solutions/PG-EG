@@ -702,6 +702,62 @@
 }
 .expandRadiusBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* ─── Type filter chips ─── */
+.typeFilters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px 0 12px;
+}
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: var(--text-secondary, #a0a0a0);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.12s;
+  white-space: nowrap;
+}
+.filterChip:hover:not(:disabled) {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.25);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.filterChipActive {
+  background: rgba(56,214,101,0.18) !important;
+  border-color: #38d665 !important;
+  color: #38d665 !important;
+  font-weight: 600;
+}
+.filterChip:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.filterCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.filterChipActive .filterCount {
+  background: rgba(56,214,101,0.25);
+  color: #38d665;
+}
+
 .resultsList { display: flex; flex-direction: column; gap: 12px; }
 
 
