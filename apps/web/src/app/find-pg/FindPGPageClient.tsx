@@ -949,34 +949,38 @@ export default function FindPGPage() {
             <button className={styles.backSearchBtn} onClick={() => { clearCache(); setStep("search"); }} id="btn-back-search">
               ← New Search
             </button>
-            <div style={{ flex: 1 }}>
-              <h1 className={styles.resultsTitle}>
-                {filteredResults.length}{typeFilter !== "all" ? ` of ${results.length}` : ""} PG{filteredResults.length !== 1 ? "s" : ""} Found
-              </h1>
-              <p className={styles.resultsSubtitle}>
-                📍 Near {searchedFrom}
-                <span className={styles.radiusBadge}>
-                  {expandedRadius ? "within 10 km" : "within 5 km"}
-                </span>
-              </p>
-            </div>
-            {/* List / Map toggle */}
-            {results.length > 0 && (
-              <div className={styles.viewToggle}>
-                <button
-                  type="button"
-                  className={`${styles.viewToggleBtn} ${!mapView ? styles.viewToggleActive : ""}`}
-                  onClick={() => setMapView(false)}
-                  id="btn-list-view"
-                >☰ List</button>
-                <button
-                  type="button"
-                  className={`${styles.viewToggleBtn} ${mapView ? styles.viewToggleActive : ""}`}
-                  onClick={() => setMapView(true)}
-                  id="btn-map-view"
-                >🗺️ Map</button>
+            <div className={styles.resultsCenter}>
+              <div>
+                <h1 className={styles.resultsTitle}>
+                  <span className={styles.highlightMarker}>
+                    {filteredResults.length}{typeFilter !== "all" ? ` of ${results.length}` : ""} PG{filteredResults.length !== 1 ? "s" : ""} Found
+                  </span>
+                </h1>
+                <p className={styles.resultsSubtitle}>
+                  📍 Near {searchedFrom}
+                  <span className={styles.radiusBadge}>
+                    {expandedRadius ? "within 10 km" : "within 5 km"}
+                  </span>
+                </p>
               </div>
-            )}
+              {/* List / Map toggle */}
+              {results.length > 0 && (
+                <div className={styles.viewToggle}>
+                  <button
+                    type="button"
+                    className={`${styles.viewToggleBtn} ${!mapView ? styles.viewToggleActive : ""}`}
+                    onClick={() => setMapView(false)}
+                    id="btn-list-view"
+                  >☰ List</button>
+                  <button
+                    type="button"
+                    className={`${styles.viewToggleBtn} ${mapView ? styles.viewToggleActive : ""}`}
+                    onClick={() => setMapView(true)}
+                    id="btn-map-view"
+                  >🗺️ Map</button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* ─── Type Filter Chips ─── */}

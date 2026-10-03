@@ -47,10 +47,8 @@ export default function PGMap({
 }: PGMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
-  const mapStyle =
-    theme === "light"
-      ? `https://api.maptiler.com/maps/streets-v2-light/style.json?key=${MAPTILER_KEY}`
-      : `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`;
+  // Always use the dark map style as requested
+  const mapStyle = `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`;
 
   const center =
     userCoords ||

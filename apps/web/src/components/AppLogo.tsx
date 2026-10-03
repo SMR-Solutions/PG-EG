@@ -11,8 +11,8 @@ interface AppLogoProps {
 
 // Width-based sizes — height is auto via CSS (image is ~4:1 wide)
 const WIDTHS = {
-  sm: 110,
-  md: 160,
+  sm: 140,
+  md: 180,
   lg: 260,
 };
 
