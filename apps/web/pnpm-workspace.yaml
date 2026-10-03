@@ -1,6 +1,6 @@
 allowBuilds:
-  '@firebase/util': set this to true or false
-  protobufjs: set this to true or false
+  '@firebase/util': false
+  protobufjs: false
   sharp: false
   unrs-resolver: false
 minimumReleaseAgeExclude:
