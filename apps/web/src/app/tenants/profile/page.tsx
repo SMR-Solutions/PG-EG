@@ -60,6 +60,9 @@ function TenantProfileInner() {
   const [rentPayAmount, setRentPayAmount] = useState("");
   const [markingPaid, setMarkingPaid] = useState(false);
   const [payError, setPayError] = useState("");
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [upiCopied, setUpiCopied] = useState(false);
+
 
   const load = useCallback(async () => {
     if (!tenantId) { setError("No tenant ID"); setLoading(false); return; }
@@ -86,7 +89,7 @@ function TenantProfileInner() {
 
   // Current month rent record
   const currentMonth = currentMonthStr();
-  const currentRent = data?.rentRecords.find((r) => r.month === currentMonth);
+  const currentRent = data?.rentRecords?.find((r) => r.month === currentMonth);
   const remaining = currentRent ? currentRent.amount - (currentRent.paidAmount || 0) : 0;
 
   async function handleMarkPaid() {
@@ -305,42 +308,19 @@ function TenantProfileInner() {
                     <span style={{ color: "#e63946" }}>Remaining: ₹{remaining.toLocaleString()}</span>
                   </div>
                   {/* WhatsApp reminder button — only when rent is unpaid */}
-                  {remaining > 0 && (() => {
-                    const rawPhone = (tenant.phone || "").replace(/\D/g, "");
-                    const waPhone  = rawPhone.startsWith("91") ? rawPhone : `91${rawPhone}`;
-                    const rawOwner = (owner?.phone || "").replace(/\D/g, "");
-                    const ownerDisplay = rawOwner ? `+91${rawOwner.replace(/^91/, "")}` : "";
-                    const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-                    const [yr, m] = currentMonth.split("-");
-                    const monthStr = m ? `${MONTHS[parseInt(m)-1]} ${yr}` : currentMonth;
-                    const activePg = allPgs.find(p => p.id === activePgId);
-                    const pgName   = activePg?.name ?? "";
-                    const msg = [
-                      pgName ? `*${pgName}*` : null,
-                      ``,
-                      `*${tenant.name}*,`,
-                      ``,
-                      `This is a gentle reminder that your rent for *${monthStr}* is due.`,
-                      ``,
-                      `Amount Due: *Rs. ${remaining.toLocaleString("en-IN")}*`,
-                      ``,
-                      `Kindly make the payment at your earliest convenience.`,
-                      `Online Payment (pay to this number) - ${ownerDisplay}`,
-                      ``,
-                      `Thank you!`,
-                    ].filter(l => l !== null).join("\n");
-                    const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`;
-                    return (
-                      <a href={waUrl} target="_blank" rel="noopener noreferrer"
-                        className={styles.waNowBtn} id="btn-wa-reminder">
-                        <svg viewBox="0 0 32 32" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
-                          <circle cx="16" cy="16" r="16" fill="#25D366"/>
-                          <path fill="#fff" d="M23.5 8.5A10.44 10.44 0 0 0 16 5.5C10.2 5.5 5.5 10.2 5.5 16a10.4 10.4 0 0 0 1.4 5.2L5.5 26.5l5.4-1.4a10.5 10.5 0 0 0 5.1 1.3c5.8 0 10.5-4.7 10.5-10.5a10.4 10.4 0 0 0-3-7.4zm-7.5 16.1a8.7 8.7 0 0 1-4.5-1.2l-.3-.2-3.2.8.9-3.1-.2-.3A8.7 8.7 0 0 1 7.3 16a8.7 8.7 0 0 1 8.7-8.7 8.7 8.7 0 0 1 8.7 8.7 8.7 8.7 0 0 1-8.7 8.6zm4.8-6.5c-.3-.1-1.6-.8-1.8-.9s-.4-.1-.6.1-.7.9-.8 1-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7 7 0 0 1-1.3-1.6c-.1-.3 0-.4.1-.6l.4-.5.3-.4v-.4l-.9-2.1c-.2-.5-.5-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8c.1.2 1.5 2.4 3.8 3.3a13 13 0 0 0 1.3.5 3.1 3.1 0 0 0 1.4.1c.4-.1 1.3-.5 1.5-1s.2-1 .1-1a.5.5 0 0 0-.4-.3z"/>
-                        </svg>
-                        WhatsApp Now
-                      </a>
-                    );
-                  })()}
+                  {remaining > 0 && (
+                    <button
+                      className={styles.waNowBtn}
+                      onClick={() => setShowReminderModal(true)}
+                      id="btn-wa-reminder"
+                    >
+                      <svg viewBox="0 0 32 32" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="16" cy="16" r="16" fill="#25D366"/>
+                        <path fill="#fff" d="M23.5 8.5A10.44 10.44 0 0 0 16 5.5C10.2 5.5 5.5 10.2 5.5 16a10.4 10.4 0 0 0 1.4 5.2L5.5 26.5l5.4-1.4a10.5 10.5 0 0 0 5.1 1.3c5.8 0 10.5-4.7 10.5-10.5a10.4 10.4 0 0 0-3-7.4zm-7.5 16.1a8.7 8.7 0 0 1-4.5-1.2l-.3-.2-3.2.8.9-3.1-.2-.3A8.7 8.7 0 0 1 7.3 16a8.7 8.7 0 0 1 8.7-8.7 8.7 8.7 0 0 1 8.7 8.7 8.7 8.7 0 0 1-8.7 8.6zm4.8-6.5c-.3-.1-1.6-.8-1.8-.9s-.4-.1-.6.1-.7.9-.8 1-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7 7 0 0 1-1.3-1.6c-.1-.3 0-.4.1-.6l.4-.5.3-.4v-.4l-.9-2.1c-.2-.5-.5-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8c.1.2 1.5 2.4 3.8 3.3a13 13 0 0 0 1.3.5 3.1 3.1 0 0 0 1.4.1c.4-.1 1.3-.5 1.5-1s.2-1 .1-1a.5.5 0 0 0-.4-.3z"/>
+                      </svg>
+                      Send Reminder
+                    </button>
+                  )}
                 </div>
 
                 {/* Partial payment form */}
@@ -541,6 +521,128 @@ function TenantProfileInner() {
         })()}
 
       </div>
+
+      {/* ─── Professional Reminder Modal ─── */}
+      {showReminderModal && (() => {
+        const { tenant, room, bed } = data!;
+        const activePg = allPgs.find(p => p.id === activePgId);
+        const pgName = activePg?.name ?? "PG";
+        const pgType = activePg?.type ?? "";
+        const upi = activePg?.paymentUpiId ?? null;
+        const payPhone = activePg?.paymentPhone ?? null;
+        const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+        const [yr, m] = currentMonth.split("-");
+        const monthStr = m ? `${MONTHS[parseInt(m)-1]} ${yr}` : currentMonth;
+        const rawPhone = (tenant.phone || "").replace(/\D/g, "");
+        const waPhone  = rawPhone.startsWith("91") ? rawPhone : `91${rawPhone}`;
+
+        const waMsg = [
+          `★ *${pgName}${pgType ? ` — ${pgType}` : ""}*`,
+          ``,
+          `Dear *${tenant.name}*,`,
+          ``,
+          `This is a friendly reminder that your rent for *${monthStr}* is due.`,
+          ``,
+          `▸ Bed ${bed?.bedNumber ?? "—"} · Room: ${room?.roomNumber ?? "—"} · Floor ${room?.floor ?? "—"}`,
+          `▸ Amount Due: *₹${remaining.toLocaleString("en-IN")}*`,
+          ``,
+          `━━━━━━━━━━━━━━━`,
+          `▸ *Pay Instantly:*`,
+          upi ? `UPI ID: ${upi}` : null,
+          payPhone ? `Number: ${payPhone}` : null,
+          (upi || payPhone) ? `${tenant.name}, you can just copy UPI ID / Mobile Number and pay.` : null,
+          `━━━━━━━━━━━━━━━`,
+          ``,
+          `Kindly make the payment at your earliest convenience.`,
+          `Thank you! :)`,
+        ].filter(l => l !== null).join("\n");
+
+        const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(waMsg)}`;
+
+        function copyText(text: string, setter: (v: boolean) => void) {
+          navigator.clipboard.writeText(text).then(() => {
+            setter(true); setTimeout(() => setter(false), 2000);
+          });
+        }
+
+        return (
+          <div className={styles.reminderOverlay} onClick={() => setShowReminderModal(false)}>
+            <div className={styles.reminderModal} onClick={e => e.stopPropagation()}>
+              <button className={styles.reminderClose} onClick={() => setShowReminderModal(false)}>✕</button>
+
+              <div className={styles.invoiceHeader}>
+                <div className={styles.invoicePgName}>{pgName}</div>
+                {pgType && <div className={styles.invoicePgType}>{pgType}</div>}
+                <div className={styles.invoiceDivider} />
+              </div>
+
+              <div className={styles.invoiceRow}>
+                <span className={styles.invoiceLabel}>Tenant</span>
+                <span className={styles.invoiceValue}>{tenant.name}</span>
+              </div>
+              <div className={styles.invoiceRow}>
+                <span className={styles.invoiceLabel}>Room · Bed</span>
+                <span className={styles.invoiceValue}>{room?.roomNumber ?? "—"} · Bed {bed?.bedNumber ?? "—"} · Floor {room?.floor ?? "—"}</span>
+              </div>
+              <div className={styles.invoiceRow}>
+                <span className={styles.invoiceLabel}>Period</span>
+                <span className={styles.invoiceValue}>{monthStr}</span>
+              </div>
+
+              <div className={styles.invoiceDivider} />
+
+              <div className={styles.invoiceAmountRow}>
+                <span className={styles.invoiceAmountLabel}>Amount Due</span>
+                <span className={styles.invoiceAmount}>₹{remaining.toLocaleString("en-IN")}</span>
+              </div>
+
+              <div className={styles.invoiceDivider} />
+
+              <p className={styles.invoicePayTitle}>Pay Instantly</p>
+
+              {upi && (
+                <div className={styles.upiPill}>
+                  <span className={styles.upiPillId}>💸 {upi}</span>
+                  <button className={styles.upiCopyBtn} onClick={() => copyText(upi!, setUpiCopied)}>
+                    {upiCopied ? "✓ Copied!" : "📋 Copy UPI"}
+                  </button>
+                </div>
+              )}
+
+              {payPhone && (
+                <div className={styles.upiPill} style={{ marginTop: 10 }}>
+                  <span className={styles.upiPillId}>📱 {payPhone}</span>
+                  <button className={styles.upiCopyBtn} onClick={() => copyText(payPhone!, setUpiCopied)}>
+                    {upiCopied ? "✓ Copied!" : "📋 Copy"}
+                  </button>
+                </div>
+              )}
+
+              {!upi && !payPhone && (
+                <p className={styles.noPaymentNote}>
+                  ⚠️ No payment details set. Go to <strong>Profile → Payment</strong> to add UPI &amp; number.
+                </p>
+              )}
+
+              <div className={styles.invoiceDivider} />
+
+              <a
+                href={waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.waSendBtn}
+                id="btn-send-whatsapp"
+              >
+                <svg viewBox="0 0 32 32" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="16" cy="16" r="16" fill="#25D366"/>
+                  <path fill="#fff" d="M23.5 8.5A10.44 10.44 0 0 0 16 5.5C10.2 5.5 5.5 10.2 5.5 16a10.4 10.4 0 0 0 1.4 5.2L5.5 26.5l5.4-1.4a10.5 10.5 0 0 0 5.1 1.3c5.8 0 10.5-4.7 10.5-10.5a10.4 10.4 0 0 0-3-7.4zm-7.5 16.1a8.7 8.7 0 0 1-4.5-1.2l-.3-.2-3.2.8.9-3.1-.2-.3A8.7 8.7 0 0 1 7.3 16a8.7 8.7 0 0 1 8.7-8.7 8.7 8.7 0 0 1 8.7 8.7 8.7 8.7 0 0 1-8.7 8.6zm4.8-6.5c-.3-.1-1.6-.8-1.8-.9s-.4-.1-.6.1-.7.9-.8 1-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7 7 0 0 1-1.3-1.6c-.1-.3 0-.4.1-.6l.4-.5.3-.4v-.4l-.9-2.1c-.2-.5-.5-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8c.1.2 1.5 2.4 3.8 3.3a13 13 0 0 0 1.3.5 3.1 3.1 0 0 0 1.4.1c.4-.1 1.3-.5 1.5-1s.2-1 .1-1a.5.5 0 0 0-.4-.3z"/>
+                </svg>
+                Send Reminder via WhatsApp
+              </a>
+            </div>
+          </div>
+        );
+      })()}
     </main>
   );
 }

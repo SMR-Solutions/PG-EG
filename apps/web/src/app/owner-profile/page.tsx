@@ -166,6 +166,37 @@ export default function OwnerProfilePage() {
           )}
         </div>
 
+        {/* ─── PG Media & Digital Locker ─── */}
+        <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
+          <button
+            className={styles.mediaBtn}
+            onClick={() => router.push("/owner-profile/pg-media?tab=images")}
+            id="btn-pg-images"
+          >
+            <span className={styles.mediaBtnIcon}>🖼️</span>
+            <span className={styles.mediaBtnLabel}>PG Images</span>
+          </button>
+          <button
+            className={`${styles.mediaBtn} ${styles.mediaBtnLocker}`}
+            onClick={() => router.push("/owner-profile/pg-media?tab=documents")}
+            id="btn-pg-documents"
+          >
+            <span className={styles.mediaBtnIcon}>🔒</span>
+            <span className={styles.mediaBtnLabel}>Important Documents</span>
+          </button>
+        </div>
+        <div style={{ display: "flex", marginTop: -4 }}>
+          <button
+            className={`${styles.mediaBtn} ${styles.mediaBtnPayment}`}
+            onClick={() => router.push("/owner-profile/payment")}
+            id="btn-payment"
+            style={{ flex: 1 }}
+          >
+            <span className={styles.mediaBtnIcon}>💳</span>
+            <span className={styles.mediaBtnLabel}>Payment — UPI &amp; Number</span>
+          </button>
+        </div>
+
         {error && <p className={styles.errorMsg}>⚠️ {error}</p>}
         {success && <p className={styles.successMsg}>✅ Profile updated!</p>}
 

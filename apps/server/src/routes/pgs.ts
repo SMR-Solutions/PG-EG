@@ -13,6 +13,11 @@ function formatPg(pg: typeof pgs.$inferSelect) {
     sharings: JSON.parse(pg.sharings), managerName: pg.managerName || null,
     managerPhone: pg.managerPhone || null,
     latitude: pg.latitude || null, longitude: pg.longitude || null,
+    pgImages: JSON.parse(pg.pgImages || "[]"),
+    pgDocuments: JSON.parse(pg.pgDocuments || "[]"),
+    paymentQrUrl: pg.paymentQrUrl || null,
+    paymentUpiId: pg.paymentUpiId || null,
+    paymentPhone: pg.paymentPhone || null,
     createdAt: pg.createdAt, updatedAt: pg.updatedAt,
   };
 }
@@ -157,6 +162,10 @@ router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
     if (sharings !== undefined) updates.sharings = JSON.stringify(sharings.sort((a, b) => a - b));
     if (managerName !== undefined) updates.managerName = managerName.trim();
     if (managerPhone !== undefined) updates.managerPhone = managerPhone.trim();
+    // pgImages / pgDocuments can also be patched here if passed
+    const anyReq = req.body as Record<string, unknown>;
+    if (anyReq.pgImages !== undefined) updates.pgImages = JSON.stringify(anyReq.pgImages);
+    if (anyReq.pgDocuments !== undefined) updates.pgDocuments = JSON.stringify(anyReq.pgDocuments);
 
     const [updated] = await db.update(pgs).set(updates).where(eq(pgs.id, req.params.id)).returning();
     res.json({ pg: formatPg(updated) });
@@ -164,6 +173,83 @@ router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
     console.error("Update PG error:", error);
     res.status(500).json({ error: "Failed to update PG" });
   }
+});
+
+// ─── GET /api/pgs/:id/images  (owner only) ───
+router.get("/:id/images", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const pg = await verifyPgOwnership(req.params.id, req.owner!.ownerId, res);
+    if (!pg) return;
+    res.json({ images: JSON.parse(pg.pgImages || "[]") });
+  } catch { res.status(500).json({ error: "Failed" }); }
+});
+
+// ─── PATCH /api/pgs/:id/images  (owner only, max 10) ───
+router.patch("/:id/images", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const pg = await verifyPgOwnership(req.params.id, req.owner!.ownerId, res);
+    if (!pg) return;
+    const { images } = req.body as { images: { url: string; fileId: string; caption?: string }[] };
+    if (!Array.isArray(images) || images.length > 10) {
+      res.status(400).json({ error: "Max 10 images allowed" }); return;
+    }
+    const db = createDb(process.env.DATABASE_URL!);
+    const [updated] = await db.update(pgs)
+      .set({ pgImages: JSON.stringify(images), updatedAt: new Date() })
+      .where(eq(pgs.id, req.params.id)).returning();
+    res.json({ images: JSON.parse(updated.pgImages || "[]") });
+  } catch { res.status(500).json({ error: "Failed" }); }
+});
+
+// ─── GET /api/pgs/:id/documents  (owner only — private locker) ───
+router.get("/:id/documents", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const pg = await verifyPgOwnership(req.params.id, req.owner!.ownerId, res);
+    if (!pg) return;
+    res.json({ documents: JSON.parse(pg.pgDocuments || "[]") });
+  } catch { res.status(500).json({ error: "Failed" }); }
+});
+
+// ─── PATCH /api/pgs/:id/documents  (owner only, max 10) ───
+router.patch("/:id/documents", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const pg = await verifyPgOwnership(req.params.id, req.owner!.ownerId, res);
+    if (!pg) return;
+    const { documents } = req.body as { documents: { url: string; fileId: string; name: string }[] };
+    if (!Array.isArray(documents) || documents.length > 10) {
+      res.status(400).json({ error: "Max 10 documents allowed" }); return;
+    }
+    const db = createDb(process.env.DATABASE_URL!);
+    const [updated] = await db.update(pgs)
+      .set({ pgDocuments: JSON.stringify(documents), updatedAt: new Date() })
+      .where(eq(pgs.id, req.params.id)).returning();
+    res.json({ documents: JSON.parse(updated.pgDocuments || "[]") });
+  } catch { res.status(500).json({ error: "Failed" }); }
+});
+
+// ─── GET /api/pgs/:id/payment  (owner only) ───
+router.get("/:id/payment", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const pg = await verifyPgOwnership(req.params.id, req.owner!.ownerId, res);
+    if (!pg) return;
+    res.json({ paymentQrUrl: pg.paymentQrUrl || null, paymentUpiId: pg.paymentUpiId || null, paymentPhone: pg.paymentPhone || null });
+  } catch { res.status(500).json({ error: "Failed" }); }
+});
+
+// ─── PATCH /api/pgs/:id/payment  (owner only) ───
+router.patch("/:id/payment", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const pg = await verifyPgOwnership(req.params.id, req.owner!.ownerId, res);
+    if (!pg) return;
+    const { paymentQrUrl, paymentUpiId, paymentPhone } = req.body as { paymentQrUrl?: string | null; paymentUpiId?: string | null; paymentPhone?: string | null };
+    const db = createDb(process.env.DATABASE_URL!);
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (paymentQrUrl !== undefined) updates.paymentQrUrl = paymentQrUrl || null;
+    if (paymentUpiId !== undefined) updates.paymentUpiId = paymentUpiId?.trim() || null;
+    if (paymentPhone !== undefined) updates.paymentPhone = paymentPhone?.trim() || null;
+    const [updated] = await db.update(pgs).set(updates).where(eq(pgs.id, req.params.id)).returning();
+    res.json({ paymentQrUrl: updated.paymentQrUrl || null, paymentUpiId: updated.paymentUpiId || null, paymentPhone: updated.paymentPhone || null });
+  } catch { res.status(500).json({ error: "Failed" }); }
 });
 
 export default router;

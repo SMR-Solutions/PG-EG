@@ -43,7 +43,8 @@ router.post("/", async (req: Request, res: Response) => {
     res.json({ url: result.url, fileId: result.fileId });
   } catch (error) {
     console.error("Upload error:", error);
-    res.status(500).json({ error: "Upload failed. Check ImageKit credentials." });
+    const msg = error instanceof Error ? error.message : "Upload failed";
+    res.status(500).json({ error: msg });
   }
 });
 

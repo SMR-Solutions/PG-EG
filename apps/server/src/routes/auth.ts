@@ -85,7 +85,7 @@ router.post("/verify", async (req: Request, res: Response) => {
       await db.update(owners).set({ firebaseUid, updatedAt: new Date() }).where(eq(owners.id, owner.id));
     }
 
-    const ownerPGs = await db.select({ id: pgs.id, name: pgs.name }).from(pgs)
+    const ownerPGs = await db.select({ id: pgs.id, name: pgs.name, type: pgs.type, paymentQrUrl: pgs.paymentQrUrl, paymentUpiId: pgs.paymentUpiId, paymentPhone: pgs.paymentPhone }).from(pgs)
       .where(eq(pgs.ownerId, owner.id)).orderBy(asc(pgs.createdAt));
     const hasPG = ownerPGs.length > 0;
     const token = makeJwt(owner.id, owner.phone, owner.role);
@@ -150,7 +150,7 @@ router.post("/google", async (req: Request, res: Response) => {
       owner = { ...owner, firebaseUid, email };
     }
 
-    const ownerPGs = await db.select({ id: pgs.id, name: pgs.name }).from(pgs)
+    const ownerPGs = await db.select({ id: pgs.id, name: pgs.name, type: pgs.type, paymentQrUrl: pgs.paymentQrUrl, paymentUpiId: pgs.paymentUpiId, paymentPhone: pgs.paymentPhone }).from(pgs)
       .where(eq(pgs.ownerId, owner.id)).orderBy(asc(pgs.createdAt));
     const hasPG = ownerPGs.length > 0;
     const token = makeJwt(owner.id, owner.phone, owner.role);
@@ -186,7 +186,7 @@ router.get("/me", async (req: Request, res: Response) => {
     if (!result[0]) { res.status(404).json({ error: "Owner not found" }); return; }
 
     const owner = result[0];
-    const ownerPGs = await db.select({ id: pgs.id, name: pgs.name }).from(pgs)
+    const ownerPGs = await db.select({ id: pgs.id, name: pgs.name, type: pgs.type, paymentQrUrl: pgs.paymentQrUrl, paymentUpiId: pgs.paymentUpiId, paymentPhone: pgs.paymentPhone }).from(pgs)
       .where(eq(pgs.ownerId, owner.id)).orderBy(asc(pgs.createdAt));
 
     res.json({

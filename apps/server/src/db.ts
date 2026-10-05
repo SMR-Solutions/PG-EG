@@ -42,6 +42,11 @@ export const pgs = pgTable("pgs", {
   // Per-PG manager contact — can differ from the Google account holder
   managerName: text("manager_name"),
   managerPhone: text("manager_phone"),
+  pgImages: text("pg_images").default("[]"),       // JSON: [{url, fileId}] — public PG gallery, max 10
+  pgDocuments: text("pg_documents").default("[]"), // JSON: [{url, fileId, name}] — private locker, max 10
+  paymentQrUrl: text("payment_qr_url"),            // ImageKit URL of UPI QR code image
+  paymentUpiId: text("payment_upi_id"),            // UPI ID e.g. name@upi
+  paymentPhone: text("payment_phone"),             // Phone number for rent collection (e.g. GPay number)
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
