@@ -1054,28 +1054,38 @@ export default function DashboardPage() {
                                 const due = rent.amount - (rent.paidAmount ?? 0);
                                 const rawPhone = (bed.tenant.phone || "").replace(/\D/g, "");
                                 const waPhone = rawPhone.startsWith("91") ? rawPhone : `91${rawPhone}`;
-                                const rawOwner = (owner?.phone || "").replace(/\D/g, "");
-                                const ownerDisplay = rawOwner ? `+91${rawOwner.replace(/^91/, "")}` : "";
                                 const mo = data.currentMonth ?? "";
                                 const [yr, m] = mo.split("-");
                                 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
                                 const monthStr = m ? `${MONTHS[parseInt(m)-1]} ${yr}` : mo;
-                                const pgName = data.pg.name;
-                                // Emoji-free message to avoid encoding issues
+                                const activePg = allPgs.find(p => p.id === activePgId);
+                                const pgName = activePg?.name ?? data.pg.name;
+                                const pgType = activePg?.type ?? "";
+                                const upi = activePg?.paymentUpiId ?? null;
+                                const payPhone = activePg?.paymentPhone ?? null;
+                                const roomNo = selectedRoom.roomNumber ?? "—";
+                                const bedNo = bed.bedNumber ?? "—";
+                                const floor = selectedRoom.floor ?? "—";
                                 const msg = [
-                                  `*${pgName}*`,
+                                  `★ *${pgName}${pgType ? ` — ${pgType}` : ""}*`,
                                   ``,
-                                  `*${bed.tenant.name}*,`,
+                                  `Dear *${bed.tenant.name}*,`,
                                   ``,
-                                  `This is a gentle reminder that your rent for *${monthStr}* is due.`,
+                                  `This is a friendly reminder that your rent for *${monthStr}* is due.`,
                                   ``,
-                                  `Amount Due: *Rs. ${due.toLocaleString("en-IN")}*`,
+                                  `▸ Bed ${bedNo} · Room: ${roomNo} · Floor ${floor}`,
+                                  `▸ Amount Due: *₹${due.toLocaleString("en-IN")}*`,
+                                  ``,
+                                  `━━━━━━━━━━━━━━━`,
+                                  `▸ *Pay Instantly:*`,
+                                  upi ? `UPI ID: ${upi}` : null,
+                                  payPhone ? `Number: ${payPhone}` : null,
+                                  (upi || payPhone) ? `${bed.tenant.name}, you can just copy UPI ID / Mobile Number and pay.` : null,
+                                  `━━━━━━━━━━━━━━━`,
                                   ``,
                                   `Kindly make the payment at your earliest convenience.`,
-                                  `Online Payment (pay to this number) - ${ownerDisplay}`,
-                                  ``,
-                                  `Thank you!`,
-                                ].join("\n");
+                                  `Thank you! :)`,
+                                ].filter(l => l !== null).join("\n");
                                 const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`;
                                 return (
                                   <a
