@@ -115,7 +115,9 @@ function ExpensesInner() {
   const [date, setDate] = useState(todayStr);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
-  const [filterMonth, setFilterMonth] = useState(curMonthIdx); // 0-indexed
+  const [filterMonth, setFilterMonth] = useState(curMonthIdx);
+  const [confirmDelete, setConfirmDelete] = useState<Expense | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const authHeader = useCallback(() =>
     token ? { Authorization: `Bearer ${token}` } : {} as Record<string, string>,
@@ -151,8 +153,14 @@ function ExpensesInner() {
   const monthTotal = monthTotals[filterMonth] || 0;
 
   async function handleAdd() {
-    if (!item.trim() || !amount || parseFloat(amount) <= 0) {
-      setError("Please enter a valid item and amount."); return;
+    const trimmed = item.trim();
+    if (!trimmed) { setError("Please enter an item name."); return; }
+    // Must contain at least one letter — no pure numbers
+    if (!/[a-zA-Z]/.test(trimmed)) {
+      setError("Item name must contain letters, not just numbers."); return;
+    }
+    if (!amount || parseFloat(amount) <= 0) {
+      setError("Please enter a valid amount."); return;
     }
     if (!activePgId) return;
     setAdding(true); setError("");
@@ -160,26 +168,32 @@ function ExpensesInner() {
       const res = await fetch(`${API_URL}/api/expenses/${activePgId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeader() },
-        body: JSON.stringify({ item: item.trim(), amount: parseFloat(amount), date }),
+        body: JSON.stringify({ item: trimmed, amount: parseFloat(amount), date }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error);
       setExpenses(prev => [j.expense, ...prev]);
       setItem(""); setAmount(""); setDate(todayStr);
-      // switch filter to the month of the new expense
       setFilterMonth(new Date(date).getMonth());
     } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
     setAdding(false);
   }
 
-  async function handleDelete(id: string) {
-    if (!activePgId) return;
+  function handleDelete(exp: Expense) {
+    setConfirmDelete(exp);
+  }
+
+  async function doDelete() {
+    if (!confirmDelete || !activePgId) return;
+    setDeleting(true);
     try {
-      await fetch(`${API_URL}/api/expenses/${activePgId}/${id}`, {
+      await fetch(`${API_URL}/api/expenses/${activePgId}/${confirmDelete.id}`, {
         method: "DELETE", headers: authHeader(),
       });
-      setExpenses(prev => prev.filter(e => e.id !== id));
+      setExpenses(prev => prev.filter(e => e.id !== confirmDelete.id));
+      setConfirmDelete(null);
     } catch { setError("Delete failed."); }
+    setDeleting(false);
   }
 
   return (
@@ -316,7 +330,7 @@ function ExpensesInner() {
                     <span className={styles.expAmt}>₹{parseFloat(exp.amount).toLocaleString("en-IN")}</span>
                     <button
                       className={styles.delBtn}
-                      onClick={() => handleDelete(exp.id)}
+                      onClick={() => handleDelete(exp)}
                       title="Delete"
                     >✕</button>
                   </div>
@@ -326,6 +340,29 @@ function ExpensesInner() {
           )}
         </div>
       </div>
+
+      {/* ─── Delete Confirm Modal ─── */}
+      {confirmDelete && (
+        <div className={styles.confirmOverlay} onClick={() => setConfirmDelete(null)}>
+          <div className={styles.confirmModal} onClick={e => e.stopPropagation()}>
+            <div className={styles.confirmIcon}>🗑️</div>
+            <h3 className={styles.confirmTitle}>Delete Expense?</h3>
+            <p className={styles.confirmBody}>
+              <strong>{confirmDelete.item}</strong>
+              <span className={styles.confirmAmt}> — ₹{parseFloat(confirmDelete.amount).toLocaleString("en-IN")}</span>
+            </p>
+            <p className={styles.confirmNote}>This cannot be undone.</p>
+            <div className={styles.confirmBtns}>
+              <button className={styles.confirmCancel} onClick={() => setConfirmDelete(null)}>
+                Cancel
+              </button>
+              <button className={styles.confirmDel} onClick={doDelete} disabled={deleting}>
+                {deleting ? "Deleting…" : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
