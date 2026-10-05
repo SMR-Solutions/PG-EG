@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import styles from "./page.module.css";
@@ -15,7 +15,7 @@ interface MediaItem {
   caption?: string;
 }
 
-export default function PgMediaPage() {
+function PgMediaInner() {
   const router = useRouter();
   const params = useSearchParams();
   const { owner, token } = useAuth();
@@ -265,4 +265,8 @@ export default function PgMediaPage() {
       )}
     </main>
   );
+}
+
+export default function PgMediaPage() {
+  return <Suspense fallback={null}><PgMediaInner /></Suspense>;
 }
