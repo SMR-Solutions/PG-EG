@@ -8,6 +8,8 @@ import {
   boolean,
   integer,
   doublePrecision,
+  numeric,
+  date,
 } from "drizzle-orm/pg-core";
 
 // ─── Schema ───────────────────────────────
@@ -130,6 +132,16 @@ export const tenantHistory = pgTable("tenant_history", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ─── Expenses ─────────────────────────────
+export const expenses = pgTable("expenses", {
+  id:        uuid("id").defaultRandom().primaryKey(),
+  pgId:      uuid("pg_id").notNull().references(() => pgs.id, { onDelete: "cascade" }),
+  item:      text("item").notNull(),
+  amount:    numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  date:      date("date").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // ─── Types ────────────────────────────────
 export type Owner = typeof owners.$inferSelect;
 export type NewOwner = typeof owners.$inferInsert;
@@ -137,7 +149,8 @@ export type PG = typeof pgs.$inferSelect;
 export type NewPG = typeof pgs.$inferInsert;
 
 // ─── DB Client ────────────────────────────
-const schema = { owners, pgs, rooms, beds, tenants, rentPayments, rentPaymentTransactions, tenantHistory };
+const schema = { owners, pgs, rooms, beds, tenants, rentPayments, rentPaymentTransactions, tenantHistory, expenses };
+
 
 export function createDb(databaseUrl: string) {
   const sql = neon(databaseUrl);

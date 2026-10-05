@@ -1,0 +1,335 @@
+"use client";
+
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import styles from "./page.module.css";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTH_FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+interface Expense {
+  id: string;
+  item: string;
+  amount: string;
+  date: string;
+  createdAt: string;
+}
+
+// ─── Pure SVG Bar Chart ────────────────────────────────────────────────────
+function BarChart({ monthTotals, year }: { monthTotals: number[]; year: number }) {
+  const W = 600, H = 220, PAD = { top: 20, right: 20, bottom: 40, left: 60 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+  const maxVal = Math.max(...monthTotals, 1);
+  const barW = innerW / 12 - 8;
+  const now = new Date();
+  const curMonth = now.getFullYear() === year ? now.getMonth() : -1;
+
+  // Y axis ticks (5 lines)
+  const ticks = 4;
+  const yTicks = Array.from({ length: ticks + 1 }, (_, i) => Math.round((maxVal / ticks) * i));
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet" className={styles.barSvg}>
+      {/* Grid lines */}
+      {yTicks.map((v, i) => {
+        const y = PAD.top + innerH - (v / maxVal) * innerH;
+        return (
+          <g key={i}>
+            <line x1={PAD.left} y1={y} x2={PAD.left + innerW} y2={y}
+              stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+            <text x={PAD.left - 8} y={y + 4} textAnchor="end"
+              fill="rgba(255,255,255,0.4)" fontSize="10">
+              {v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Bars */}
+      {monthTotals.map((val, i) => {
+        const x = PAD.left + i * (innerW / 12) + 4;
+        const barH = val > 0 ? Math.max(4, (val / maxVal) * innerH) : 0;
+        const y = PAD.top + innerH - barH;
+        const isCurrent = i === curMonth;
+        const isEmpty = val === 0;
+
+        return (
+          <g key={i}>
+            {/* Bar */}
+            <rect
+              x={x} y={y} width={barW} height={barH}
+              rx="5" ry="5"
+              fill={isCurrent
+                ? "url(#barGradActive)"
+                : isEmpty ? "rgba(255,255,255,0.05)" : "url(#barGrad)"}
+            />
+            {/* Amount label on top */}
+            {val > 0 && (
+              <text x={x + barW / 2} y={y - 5} textAnchor="middle"
+                fill={isCurrent ? "#fff" : "rgba(255,255,255,0.55)"} fontSize="9" fontWeight="600">
+                {val >= 1000 ? `${(val/1000).toFixed(1)}k` : val}
+              </text>
+            )}
+            {/* Month label */}
+            <text x={x + barW / 2} y={H - PAD.bottom + 14} textAnchor="middle"
+              fill={isCurrent ? "#fff" : "rgba(255,255,255,0.5)"} fontSize="10"
+              fontWeight={isCurrent ? "700" : "400"}>
+              {MONTHS[i]}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Gradients */}
+      <defs>
+        <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#6366f1" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.5" />
+        </linearGradient>
+        <linearGradient id="barGradActive" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f59e0b" stopOpacity="1" />
+          <stop offset="100%" stopColor="#d97706" stopOpacity="0.7" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+// ─── Main Page ─────────────────────────────────────────────────────────────
+function ExpensesInner() {
+  const router = useRouter();
+  const { activePgId, token } = useAuth();
+
+  const year = new Date().getFullYear();
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const curMonthIdx = new Date().getMonth();
+
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [item, setItem] = useState("");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState(todayStr);
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState("");
+  const [filterMonth, setFilterMonth] = useState(curMonthIdx); // 0-indexed
+
+  const authHeader = useCallback(() =>
+    token ? { Authorization: `Bearer ${token}` } : {} as Record<string, string>,
+  [token]);
+
+  const load = useCallback(async () => {
+    if (!activePgId || !token) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/expenses/${activePgId}?year=${year}`, {
+        headers: authHeader(),
+      });
+      const j = await res.json();
+      setExpenses(j.expenses ?? []);
+    } catch { setError("Failed to load expenses."); }
+    setLoading(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePgId, token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Month totals for bar chart
+  const monthTotals = Array.from({ length: 12 }, (_, mi) => {
+    return expenses
+      .filter(e => new Date(e.date).getMonth() === mi)
+      .reduce((s, e) => s + parseFloat(e.amount), 0);
+  });
+
+  const totalYear = monthTotals.reduce((a, b) => a + b, 0);
+
+  // Expenses for selected month
+  const filtered = expenses.filter(e => new Date(e.date).getMonth() === filterMonth);
+  const monthTotal = monthTotals[filterMonth] || 0;
+
+  async function handleAdd() {
+    if (!item.trim() || !amount || parseFloat(amount) <= 0) {
+      setError("Please enter a valid item and amount."); return;
+    }
+    if (!activePgId) return;
+    setAdding(true); setError("");
+    try {
+      const res = await fetch(`${API_URL}/api/expenses/${activePgId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeader() },
+        body: JSON.stringify({ item: item.trim(), amount: parseFloat(amount), date }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error);
+      setExpenses(prev => [j.expense, ...prev]);
+      setItem(""); setAmount(""); setDate(todayStr);
+      // switch filter to the month of the new expense
+      setFilterMonth(new Date(date).getMonth());
+    } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+    setAdding(false);
+  }
+
+  async function handleDelete(id: string) {
+    if (!activePgId) return;
+    try {
+      await fetch(`${API_URL}/api/expenses/${activePgId}/${id}`, {
+        method: "DELETE", headers: authHeader(),
+      });
+      setExpenses(prev => prev.filter(e => e.id !== id));
+    } catch { setError("Delete failed."); }
+  }
+
+  return (
+    <main className={styles.main}>
+      <div className={styles.orb1} /><div className={styles.orb2} />
+
+      <header className={styles.header}>
+        <button className={styles.backBtn} onClick={() => router.back()} id="btn-back">← Back</button>
+        <div className={styles.logo}>
+          <span className={styles.logoPG}>PG</span>
+          <span className={styles.logoDash}>-</span>
+          <span className={styles.logoEG}>EG</span>
+        </div>
+      </header>
+
+      <div className={styles.content}>
+        {/* Title + year total */}
+        <div className={styles.titleRow}>
+          <div>
+            <h1 className={styles.title}>📊 Expenses</h1>
+            <p className={styles.subtitle}>{year} — track everything you spend on your PG</p>
+          </div>
+          <div className={styles.yearTotal}>
+            <span className={styles.yearTotalLabel}>Total {year}</span>
+            <span className={styles.yearTotalAmt}>₹{totalYear.toLocaleString("en-IN")}</span>
+          </div>
+        </div>
+
+        {/* Bar chart */}
+        <div className={styles.chartCard}>
+          <div className={styles.chartHeader}>
+            <span className={styles.chartTitle}>Monthly Spending — {year}</span>
+            <span className={styles.chartLegend}><span className={styles.dotActive} /> This month</span>
+          </div>
+          {loading ? (
+            <div className={styles.chartLoading}><span className={styles.spinner} /></div>
+          ) : (
+            <div
+              className={styles.chartWrap}
+              onClick={e => {
+                // clicking a bar: detect month by x position
+                const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const mi = Math.floor((x / rect.width) * 12);
+                if (mi >= 0 && mi < 12) setFilterMonth(mi);
+              }}
+            >
+              <BarChart monthTotals={monthTotals} year={year} />
+            </div>
+          )}
+          <div className={styles.monthTabs}>
+            {MONTHS.map((mo, i) => (
+              <button
+                key={i}
+                className={`${styles.monthTab} ${i === filterMonth ? styles.monthTabActive : ""}`}
+                onClick={() => setFilterMonth(i)}
+              >{mo}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Add expense form */}
+        <div className={styles.formCard}>
+          <p className={styles.formTitle}>➕ Add Expense</p>
+          {error && <p className={styles.errorMsg}>⚠️ {error}</p>}
+          <div className={styles.formRow}>
+            <div className={styles.formField}>
+              <label className={styles.fieldLabel}>Item</label>
+              <input
+                id="input-item"
+                type="text"
+                className={styles.fieldInput}
+                placeholder="e.g. Electricity bill, Cleaning, Repair…"
+                value={item}
+                onChange={e => setItem(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleAdd()}
+              />
+            </div>
+            <div className={styles.formFieldSm}>
+              <label className={styles.fieldLabel}>Amount (₹)</label>
+              <input
+                id="input-amount"
+                type="number"
+                min="1"
+                className={styles.fieldInput}
+                placeholder="0"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleAdd()}
+              />
+            </div>
+            <div className={styles.formFieldSm}>
+              <label className={styles.fieldLabel}>Date</label>
+              <input
+                id="input-date"
+                type="date"
+                className={styles.fieldInput}
+                value={date}
+                onChange={e => setDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <button
+            className={styles.addBtn}
+            onClick={handleAdd}
+            disabled={adding}
+            id="btn-add-expense"
+          >
+            {adding ? <><span className={styles.spinnerSm} /> Adding…</> : "✅ Add Expense"}
+          </button>
+        </div>
+
+        {/* Monthly list */}
+        <div className={styles.listCard}>
+          <div className={styles.listHeader}>
+            <span className={styles.listTitle}>{MONTH_FULL[filterMonth]} Expenses</span>
+            <span className={styles.listTotal}>₹{monthTotal.toLocaleString("en-IN")}</span>
+          </div>
+          {loading ? (
+            <div className={styles.listLoading}><span className={styles.spinner} /></div>
+          ) : filtered.length === 0 ? (
+            <p className={styles.emptyMsg}>No expenses for {MONTH_FULL[filterMonth]} yet.</p>
+          ) : (
+            <div className={styles.expenseList}>
+              {filtered.map(exp => (
+                <div key={exp.id} className={styles.expRow}>
+                  <div className={styles.expLeft}>
+                    <span className={styles.expItem}>{exp.item}</span>
+                    <span className={styles.expDate}>
+                      {new Date(exp.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                    </span>
+                  </div>
+                  <div className={styles.expRight}>
+                    <span className={styles.expAmt}>₹{parseFloat(exp.amount).toLocaleString("en-IN")}</span>
+                    <button
+                      className={styles.delBtn}
+                      onClick={() => handleDelete(exp.id)}
+                      title="Delete"
+                    >✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+export default function ExpensesPage() {
+  return <Suspense fallback={null}><ExpensesInner /></Suspense>;
+}

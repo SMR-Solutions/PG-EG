@@ -12,6 +12,7 @@ import uploadRouter from "./routes/upload";
 import tenantsRouter from "./routes/tenants";
 import rentRouter from "./routes/rent";
 import publicRouter from "./routes/public";
+import expensesRouter from "./routes/expenses";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -47,6 +48,8 @@ app.use("/api/upload", uploadRouter);
 app.use("/api/tenants", tenantsRouter);
 app.use("/api/rent", rentRouter);
 app.use("/api/public", publicRouter);
+app.use("/api/expenses", expensesRouter);
+
 
 // ─── Start ────────────────────────────────
 app.listen(PORT, () => {

@@ -597,6 +597,18 @@ export default function DashboardPage() {
                   </div>
                 </button>
 
+                <button
+                  className={styles.sidebarAction}
+                  id="btn-expenses"
+                  onClick={() => { setProfileOpen(false); router.push("/expenses"); }}
+                >
+                  <div className={styles.sidebarActionIcon}>📊</div>
+                  <div>
+                    <div className={styles.sidebarActionTitle}>Expenses</div>
+                    <div className={styles.sidebarActionDesc}>Track monthly PG spending</div>
+                  </div>
+                </button>
+
                 {allPgs.length > 1 && (
                   <button
                     className={styles.sidebarAction}
