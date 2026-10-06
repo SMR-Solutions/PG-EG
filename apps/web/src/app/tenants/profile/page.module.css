@@ -396,3 +396,32 @@
 .invoiceDownloadBtn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
 .invoiceDownloadBtn:disabled { opacity: 0.6; cursor: wait; }
 .spinnerDk { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; animation: spin 0.7s linear infinite; display: inline-block; flex-shrink: 0; }
+
+/* ─── Edit / Complete Profile ─────────────────────────────────────────────── */
+.editProfileToggle { width: 100%; display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); border: 1px solid var(--border-hover); border-radius: 14px; padding: 14px 18px; color: var(--text-primary); font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s; }
+.editProfileToggle:hover { background: var(--border); }
+.editChevron { font-size: 12px; color: var(--text-muted); }
+.editProfileBody { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; }
+.editGroupLabel { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 0; }
+.editInput { background: var(--bg-card); border: 1px solid var(--border-hover); border-radius: 10px; color: var(--text-primary); font-size: 14px; font-family: inherit; padding: 11px 14px; outline: none; width: 100%; box-sizing: border-box; transition: border-color 0.15s; }
+.editInput:focus { border-color: #6366f1; }
+.editInput::placeholder { color: var(--text-muted); opacity: 0.6; }
+.editPhotoRow { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
+.editThumb { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-hover); }
+.editThumbEmpty { width: 72px; height: 72px; border-radius: 10px; background: var(--bg-card); border: 1px dashed var(--border-hover); display: flex; align-items: center; justify-content: center; font-size: 26px; }
+.editUploadBtn { display: inline-flex; align-items: center; padding: 9px 16px; background: var(--bg-overlay); border: 1px solid var(--border-hover); border-radius: 10px; color: var(--text-primary); font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+.editUploadBtn:hover { background: var(--border-hover); }
+.editRelRow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.editRelTag { padding: 6px 12px; border: 1px solid var(--border-hover); border-radius: 8px; background: transparent; color: var(--text-muted); font-size: 12px; font-family: inherit; cursor: pointer; transition: all 0.12s; }
+.editRelTag:hover { border-color: #f4a261; color: var(--text-primary); }
+.editRelTagActive { background: rgba(244,162,97,0.15); border-color: #f4a261; color: #f4a261; font-weight: 700; }
+.editProfRow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.editProfBtn { flex: 1; min-width: 90px; padding: 10px 6px; border: 1.5px solid var(--border-hover); border-radius: 10px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.12s; text-align: center; }
+.editProfBtn:hover { border-color: #6366f1; color: var(--text-primary); }
+.editProfBtnActive { border-color: #6366f1; background: rgba(99,102,241,0.12); color: #fff; }
+.editSaveBtn { margin-top: 18px; width: 100%; padding: 14px; background: linear-gradient(90deg, #6366f1, #4f46e5); border: none; border-radius: 12px; color: #fff; font-size: 15px; font-weight: 800; cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s, transform 0.15s; box-shadow: 0 4px 16px rgba(99,102,241,0.25); }
+.editSaveBtn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+.editSaveBtn:disabled { opacity: 0.6; cursor: wait; }
+.editErr { color: #ef4444; font-size: 13px; margin: 0; padding: 10px 14px; background: rgba(239,68,68,0.08); border-radius: 10px; border: 1px solid rgba(239,68,68,0.2); }
+.editOk { color: #2dc653; font-size: 13px; margin: 0; padding: 10px 14px; background: rgba(45,198,83,0.08); border-radius: 10px; border: 1px solid rgba(45,198,83,0.25); }
+.spinnerSm { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; animation: spin 0.7s linear infinite; display: inline-block; }

@@ -55,7 +55,7 @@ function CheckInForm() {
   const [emergencyContact, setEmergencyContact] = useState("");
   const [emergencyRelation, setEmergencyRelation] = useState("Father");
   const [joiningDate, setJoiningDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [profession, setProfession] = useState<"student" | "jobholder" | "">("" );
+  const [profession, setProfession] = useState<"student" | "jobholder" | "other" | "">("" );
   const [professionDetail, setProfessionDetail] = useState("");
   const [monthlyRent, setMonthlyRent] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
@@ -351,6 +351,12 @@ function CheckInForm() {
               onClick={() => { setProfession("jobholder"); setProfessionDetail(""); }}
               disabled={submitting}
             >💼 Job Holder</button>
+            <button
+              type="button"
+              className={`${styles.profBtn} ${profession === "other" ? styles.profBtnActive : ""}`}
+              onClick={() => { setProfession("other"); setProfessionDetail(""); }}
+              disabled={submitting}
+            >🔹 Other</button>
           </div>
           {profession === "student" && (
             <input
@@ -373,6 +379,18 @@ function CheckInForm() {
               value={professionDetail}
               onChange={e => setProfessionDetail(e.target.value)}
               id="input-job-detail"
+              disabled={submitting}
+            />
+          )}
+          {profession === "other" && (
+            <input
+              type="text"
+              className={styles.input}
+              style={{ marginTop: 10 }}
+              placeholder="What do you do? e.g. Freelancer, Business Owner, Retired…"
+              value={professionDetail}
+              onChange={e => setProfessionDetail(e.target.value)}
+              id="input-other-detail"
               disabled={submitting}
             />
           )}

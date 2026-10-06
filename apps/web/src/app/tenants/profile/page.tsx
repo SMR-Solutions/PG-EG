@@ -33,6 +33,7 @@ interface TenantProfile {
   joiningDate: string; leavingDate?: string | null;
   rentAmount?: number; advanceAmount?: number; paymentMode?: string | null;
   depositDeduction?: number | null; refundMode?: string | null;
+  profession?: string | null; professionDetail?: string | null;
   status: string;
 }
 interface Bed { id: string; bedNumber: number; }
@@ -63,6 +64,20 @@ function TenantProfileInner() {
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [upiCopied, setUpiCopied] = useState(false);
 
+  // ── Edit / Complete Profile state ──────────────────────────────────────
+  const [editOpen, setEditOpen] = useState(false);
+  const [editAltPhone, setEditAltPhone] = useState("");
+  const [editEmergency, setEditEmergency] = useState("");
+  const [editEmergencyRel, setEditEmergencyRel] = useState("Father");
+  const [editProfession, setEditProfession] = useState<"student"|"jobholder"|"other"|"">("" );
+  const [editProfDetail, setEditProfDetail] = useState("");
+  const [editPhotoUrl, setEditPhotoUrl] = useState<string|null>(null);
+  const [editIdUrl, setEditIdUrl] = useState<string|null>(null);
+  const [uploadingSelfie, setUploadingSelfie] = useState(false);
+  const [uploadingId, setUploadingId] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editSuccess, setEditSuccess] = useState("");
 
   const load = useCallback(async () => {
     if (!tenantId) { setError("No tenant ID"); setLoading(false); return; }
@@ -91,6 +106,67 @@ function TenantProfileInner() {
   const currentMonth = currentMonthStr();
   const currentRent = data?.rentRecords?.find((r) => r.month === currentMonth);
   const remaining = currentRent ? currentRent.amount - (currentRent.paidAmount || 0) : 0;
+
+  function openEdit() {
+    const t = data!.tenant;
+    setEditAltPhone(t.altPhone || "");
+    setEditEmergency(t.emergencyContact || "");
+    setEditEmergencyRel(t.emergencyRelation || "Father");
+    setEditProfession((t.profession as "student"|"jobholder"|"other"|"") || "");
+    setEditProfDetail(t.professionDetail || "");
+    setEditPhotoUrl(t.photoUrl || null);
+    setEditIdUrl(t.idPhotoUrl || null);
+    setEditError(""); setEditSuccess("");
+    setEditOpen(true);
+  }
+
+  async function uploadImage(file: File, field: "selfie" | "id"): Promise<string | null> {
+    const setter = field === "selfie" ? setUploadingSelfie : setUploadingId;
+    setter(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("type", field === "selfie" ? "selfie" : "id");
+      const res = await fetch(`${API_URL}/api/upload`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Upload failed");
+      return j.url as string;
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : "Upload failed");
+      return null;
+    } finally { setter(false); }
+  }
+
+  async function saveProfile() {
+    if (!tenantId) return;
+    setEditSaving(true); setEditError(""); setEditSuccess("");
+    try {
+      const body: Record<string, unknown> = {
+        altPhone: editAltPhone.replace(/\D/g, "").slice(-10) || null,
+        emergencyContact: editEmergency.replace(/\D/g, "").slice(-10) || null,
+        emergencyRelation: editEmergency ? editEmergencyRel : null,
+        profession: editProfession || null,
+        professionDetail: editProfDetail.trim() || null,
+        photoUrl: editPhotoUrl,
+        idPhotoUrl: editIdUrl,
+      };
+      const res = await fetch(`${API_URL}/api/tenants/${tenantId}/contact`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(body),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Failed");
+      setEditSuccess("Profile updated! ✅");
+      await load();
+      setTimeout(() => { setEditOpen(false); setEditSuccess(""); }, 1200);
+    } catch (e) { setEditError(e instanceof Error ? e.message : "Failed"); }
+    setEditSaving(false);
+  }
 
   async function handleMarkPaid() {
     if (!currentRent) return;
@@ -225,6 +301,104 @@ function TenantProfileInner() {
               </span>
             </div>
           </div>
+        </section>
+
+        {/* ── Complete / Edit Profile ── */}
+        <section className={styles.section}>
+          <button className={styles.editProfileToggle} onClick={() => editOpen ? setEditOpen(false) : openEdit()} id="btn-edit-profile">
+            ✏️ {editOpen ? "Close Editor" : "Edit / Complete Profile"}
+            <span className={styles.editChevron}>{editOpen ? "▲" : "▼"}</span>
+          </button>
+
+          {editOpen && (
+            <div className={styles.editProfileBody}>
+              {editError && <p className={styles.editErr}>⚠️ {editError}</p>}
+              {editSuccess && <p className={styles.editOk}>{editSuccess}</p>}
+
+              {/* Photos */}
+              <p className={styles.editGroupLabel}>📷 Selfie Photo</p>
+              <div className={styles.editPhotoRow}>
+                {editPhotoUrl
+                  ? <img src={editPhotoUrl} className={styles.editThumb} alt="selfie" />
+                  : <div className={styles.editThumbEmpty}>👤</div>}
+                <label className={styles.editUploadBtn} htmlFor="ep-selfie">
+                  {uploadingSelfie ? "Uploading…" : (editPhotoUrl ? "Change Photo" : "+ Add Selfie")}
+                  <input id="ep-selfie" type="file" accept="image/*" hidden disabled={uploadingSelfie}
+                    onChange={async e => {
+                      const f = e.target.files?.[0]; if (!f) return;
+                      const url = await uploadImage(f, "selfie");
+                      if (url) setEditPhotoUrl(url);
+                    }} />
+                </label>
+              </div>
+
+              <p className={styles.editGroupLabel} style={{ marginTop: 14 }}>🪪 ID Card</p>
+              <div className={styles.editPhotoRow}>
+                {editIdUrl
+                  ? <img src={editIdUrl} className={styles.editThumb} alt="id" style={{ objectFit: "contain" }} />
+                  : <div className={styles.editThumbEmpty}>🪪</div>}
+                <label className={styles.editUploadBtn} htmlFor="ep-id">
+                  {uploadingId ? "Uploading…" : (editIdUrl ? "Change ID" : "+ Add ID Card")}
+                  <input id="ep-id" type="file" accept="image/*" hidden disabled={uploadingId}
+                    onChange={async e => {
+                      const f = e.target.files?.[0]; if (!f) return;
+                      const url = await uploadImage(f, "id");
+                      if (url) setEditIdUrl(url);
+                    }} />
+                </label>
+              </div>
+
+              {/* Alt phone */}
+              <p className={styles.editGroupLabel} style={{ marginTop: 14 }}>📱 Alternate Number</p>
+              <input type="tel" className={styles.editInput} placeholder="Alternate mobile (optional)"
+                value={editAltPhone} onChange={e => setEditAltPhone(e.target.value)} id="ep-alt-phone" />
+
+              {/* Emergency contact */}
+              <p className={styles.editGroupLabel} style={{ marginTop: 14 }}>🏥 Emergency Contact</p>
+              <input type="tel" className={styles.editInput} placeholder="Emergency mobile number"
+                value={editEmergency} onChange={e => setEditEmergency(e.target.value)} id="ep-emergency" />
+              {editEmergency && (
+                <div className={styles.editRelRow}>
+                  {["Father","Mother","Brother","Sister","Friend","Other"].map(rel => (
+                    <button key={rel} type="button"
+                      className={`${styles.editRelTag} ${editEmergencyRel === rel ? styles.editRelTagActive : ""}`}
+                      onClick={() => setEditEmergencyRel(rel)}>{rel}</button>
+                  ))}
+                </div>
+              )}
+
+              {/* Profession */}
+              <p className={styles.editGroupLabel} style={{ marginTop: 14 }}>💼 Profession</p>
+              <div className={styles.editProfRow}>
+                {(["student","jobholder","other"] as const).map(p => (
+                  <button key={p} type="button"
+                    className={`${styles.editProfBtn} ${editProfession === p ? styles.editProfBtnActive : ""}`}
+                    onClick={() => { setEditProfession(p); setEditProfDetail(""); }}>
+                    {p === "student" ? "🎓 Student" : p === "jobholder" ? "💼 Job Holder" : "🔹 Other"}
+                  </button>
+                ))}
+              </div>
+              {editProfession === "student" && (
+                <input type="text" className={styles.editInput} style={{ marginTop: 8 }}
+                  placeholder="e.g. Engineering 3rd Year in JSS College…"
+                  value={editProfDetail} onChange={e => setEditProfDetail(e.target.value)} id="ep-study" />
+              )}
+              {editProfession === "jobholder" && (
+                <input type="text" className={styles.editInput} style={{ marginTop: 8 }}
+                  placeholder="e.g. Software Engineer at Infosys, 140/A ABC Street…"
+                  value={editProfDetail} onChange={e => setEditProfDetail(e.target.value)} id="ep-job" />
+              )}
+              {editProfession === "other" && (
+                <input type="text" className={styles.editInput} style={{ marginTop: 8 }}
+                  placeholder="What do you do? e.g. Freelancer, Business Owner…"
+                  value={editProfDetail} onChange={e => setEditProfDetail(e.target.value)} id="ep-other" />
+              )}
+
+              <button className={styles.editSaveBtn} onClick={saveProfile} disabled={editSaving || uploadingSelfie || uploadingId} id="btn-save-profile">
+                {editSaving ? <><span className={styles.spinnerSm} /> Saving…</> : "💾 Save Profile"}
+              </button>
+            </div>
+          )}
         </section>
 
         {/* ── Stay Details ── */}

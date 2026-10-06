@@ -309,12 +309,16 @@ router.get("/:id/history", requireAuth, async (req: Request, res: Response) => {
 router.patch("/:id/contact", requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { phone, altPhone, emergencyContact, emergencyRelation, idPhotoUrl } = req.body as {
+    const { phone, altPhone, emergencyContact, emergencyRelation, idPhotoUrl,
+            photoUrl, profession, professionDetail } = req.body as {
       phone?: string;
       altPhone?: string | null;
       emergencyContact?: string | null;
       emergencyRelation?: string | null;
       idPhotoUrl?: string | null;
+      photoUrl?: string | null;
+      profession?: string | null;
+      professionDetail?: string | null;
     };
 
     const tenant = await verifyTenantOwnership(id, req.owner!.ownerId, res);
@@ -335,6 +339,9 @@ router.patch("/:id/contact", requireAuth, async (req: Request, res: Response) =>
     if ("emergencyContact" in req.body) updates.emergencyContact = emergencyContact?.trim() || null;
     if ("emergencyRelation" in req.body) updates.emergencyRelation = emergencyRelation?.trim() || null;
     if ("idPhotoUrl" in req.body) updates.idPhotoUrl = idPhotoUrl || null;
+    if ("photoUrl" in req.body) updates.photoUrl = photoUrl || null;
+    if ("profession" in req.body) updates.profession = profession || null;
+    if ("professionDetail" in req.body) updates.professionDetail = professionDetail?.trim() || null;
 
     const [updated] = await db.update(tenants).set(updates).where(eq(tenants.id, id)).returning();
     res.json({ tenant: updated });
