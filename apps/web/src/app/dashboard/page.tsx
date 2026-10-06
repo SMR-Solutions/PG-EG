@@ -40,7 +40,12 @@ interface DashboardData { pg: PGData; rooms: Room[]; currentMonth: string; }
 /* ─── Helpers ─── */
 const BED_LETTERS = "ABCDEFGHIJKLMNOP";
 const TYPE_EMOJI: Record<string, string> = { gents: "🚹", ladies: "🚺", "co-living": "🧑‍🤝‍🧑" };
-const SHARE_ICONS = ["", "👤", "👥", "👥", "👨‍👩‍👧‍👦", "🏠"];
+function getSharingEmoji(type: number): string {
+  if (type <= 0) return "🏠";
+  const pairs = Math.floor(type / 2);
+  const single = type % 2;
+  return "👥".repeat(pairs) + (single ? "👤" : "");
+}
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 function monthLabel(m: string) {
@@ -466,17 +471,17 @@ export default function DashboardPage() {
           <div className={styles.headerRight}>
             <div className={styles.overallStat}>
               <span className={styles.overallNum}>{totalBeds}</span>
-              <span className={styles.overallLabel}>total</span>
+              <span className={styles.overallLabel}>total <span className={styles.bedIcon}>🛏️</span></span>
             </div>
             <div className={styles.statDivider} />
             <div className={styles.overallStat}>
               <span className={styles.overallNum} style={{ color: "var(--brand-green)" }}>{occupiedBeds}</span>
-              <span className={styles.overallLabel}>filled</span>
+              <span className={styles.overallLabel}>filled <span className={styles.bedIcon}>🛏️</span></span>
             </div>
             <div className={styles.statDivider} />
             <div className={styles.overallStat}>
               <span className={styles.overallNum} style={{ color: "#e63946" }}>{totalBeds - occupiedBeds}</span>
-              <span className={styles.overallLabel}>free</span>
+              <span className={styles.overallLabel}>free <span className={styles.bedIcon}>🛏️</span></span>
             </div>
             {pendingRentCount > 0 && (
               <>
@@ -786,7 +791,7 @@ export default function DashboardPage() {
                       onClick={() => { playWhoosh(true); setFilterType(isActive ? null : type); }} id={`sharing-card-${type}`}>
                       <DonutRing pct={stats.pct} free={stats.free} total={stats.totalBeds} />
                       <div className={styles.sharingInfo}>
-                        <span className={styles.sharingIcon}>{SHARE_ICONS[Math.min(type, 5)] || "🏠"}</span>
+                        <span className={styles.sharingIcon}>{getSharingEmoji(type)}</span>
                         <span className={styles.sharingLabel}>{type}-Share</span>
                         <span className={styles.sharingDetail}>{stats.free} of {stats.totalBeds} free</span>
                       </div>

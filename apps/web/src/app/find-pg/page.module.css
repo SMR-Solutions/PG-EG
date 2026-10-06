@@ -110,7 +110,7 @@
   display: flex; flex-direction: column;
   position: relative;
   animation: slideInRight 0.2s cubic-bezier(0.32,0.72,0,1);
-  overflow: hidden;
+  overflow: visible;
   transition: background 0.25s, border-color 0.25s;
 }
 @keyframes slideInRight {
@@ -119,18 +119,61 @@
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* Close pill */
+/* Close pill floating on left edge outside sidebar */
 .sidebarPillTab {
   position: absolute;
-  left: -32px; top: 50%; transform: translateY(-50%);
-  width: 32px; height: 52px;
-  border-radius: 12px 0 0 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border); border-right: none;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; z-index: 10;
+  top: 50%;
+  left: -44px;
+  transform: translateY(-50%);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 210;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.38);
+  transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
+  padding: 0;
+  outline: none;
 }
-.sidebarPillArrow { font-size: 16px; color: var(--text-secondary); }
+.sidebarPillTab:hover {
+  background: #f4f4f5;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.48);
+  transform: translateY(-50%) scale(1.08);
+}
+.sidebarPillTab:active {
+  transform: translateY(-50%) scale(0.93);
+}
+.sidebarPillArrow {
+  font-size: 18px;
+  color: #111111;
+  font-weight: 900;
+  display: inline-block;
+  animation: nudgeRightArrow 1.0s ease-in-out infinite;
+  line-height: 1;
+}
+
+:global([data-theme="light"]) .sidebarPillTab {
+  background: #111111;
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+}
+:global([data-theme="light"]) .sidebarPillTab:hover {
+  background: #222222;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+}
+:global([data-theme="light"]) .sidebarPillArrow {
+  color: #ffffff;
+}
+
+@keyframes nudgeRightArrow {
+  0%, 100% { transform: translateX(0);    opacity: 0.75; }
+  50%       { transform: translateX(4px);  opacity: 1;    }
+}
 
 /* Theme pill */
 .themePill {
