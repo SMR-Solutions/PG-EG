@@ -27,11 +27,13 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
     const {
       bedId, pgId, name, phone, altPhone, emergencyContact, emergencyRelation,
       joiningDate, rentAmount, advanceAmount, paymentMode, photoUrl, idPhotoUrl,
+      profession, professionDetail,
     } = req.body as {
       bedId: string; pgId: string; name: string; phone: string;
       altPhone?: string; emergencyContact?: string; emergencyRelation?: string;
       joiningDate: string; rentAmount: number; advanceAmount: number;
       paymentMode: string; photoUrl?: string; idPhotoUrl?: string;
+      profession?: string; professionDetail?: string;
     };
 
     if (!bedId || !pgId || !name?.trim() || !phone?.trim()) {
@@ -73,6 +75,8 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       paymentMode: paymentMode || "cash",
       photoUrl: photoUrl || null,
       idPhotoUrl: idPhotoUrl || null,
+      profession: profession || null,
+      professionDetail: professionDetail?.trim() || null,
       status: "active",
     }).returning();
 

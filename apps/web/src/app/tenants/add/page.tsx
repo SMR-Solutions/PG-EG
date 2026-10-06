@@ -55,6 +55,8 @@ function CheckInForm() {
   const [emergencyContact, setEmergencyContact] = useState("");
   const [emergencyRelation, setEmergencyRelation] = useState("Father");
   const [joiningDate, setJoiningDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [profession, setProfession] = useState<"student" | "jobholder" | "">("" );
+  const [professionDetail, setProfessionDetail] = useState("");
   const [monthlyRent, setMonthlyRent] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
   const [paymentMode, setPaymentMode] = useState<"cash" | "upi">("cash");
@@ -160,6 +162,8 @@ function CheckInForm() {
           rentAmount: rentVal,
           advanceAmount: depositVal,
           paymentMode,
+          profession: profession || undefined,
+          professionDetail: professionDetail.trim() || undefined,
           photoUrl: selfieUrl || null,
           idPhotoUrl: idUrl || null,
         }),
@@ -332,8 +336,49 @@ function CheckInForm() {
             ))}
           </div>
 
+          {/* Profession */}
+          <p className={styles.fieldGroupLabel} style={{ marginTop: 14 }}>Profession</p>
+          <div className={styles.professionRow}>
+            <button
+              type="button"
+              className={`${styles.profBtn} ${profession === "student" ? styles.profBtnActive : ""}`}
+              onClick={() => { setProfession("student"); setProfessionDetail(""); }}
+              disabled={submitting}
+            >🎓 Student</button>
+            <button
+              type="button"
+              className={`${styles.profBtn} ${profession === "jobholder" ? styles.profBtnActive : ""}`}
+              onClick={() => { setProfession("jobholder"); setProfessionDetail(""); }}
+              disabled={submitting}
+            >💼 Job Holder</button>
+          </div>
+          {profession === "student" && (
+            <input
+              type="text"
+              className={styles.input}
+              style={{ marginTop: 10 }}
+              placeholder="What studies? e.g. Engineering 3rd Year in JSS College…"
+              value={professionDetail}
+              onChange={e => setProfessionDetail(e.target.value)}
+              id="input-study-detail"
+              disabled={submitting}
+            />
+          )}
+          {profession === "jobholder" && (
+            <input
+              type="text"
+              className={styles.input}
+              style={{ marginTop: 10 }}
+              placeholder="Job Details e.g. Software Engineer at Infosys, 140/A ABC Street…"
+              value={professionDetail}
+              onChange={e => setProfessionDetail(e.target.value)}
+              id="input-job-detail"
+              disabled={submitting}
+            />
+          )}
+
           {/* Joining date */}
-          <div className={styles.dateRow}>
+          <div className={styles.dateRow} style={{ marginTop: 14 }}>
             <label className={styles.dateLabel}>Joining Date</label>
             <input type="date" className={styles.input} value={joiningDate}
               onChange={(e) => setJoiningDate(e.target.value)} id="input-date" disabled={submitting} />
@@ -347,18 +392,8 @@ function CheckInForm() {
             <span className={styles.sectionTitle}>Money Received</span>
           </div>
 
-          {/* Monthly Rent */}
-          <p className={styles.fieldGroupLabel}>Monthly Rent</p>
-          <div className={styles.depositRow}>
-            <span className={styles.rupeeSign}>₹</span>
-            <input type="number" className={`${styles.input} ${styles.depositInput}`}
-              placeholder="Monthly Rent Amount" value={monthlyRent}
-              onChange={(e) => setMonthlyRent(e.target.value)}
-              id="input-rent" inputMode="numeric" disabled={submitting} />
-          </div>
-
           {/* Deposit */}
-          <p className={styles.fieldGroupLabel} style={{ marginTop: 14 }}>Deposit (Advance)</p>
+          <p className={styles.fieldGroupLabel}>Deposit (Advance)</p>
           <div className={styles.depositRow}>
             <span className={styles.rupeeSign}>₹</span>
             <input type="number" className={`${styles.input} ${styles.depositInput}`}
@@ -376,6 +411,16 @@ function CheckInForm() {
               onClick={() => setPaymentMode("upi")} id="btn-upi">
               <span className={styles.payIcon}>📱</span><span>UPI</span>
             </button>
+          </div>
+
+          {/* Monthly Rent */}
+          <p className={styles.fieldGroupLabel} style={{ marginTop: 14 }}>Monthly Rent</p>
+          <div className={styles.depositRow}>
+            <span className={styles.rupeeSign}>₹</span>
+            <input type="number" className={`${styles.input} ${styles.depositInput}`}
+              placeholder="Monthly Rent Amount" value={monthlyRent}
+              onChange={(e) => setMonthlyRent(e.target.value)}
+              id="input-rent" inputMode="numeric" disabled={submitting} />
           </div>
         </div>
 

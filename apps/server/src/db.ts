@@ -90,6 +90,8 @@ export const tenants = pgTable("tenants", {
   paymentMode: text("payment_mode"),                  // cash | upi (for deposit)
   depositDeduction: integer("deposit_deduction").default(0),
   refundMode: text("refund_mode"),
+  profession: text("profession"),                      // student | jobholder
+  professionDetail: text("profession_detail"),         // study/job details
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
