@@ -34,3 +34,15 @@
 .saveBtn { width: 100%; padding: 16px; border-radius: 14px; background: linear-gradient(135deg, #2dc653, #16a34a); border: none; color: #000; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: opacity 0.15s, transform 0.15s; }
 .saveBtn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
 .saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ─── Light mode contrast overrides ─── */
+:global([data-theme="light"]) .subtitle { color: #1f2937; font-weight: 500; }
+:global([data-theme="light"]) .label { color: #000000; font-weight: 800; }
+:global([data-theme="light"]) .optional { color: #4b5563; font-weight: 600; opacity: 1; }
+:global([data-theme="light"]) .input { color: #000000; font-weight: 700; background: #ffffff; border-color: #cbd5e1; }
+:global([data-theme="light"]) .typeBtn { color: #111827; opacity: 0.9; font-weight: 600; background: #e2e8f0; border-color: #cbd5e1; }
+:global([data-theme="light"]) .typeBtnActive { color: #000000; opacity: 1; font-weight: 800; background: rgba(45,198,83,0.18); border-color: #2dc653; }
+:global([data-theme="light"]) .sharingBtn { color: #111827; opacity: 0.9; font-weight: 600; background: #e2e8f0; border-color: #cbd5e1; }
+:global([data-theme="light"]) .sharingBtnActive { color: #000000; opacity: 1; font-weight: 800; background: rgba(45,198,83,0.18); border-color: #2dc653; }
+:global([data-theme="light"]) .stepBtn { color: #000000; background: #e2e8f0; border-color: #cbd5e1; font-weight: 800; }
+:global([data-theme="light"]) .stepValue { color: #000000; font-weight: 800; }

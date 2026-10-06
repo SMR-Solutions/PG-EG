@@ -115,3 +115,19 @@
 .optionTitle { font-size: 16px; font-weight: 700; color: var(--text-primary); }
 .optionDesc { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
 .optionArrow { margin-left: auto; font-size: 18px; color: var(--text-muted); }
+
+/* ─── Light mode contrast overrides ─── */
+:global([data-theme="light"]) .subtitle { color: #1f2937; font-weight: 500; }
+:global([data-theme="light"]) .emptyNote { color: #374151; font-weight: 500; }
+:global([data-theme="light"]) .pgCard { background: #ffffff; border-color: #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+:global([data-theme="light"]) .pgCardName { color: #000000; font-weight: 800; }
+:global([data-theme="light"]) .pgCardMeta { color: #111827; font-weight: 700; }
+:global([data-theme="light"]) .pgCardAddress { color: #374151; font-weight: 600; opacity: 1; }
+:global([data-theme="light"]) .pgCardArrow { color: #111827; font-weight: 700; }
+:global([data-theme="light"]) .selectedPgName { color: #000000; font-weight: 800; }
+:global([data-theme="light"]) .selectedPgMeta { color: #1f2937; font-weight: 600; }
+:global([data-theme="light"]) .changePgBtn { color: #000000; border-color: #94a3b8; font-weight: 700; }
+:global([data-theme="light"]) .optionCard { background: #ffffff; border-color: #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+:global([data-theme="light"]) .optionTitle { color: #000000; font-weight: 800; }
+:global([data-theme="light"]) .optionDesc { color: #374151; font-weight: 600; }
+:global([data-theme="light"]) .optionArrow { color: #111827; font-weight: 700; }

@@ -72,22 +72,22 @@
 /* ─── Fields ─── */
 .fieldGroup { display: flex; flex-direction: column; gap: 6px; }
 .fieldLabel {
-  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  font-size: 11px; font-weight: 800; color: var(--text-secondary);
   text-transform: uppercase; letter-spacing: 0.06em; margin: 0;
 }
-.fieldHint { font-size: 11px; color: var(--text-muted); margin: 0; opacity: 0.7; }
+.fieldHint { font-size: 11px; color: var(--text-secondary); margin: 0; opacity: 0.85; }
 
 .fieldReadonly {
   display: flex; align-items: center; justify-content: space-between;
   padding: 11px 14px;
-  background: var(--border);
+  background: var(--bg-overlay);
   border: 1.5px solid var(--border-hover);
   border-radius: 10px;
-  font-size: 14px; font-weight: 600; color: var(--text-primary); opacity: 0.75;
+  font-size: 14px; font-weight: 700; color: var(--text-primary); opacity: 1;
 }
 .lockBadge {
   font-size: 10px; font-weight: 700;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   background: var(--border);
   border: 1px solid var(--border-hover);
   border-radius: 20px; padding: 2px 8px;
@@ -103,8 +103,8 @@
 }
 .inputWrap:focus-within { border-color: rgba(45,198,83,0.5); }
 .inputPrefix {
-  padding: 0 12px; color: var(--text-muted);
-  font-size: 13px; font-weight: 600;
+  padding: 0 12px; color: var(--text-primary);
+  font-size: 13px; font-weight: 700;
 }
 .input {
   flex: 1; background: none; border: none; outline: none;
@@ -177,3 +177,49 @@ input.input:focus { border-color: rgba(45,198,83,0.5); outline: none; }
 .mediaBtnPayment:hover { border-color: #6366f1; background: rgba(99,102,241,0.07); }
 .mediaBtnIcon { font-size: 28px; line-height: 1; }
 .mediaBtnLabel { font-size: 12px; font-weight: 700; color: var(--text-primary); text-align: center; line-height: 1.3; }
+
+/* ─── Light mode contrast overrides ─── */
+:global([data-theme="light"]) .photoHint {
+  color: #000000;
+  font-weight: 700;
+}
+:global([data-theme="light"]) .fieldLabel {
+  color: #000000;
+  font-weight: 800;
+}
+:global([data-theme="light"]) .fieldHint {
+  color: #1f2937;
+  font-weight: 600;
+  opacity: 1;
+}
+:global([data-theme="light"]) .fieldReadonly {
+  color: #000000;
+  opacity: 1;
+  font-weight: 700;
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+:global([data-theme="light"]) .lockBadge {
+  color: #000000;
+  background: #cbd5e1;
+  border-color: #94a3b8;
+  font-weight: 700;
+}
+:global([data-theme="light"]) .inputPrefix {
+  color: #000000;
+  font-weight: 700;
+}
+:global([data-theme="light"]) .input {
+  color: #000000;
+  font-weight: 700;
+}
+:global([data-theme="light"]) input.input {
+  color: #000000;
+  font-weight: 700;
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+:global([data-theme="light"]) .mediaBtnLabel {
+  color: #000000;
+  font-weight: 800;
+}

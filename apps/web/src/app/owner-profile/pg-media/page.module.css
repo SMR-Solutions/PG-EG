@@ -95,3 +95,12 @@
 .confirmYes { flex: 1; padding: 13px; background: #e63946; border: none; border-radius: 12px; color: #fff; font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit; transition: background 0.15s; box-shadow: 0 4px 16px rgba(230,57,70,0.35); }
 .confirmYes:hover { background: #b91c1c; }
 .confirmYes:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ─── Light mode contrast overrides ─── */
+:global([data-theme="light"]) .tab { color: #374151; font-weight: 700; }
+:global([data-theme="light"]) .tabActive { color: #000000 !important; background: #ffffff !important; }
+:global([data-theme="light"]) .subtitle { color: #1f2937; font-weight: 500; }
+:global([data-theme="light"]) .countBadge { color: #000000; font-weight: 700; border-color: #cbd5e1; }
+:global([data-theme="light"]) .docName { color: #000000; font-weight: 800; }
+:global([data-theme="light"]) .emptyHint { color: #374151; }
+:global([data-theme="light"]) .privateNotice { color: #1f2937; font-weight: 500; }

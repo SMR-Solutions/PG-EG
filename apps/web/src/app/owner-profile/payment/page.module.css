@@ -75,3 +75,12 @@
 .previewBody { display: flex; flex-direction: column; gap: 8px; }
 .previewUpi { font-size: 15px; color: var(--text-primary); margin: 0; }
 .previewUpi strong { color: #2dc653; }
+
+/* ─── Light mode contrast overrides ─── */
+:global([data-theme="light"]) .subtitle { color: #1f2937; font-weight: 500; }
+:global([data-theme="light"]) .sectionLabel { color: #000000; font-weight: 800; }
+:global([data-theme="light"]) .sectionHint { color: #374151; font-weight: 600; opacity: 1; }
+:global([data-theme="light"]) .uploadQrBtn { color: #000000; border-color: #cbd5e1; }
+:global([data-theme="light"]) .upiInput { color: #000000; font-weight: 700; }
+:global([data-theme="light"]) .upiInput::placeholder { color: #6b7280; }
+:global([data-theme="light"]) .previewTitle { color: #000000; font-weight: 800; }

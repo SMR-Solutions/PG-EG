@@ -88,3 +88,28 @@
 .confirmDel { flex: 1; padding: 12px; background: #ef4444; border: none; border-radius: 12px; color: #fff; font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit; transition: opacity 0.15s; }
 .confirmDel:hover:not(:disabled) { opacity: 0.85; }
 .confirmDel:disabled { opacity: 0.6; cursor: wait; }
+
+/* ─── Light mode contrast overrides ─── */
+:global([data-theme="light"]) .subtitle { color: #1f2937; font-weight: 500; }
+:global([data-theme="light"]) .yearTotalLabel { color: #000000; font-weight: 800; }
+:global([data-theme="light"]) .chartTitle { color: #000000; font-weight: 800; }
+:global([data-theme="light"]) .chartLegend { color: #1f2937; font-weight: 600; }
+:global([data-theme="light"]) .monthTab { color: #1f2937; border-color: #cbd5e1; font-weight: 600; background: #ffffff; }
+:global([data-theme="light"]) .monthTab:hover { border-color: #6366f1; color: #6366f1; }
+:global([data-theme="light"]) .monthTabActive { background: #6366f1 !important; border-color: #6366f1 !important; color: #ffffff !important; font-weight: 800; }
+:global([data-theme="light"]) .formTitle { color: #000000; font-weight: 800; }
+:global([data-theme="light"]) .fieldLabel { color: #000000; font-weight: 800; }
+:global([data-theme="light"]) .fieldInput { color: #000000; font-weight: 700; background: #ffffff; border-color: #cbd5e1; }
+:global([data-theme="light"]) .fieldInput::placeholder { color: #6b7280; opacity: 1; }
+:global([data-theme="light"]) .fieldInput[type="date"] { color-scheme: light; }
+:global([data-theme="light"]) .listTitle { color: #000000; font-weight: 800; }
+:global([data-theme="light"]) .expItem { color: #000000; font-weight: 700; }
+:global([data-theme="light"]) .expDate { color: #374151; font-weight: 500; }
+:global([data-theme="light"]) .emptyMsg { color: #374151; font-weight: 500; }
+:global([data-theme="light"]) .chartCard,
+:global([data-theme="light"]) .formCard,
+:global([data-theme="light"]) .listCard {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}

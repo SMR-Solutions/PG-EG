@@ -40,9 +40,9 @@ function BarChart({ monthTotals, year }: { monthTotals: number[]; year: number }
         return (
           <g key={i}>
             <line x1={PAD.left} y1={y} x2={PAD.left + innerW} y2={y}
-              stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+              stroke="var(--border-hover)" strokeWidth="1" strokeOpacity="0.5" />
             <text x={PAD.left - 8} y={y + 4} textAnchor="end"
-              fill="rgba(255,255,255,0.4)" fontSize="10">
+              fill="var(--text-secondary)" fontSize="10" fontWeight="600">
               {v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}
             </text>
           </g>
@@ -65,19 +65,19 @@ function BarChart({ monthTotals, year }: { monthTotals: number[]; year: number }
               rx="5" ry="5"
               fill={isCurrent
                 ? "url(#barGradActive)"
-                : isEmpty ? "rgba(255,255,255,0.05)" : "url(#barGrad)"}
+                : isEmpty ? "var(--border)" : "url(#barGrad)"}
             />
             {/* Amount label on top */}
             {val > 0 && (
               <text x={x + barW / 2} y={y - 5} textAnchor="middle"
-                fill={isCurrent ? "#fff" : "rgba(255,255,255,0.55)"} fontSize="9" fontWeight="600">
+                fill={isCurrent ? "#d97706" : "var(--text-primary)"} fontSize="9" fontWeight="700">
                 {val >= 1000 ? `${(val/1000).toFixed(1)}k` : val}
               </text>
             )}
             {/* Month label */}
             <text x={x + barW / 2} y={H - PAD.bottom + 14} textAnchor="middle"
-              fill={isCurrent ? "#fff" : "rgba(255,255,255,0.5)"} fontSize="10"
-              fontWeight={isCurrent ? "700" : "400"}>
+              fill={isCurrent ? "#6366f1" : "var(--text-primary)"} fontSize="10"
+              fontWeight={isCurrent ? "800" : "600"}>
               {MONTHS[i]}
             </text>
           </g>
