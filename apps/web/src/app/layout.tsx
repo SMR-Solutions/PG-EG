@@ -13,10 +13,10 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
-  title: "PG-EG — Making PG Maintenance Easy",
+  title: "PG-EG — Find PGs & Manage Properties Digitally",
   description:
-    "PG-EG is the simplest way for PG owners to manage their rooms, beds, and tenants — all in one place.",
-  keywords: ["PG management", "paying guest", "room management", "tenant management"],
+    "Find your perfect PG instantly or manage your PG property digitally with 3D building management, automated rent tracking, and seamless tenant tools. No hassle, just PG-EG.",
+  keywords: ["PG near me", "find PG", "PG accommodation", "paying guest", "PG management app", "tenant management", "rent tracking", "3D building management", "PG software"],
   authors: [{ name: "PG-EG" }],
   applicationName: "PG-EG",
   appleWebApp: {

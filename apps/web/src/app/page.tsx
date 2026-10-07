@@ -90,7 +90,11 @@ export default function HomePage() {
         {/* Logo */}
         <div className={`${styles.logoWrap} animate-fade-up`}>
           <AppLogo size="lg" />
-          <p className={styles.tagline}>Searching PG?🧐 — It&apos;s Very Easy😎.</p>
+          <div className={styles.taglineWrap}>
+            <span className={styles.taglinePart1}>Searching PG? 🧐</span>
+            <span className={styles.taglineDash}> — </span>
+            <span className={styles.taglinePart2}>It&apos;s Very Easy 😎.</span>
+          </div>
         </div>
 
         {/* ── FIND PG — main CTA ── */}
@@ -109,7 +113,7 @@ export default function HomePage() {
           </button>
 
           <p className={styles.ctaHint}>
-            📍 Near your college · 🏢 Near your workplace · 🔗 Paste any Maps link
+            📍 Near your college · 🏢 Near your workplace
           </p>
         </div>
       </div>
@@ -121,18 +125,17 @@ export default function HomePage() {
         <div className={`${styles.footerSection} animate-fade-up delay-2`}>
           <div className={styles.footerIcon}>🎓</div>
           <div className={styles.footerBody}>
-            <h3 className={styles.footerTitle}>Find PGs instantly — anywhere</h3>
-            <p className={styles.footerDesc}>
-              Share your location or drop a Google Maps link of your college, office, or
-              any landmark. PG-EG instantly shows you the nearest registered PGs with
-              distances, sharing types, and a one-tap route to each one.
-              No sign-up needed to browse — just search and go.
-            </p>
+            <h3 className={styles.footerTitle}><span className={styles.highlight}>Find PGs instantly — anywhere</span></h3>
+            <ul className={styles.footerList}>
+              <li>Just click &quot;<span className={styles.highlight}>Find PG Near Me</span>&quot; — That&apos;s it.</li>
+              <li>Get all the registered <span className={styles.highlight}>PGs near you instantly</span>.</li>
+              <li>Select one, see authentic images, call, enquire —&gt; JOIN the PG.</li>
+              <li>That <span className={styles.highlight}>simple</span>... <span className={styles.highlight}>no tension</span> , no hassle.</li>
+            </ul>
             <div className={styles.footerChips}>
               <span className={styles.chip}>📍 GPS search</span>
               <span className={styles.chip}>🏫 Near college</span>
               <span className={styles.chip}>🏢 Near office</span>
-              <span className={styles.chip}>🔗 Maps link</span>
               <span className={styles.chip}>🗺️ One-tap directions</span>
             </div>
           </div>
@@ -142,21 +145,25 @@ export default function HomePage() {
 
         {/* ── For owners ── */}
         <div className={`${styles.footerSection} animate-fade-up delay-3`}>
-          <div className={styles.footerIcon}>🏗️</div>
+          <div className={styles.footerIcon}>🏢</div>
           <div className={styles.footerBody}>
-            <h3 className={styles.footerTitle}>PG Owners — manage everything digitally</h3>
-            <p className={styles.footerDesc}>
-              Register your PG once and let students find you automatically. Build your
-              PG as a real <strong>3D digital structure</strong> — floors, rooms, beds and
-              tenants — all in your mobile. Know exactly which bed is occupied, which rent
-              is due, and who lives where, from anywhere.
-            </p>
+            <h3 className={styles.footerTitle}><span className={styles.highlight}>PG Owners — manage everything digitally</span></h3>
+            <ul className={styles.footerList}>
+              <li><span className={styles.highlight}>Register your PG</span> once and let students/job-holders find you automatically.</li>
+              <li>🏢 <strong><span className={styles.highlight}>Your Building in your Mobile.</span></strong></li>
+              <li>All PG details tracked digitally — Building, Floors, Rooms, Beds, and Tenants.</li>
+              <li>📸 <span className={styles.highlight}>Upload PG images</span> to increase visibility &amp; trust.</li>
+              <li>📄 <strong>SAVE PG Documents safely</strong> in a secure digital vault.</li>
+              <li>📅 <span className={styles.highlight}>Send Rent Reminders with one tap via WhatsApp</span>.</li>
+              <li>💵 Automated <span className={styles.highlight}><strong>Rent Collection Reports</strong> &amp; balances.</span></li>
+              <li>📊 <span className={styles.highlight}><strong>Expenses Tracker</strong></span> — manage everything you spend &amp; plan to save.</li>
+            </ul>
             <div className={styles.footerChips}>
-              <span className={styles.chip}>🏢 3D building view</span>
-              <span className={styles.chip}>🛏️ Beds &amp; rooms</span>
-              <span className={styles.chip}>👤 Tenant records</span>
-              <span className={styles.chip}>💰 Rent tracking</span>
-              <span className={styles.chip}>🔒 Data safety</span>
+              <span className={styles.chip}>🏢 3D Building Management</span>
+              <span className={styles.chip}>💰 Rent &amp; Expense Tracking</span>
+              <span className={styles.chip}>📊 Financial Reports</span>
+              <span className={styles.chip}>🔒 Secure Data Vault</span>
+              <span className={styles.chip}>📱 WhatsApp Integration</span>
             </div>
           </div>
         </div>
