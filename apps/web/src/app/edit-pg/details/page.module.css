@@ -12,10 +12,10 @@
 .logoPG { color: #e63946; } .logoDash { color: var(--text-muted); } .logoEG { color: #2dc653; }
 .titleBlock { display: flex; flex-direction: column; gap: 4px; }
 .title { font-size: 26px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px; margin: 0; }
-.subtitle { font-size: 14px; color: var(--text-muted); margin: 0; }
+.subtitle { font-size: 14px; color: var(--text-primary); margin: 0; }
 .form { display: flex; flex-direction: column; gap: 18px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 24px; box-shadow: var(--shadow-card); }
 .field { display: flex; flex-direction: column; gap: 8px; }
-.label { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; }
+.label { font-size: 12px; font-weight: 600; color: var(--text-primary); letter-spacing: 0.5px; text-transform: uppercase; }
 .optional { font-weight: 400; color: var(--text-muted); opacity: 0.6; text-transform: none; letter-spacing: 0; }
 .input { background: var(--bg-overlay); border: 1px solid var(--border-hover); border-radius: 12px; color: var(--text-primary); font-size: 15px; font-family: inherit; padding: 14px 16px; outline: none; transition: border-color 0.15s; width: 100%; box-sizing: border-box; }
 .input:focus { border-color: rgba(45,198,83,0.5); }

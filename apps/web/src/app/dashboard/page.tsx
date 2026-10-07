@@ -748,7 +748,7 @@ export default function DashboardPage() {
           <section className={styles.sharingSection}>
             {/* Label row with chevron navigation */}
             <div className={styles.sharingNav}>
-              <p className={`${styles.sectionLabel} ${styles.sharingNavLabel}`} style={{ margin: 0 }}>AVAILABILITY BY SHARING TYPE</p>
+              <p className={`${styles.sectionLabel} ${styles.sharingNavLabel}`} style={{ margin: 0, color: "#ffffff", opacity: 1 }}>AVAILABILITY BY SHARING TYPE</p>
               {/* Right side controls — chevrons hidden on small screens, collapse always visible */}
               <div className={styles.sharingNavRight}>
                 {/* ‹ › scroll chevrons — hidden on small screens via CSS */}

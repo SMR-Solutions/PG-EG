@@ -56,6 +56,71 @@ function TenantProfileInner() {
   const [error, setError] = useState("");
   const [idFlipped, setIdFlipped] = useState(false);
 
+  // Lightbox state
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [lightboxZoom, setLightboxZoom] = useState(1);
+  const [touchStart, setTouchStart] = useState<{x: number, y: number} | null>(null);
+  const [touchEnd, setTouchEnd] = useState<{x: number, y: number} | null>(null);
+  const [lastTap, setLastTap] = useState(0);
+  const [pinchDist, setPinchDist] = useState(0);
+
+  const handleLbTouchStart = (e: React.TouchEvent) => {
+    if (e.targetTouches.length === 1) {
+      setTouchEnd(null);
+      setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+    } else if (e.targetTouches.length === 2) {
+      const touch1 = e.targetTouches[0];
+      const touch2 = e.targetTouches[1];
+      setPinchDist(Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY));
+    }
+  };
+
+  const handleLbTouchMove = (e: React.TouchEvent) => {
+    if (e.targetTouches.length === 1) {
+      setTouchEnd({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+    } else if (e.targetTouches.length === 2) {
+      const touch1 = e.targetTouches[0];
+      const touch2 = e.targetTouches[1];
+      const dist = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+      if (pinchDist) {
+        const delta = dist - pinchDist;
+        setLightboxZoom(z => Math.min(5, Math.max(1, z + delta * 0.015)));
+      }
+      setPinchDist(dist);
+    }
+  };
+
+  const handleLbTouchEnd = () => {
+    setPinchDist(0);
+    
+    // Double tap
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      setLightboxZoom(z => (z === 1 ? 2.5 : 1));
+      setLastTap(0);
+    } else {
+      setLastTap(now);
+    }
+
+    // Swipe
+    if (!touchStart || !touchEnd) return;
+    const xDistance = touchStart.x - touchEnd.x;
+    const yDistance = Math.abs(touchStart.y - touchEnd.y);
+    
+    // Swipe left or right if horizontal movement is greater than vertical movement
+    if (Math.abs(xDistance) > 50 && yDistance < 60) {
+      const pUrl = data?.tenant.photoUrl;
+      const iUrl = data?.tenant.idPhotoUrl;
+      if (pUrl && iUrl) {
+        setLightboxImg(prev => prev === pUrl ? iUrl : pUrl);
+        setLightboxZoom(1);
+      }
+    }
+    
+    setTouchStart(null);
+    setTouchEnd(null);
+  };
+
   // Rent payment state
   const [rentPayMode, setRentPayMode] = useState<"cash" | "upi">("cash");
   const [rentPayAmount, setRentPayAmount] = useState("");
@@ -231,13 +296,23 @@ function TenantProfileInner() {
       {/* Header */}
       <header className={styles.header}>
         <button className={styles.backBtn} onClick={() => router.push("/dashboard")} id="btn-back">← Dashboard</button>
-        <AppLogo size="sm" />
+        <AppLogo size="xs" />
       </header>
 
       <div className={styles.content}>
 
-        {/* Hero — photo (click to flip to ID card) */}
-        <div className={styles.heroWrap}>
+        {/* Hero — photo (click to open lightbox) */}
+        <div 
+          className={styles.heroWrap} 
+          onClick={() => {
+            const url = idFlipped ? tenant.idPhotoUrl : tenant.photoUrl;
+            if (url) {
+              setLightboxImg(url);
+              setLightboxZoom(1);
+            }
+          }}
+          style={{ cursor: (idFlipped ? tenant.idPhotoUrl : tenant.photoUrl) ? "zoom-in" : "default" }}
+        >
           {/* Photo side */}
           {!idFlipped && (
             tenant.photoUrl
@@ -617,7 +692,7 @@ function TenantProfileInner() {
             <section className={styles.section}>
               <h2 className={styles.sectionTitle}>🕓 Full History</h2>
               <div style={{ position: "relative", paddingLeft: 28 }}>
-                <div style={{ position: "absolute", left: 10, top: 0, bottom: 0, width: 2, background: "rgba(255,255,255,0.08)", borderRadius: 2 }} />
+                <div className={styles.historyLine} />
 
                 {items.map((item, i) => {
                   const isLast = i === items.length - 1;
@@ -625,19 +700,19 @@ function TenantProfileInner() {
                   if (item.kind === "rent") {
                     return (
                       <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: isLast ? 0 : 20, position: "relative" }}>
-                        <div style={{ position: "absolute", left: -22, top: 4, width: 12, height: 12, borderRadius: "50%", background: "#f4a261", border: "2px solid rgba(255,255,255,0.15)" }} />
-                        <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(244,162,97,0.15)", borderRadius: 10, padding: "10px 14px" }}>
+                        <div style={{ position: "absolute", left: -22, top: 4, width: 12, height: 12, borderRadius: "50%", background: "#f4a261", border: "2px solid var(--bg-base)" }} />
+                        <div className={`${styles.historyCard} ${styles.historyCardRent}`}>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                             <span style={{ fontWeight: 700, fontSize: 13, color: "#f4a261" }}>
                               {item.mode === "upi" ? "📱" : "💵"} Rent Paid · {monthLabel(item.month)}
                             </span>
-                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{fmt(item.createdAt)} {fmtTime(item.createdAt)}</span>
+                            <span className={styles.historyTimestamp}>{fmt(item.createdAt)} {fmtTime(item.createdAt)}</span>
                           </div>
                           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                            <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>₹{item.amount.toLocaleString()}</span>
-                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", textTransform: "uppercase" }}>{item.mode}</span>
+                            <span className={styles.historyAmount}>₹{item.amount.toLocaleString()}</span>
+                            <span className={styles.historyMode}>{item.mode}</span>
                           </div>
-                          {item.note && <p style={{ margin: "4px 0 0", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{item.note}</p>}
+                          {item.note && <p className={styles.historyNote}>{item.note}</p>}
                         </div>
                       </div>
                     );
@@ -659,32 +734,32 @@ function TenantProfileInner() {
 
                   return (
                     <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: isLast ? 0 : 20, position: "relative" }}>
-                      <div style={{ position: "absolute", left: -22, top: 4, width: 12, height: 12, borderRadius: "50%", background: dot, border: "2px solid rgba(255,255,255,0.15)" }} />
-                      <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: `1px solid ${dot}26`, borderRadius: 10, padding: "10px 14px" }}>
+                      <div style={{ position: "absolute", left: -22, top: 4, width: 12, height: 12, borderRadius: "50%", background: dot, border: "2px solid var(--bg-base)" }} />
+                      <div className={styles.historyCard} style={{ borderColor: `${dot}40` }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                           <span style={{ fontWeight: 700, fontSize: 13, color: dot }}>{icon} {label}</span>
-                          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{fmt(item.createdAt)} {fmtTime(item.createdAt)}</span>
+                          <span className={styles.historyTimestamp}>{fmt(item.createdAt)} {fmtTime(item.createdAt)}</span>
                         </div>
                         {isMove && item.fromRoom && item.toRoom && (
-                          <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
+                          <p style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>
                             <span style={{ color: "#f4a261" }}>{item.fromRoom}</span>
-                            <span style={{ margin: "0 6px", color: "rgba(255,255,255,0.3)" }}>→</span>
+                            <span className={styles.historyMoveArrow}>→</span>
                             <span style={{ color: "#4dabf7" }}>{item.toRoom}</span>
                           </p>
                         )}
                         {isCheckOut && co && (
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px", marginTop: 6 }}>
-                            {[["Deposit","#fff",co.deposit],["Deduction","#e63946",co.deduction],["Refund","#2dc653",co.refund],["Via","#fff",co.via.toUpperCase()]].map(([lbl,clr,val]) => (
-                              <div key={lbl} style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>{lbl}
-                                <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: clr }}>
+                            {[["Deposit","var(--text-primary)",co.deposit],["Deduction","#e63946",co.deduction],["Refund","#2dc653",co.refund],["Via","var(--text-primary)",co.via.toUpperCase()]].map(([lbl,clr,val]) => (
+                              <div key={lbl} className={styles.historyCoLabel}>{lbl}
+                                <span className={styles.historyCoValue} style={{ color: clr }}>
                                   {lbl !== "Via" ? "₹" : ""}{val}
                                 </span>
                               </div>
                             ))}
                           </div>
                         )}
-                        {isCheckOut && !co && item.note && <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{item.note}</p>}
-                        {(isCheckIn || (!isMove && !isCheckOut)) && item.note && <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{item.note}</p>}
+                        {isCheckOut && !co && item.note && <p className={styles.historyNote}>{item.note}</p>}
+                        {(isCheckIn || (!isMove && !isCheckOut)) && item.note && <p className={styles.historyNote}>{item.note}</p>}
                       </div>
                     </div>
                   );
@@ -817,6 +892,71 @@ function TenantProfileInner() {
           </div>
         );
       })()}
+      {/* ─── Lightbox Modal ─── */}
+      {lightboxImg && (() => {
+        const pUrl = data?.tenant?.photoUrl;
+        const iUrl = data?.tenant?.idPhotoUrl;
+        const hasBoth = !!(pUrl && iUrl);
+        const toggleImg = () => {
+          if (hasBoth) {
+            setLightboxImg(prev => prev === pUrl ? iUrl : pUrl);
+            setLightboxZoom(1);
+          }
+        };
+
+        return (
+          <div className={styles.lightboxOverlay} onClick={() => setLightboxImg(null)}>
+            <button className={styles.lightboxClose} onClick={() => setLightboxImg(null)}>✕</button>
+            
+            {hasBoth && (
+              <>
+                <button className={`${styles.lightboxChevron} ${styles.lightboxChevronLeft}`} onClick={(e) => { e.stopPropagation(); toggleImg(); }}>❮</button>
+                <button className={`${styles.lightboxChevron} ${styles.lightboxChevronRight}`} onClick={(e) => { e.stopPropagation(); toggleImg(); }}>❯</button>
+              </>
+            )}
+
+            <button className={styles.lightboxDownload} onClick={async (e) => { 
+              e.stopPropagation(); 
+              try {
+                const r = await fetch(lightboxImg);
+                const b = await r.blob();
+                const url = window.URL.createObjectURL(b);
+                const a = document.createElement("a");
+                a.href = url; 
+                a.download = `pg-eg-tenant-${Date.now()}.jpg`;
+                a.click(); 
+                window.URL.revokeObjectURL(url);
+              } catch(err) {
+                window.open(lightboxImg, "_blank");
+              }
+            }}>
+              <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            </button>
+
+            <div className={styles.lightboxControls} onClick={(e) => e.stopPropagation()}>
+              <button className={styles.lightboxBtn} onClick={() => setLightboxZoom(z => Math.max(1, z - 0.5))}>−</button>
+              <span className={styles.lightboxZoomText}>{Math.round(lightboxZoom * 100)}%</span>
+              <button className={styles.lightboxBtn} onClick={() => setLightboxZoom(z => Math.min(5, z + 0.5))}>+</button>
+            </div>
+
+            <div 
+              className={styles.lightboxImageWrapper} 
+              onClick={(e) => e.stopPropagation()}
+              onTouchStart={handleLbTouchStart}
+              onTouchMove={handleLbTouchMove}
+              onTouchEnd={handleLbTouchEnd}
+            >
+              <img 
+                src={lightboxImg} 
+                alt="Zoomed" 
+                className={styles.lightboxImage} 
+                style={{ transform: `scale(${lightboxZoom})` }} 
+              />
+            </div>
+          </div>
+        );
+      })()}
+
     </main>
   );
 }

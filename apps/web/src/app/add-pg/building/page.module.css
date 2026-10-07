@@ -176,7 +176,7 @@
   border: none;
   cursor: pointer;
   transition: background 0.15s ease;
-  color: var(--text-primary);
+  color: #ffffff;
   font-family: inherit;
   text-align: left;
   position: relative;
@@ -274,7 +274,7 @@
   height: 20px;
   background: transparent;
   border: none;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.5);
   font-size: 16px;
   cursor: pointer;
   border-radius: 50%;
@@ -338,21 +338,21 @@
 
 .addFields { display: flex; flex-direction: column; gap: 12px; }
 .addField { display: flex; flex-direction: column; gap: 6px; }
-.addLabel { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.addLabel { font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.6); }
 
 .addInput {
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: var(--radius-md);
   padding: 11px 14px;
-  color: var(--text-primary);
+  color: #ffffff;
   font-size: 15px;
   font-family: inherit;
   outline: none;
   transition: var(--transition);
   width: 100%;
 }
-.addInput::placeholder { color: var(--text-muted); }
+.addInput::placeholder { color: rgba(255, 255, 255, 0.4); }
 .addInput:focus {
   border-color: var(--brand-green);
   box-shadow: 0 0 0 3px rgba(45, 198, 83, 0.1);

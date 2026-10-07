@@ -52,7 +52,7 @@
 /* Title */
 .titleBlock { display: flex; flex-direction: column; gap: 4px; }
 .title { font-size: 28px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px; margin: 0; }
-.subtitle { font-size: 14px; color: var(--text-muted); margin: 0; }
+.subtitle { font-size: 14px; color: var(--text-primary); margin: 0; }
 
 /* PG list */
 .pgList { display: flex; flex-direction: column; gap: 12px; }
@@ -74,9 +74,9 @@
 .pgCardIcon { font-size: 28px; flex-shrink: 0; }
 .pgCardInfo { flex: 1; }
 .pgCardName { font-size: 17px; font-weight: 700; color: var(--text-primary); }
-.pgCardMeta { font-size: 12px; color: var(--text-muted); margin-top: 3px; text-transform: capitalize; }
-.pgCardAddress { font-size: 11px; color: var(--text-muted); margin-top: 2px; opacity: 0.7; }
-.pgCardArrow { font-size: 18px; color: var(--text-muted); }
+.pgCardMeta { font-size: 12px; color: var(--text-primary); margin-top: 3px; text-transform: capitalize; }
+.pgCardAddress { font-size: 11px; color: var(--text-primary); margin-top: 2px; opacity: 0.9; }
+.pgCardArrow { font-size: 18px; color: var(--text-primary); }
 
 /* Selected PG banner */
 .editOptions { display: flex; flex-direction: column; gap: 14px; }
@@ -88,7 +88,7 @@
   font-size: 20px;
 }
 .selectedPgName { font-size: 15px; font-weight: 700; color: var(--text-primary); }
-.selectedPgMeta { font-size: 12px; color: var(--text-muted); margin-top: 2px; text-transform: capitalize; }
+.selectedPgMeta { font-size: 12px; color: var(--text-primary); margin-top: 2px; text-transform: capitalize; }
 .changePgBtn {
   margin-left: auto; background: none; border: 1px solid var(--border-hover);
   color: var(--text-muted); font-size: 12px; padding: 6px 12px;
@@ -113,8 +113,8 @@
 }
 .optionIcon { font-size: 26px; flex-shrink: 0; }
 .optionTitle { font-size: 16px; font-weight: 700; color: var(--text-primary); }
-.optionDesc { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
-.optionArrow { margin-left: auto; font-size: 18px; color: var(--text-muted); }
+.optionDesc { font-size: 12px; color: var(--text-primary); margin-top: 3px; }
+.optionArrow { margin-left: auto; font-size: 18px; color: var(--text-primary); }
 
 /* ─── Light mode contrast overrides ─── */
 :global([data-theme="light"]) .subtitle { color: #1f2937; font-weight: 500; }

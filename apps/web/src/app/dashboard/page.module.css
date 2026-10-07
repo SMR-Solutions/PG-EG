@@ -1982,3 +1982,9 @@
   border-radius: 999px;
   letter-spacing: 0.04em;
 }
+
+/* ─── Light Mode Overrides ─── */
+:global([data-theme="light"]) .historyTenantPhone,
+:global([data-theme="light"]) .historyDeposit {
+  color: #111827;
+}

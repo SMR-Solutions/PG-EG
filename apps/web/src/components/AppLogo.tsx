@@ -4,13 +4,14 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface AppLogoProps {
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   onClick?: () => void;
   href?: string;
 }
 
 // Width-based sizes — height is auto via CSS (image is ~4:1 wide)
 const WIDTHS = {
+  xs: 100,
   sm: 140,
   md: 180,
   lg: 260,
