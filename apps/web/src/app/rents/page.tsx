@@ -323,6 +323,10 @@ export default function RentsPage() {
         ? `<span class="status-active">&#9679; Active</span>`
         : `<span class="status-checkout">&#9679; Checked out ${leaveDate}</span>`;
 
+      const prof = t?.profession ? (String(t.profession).charAt(0).toUpperCase() + String(t.profession).slice(1)) : "—";
+      const profDetail = t?.professionDetail ? ` (${t.professionDetail})` : "";
+      const professionText = `${prof}${profDetail}`;
+
       return `
 <div class="tenant">
   <div class="photos">
@@ -346,6 +350,7 @@ export default function RentsPage() {
       <div class="field"><label>Sharing Type</label><span>${room?.sharingType ?? "—"}-sharing</span></div>
       <div class="field"><label>Advance / Deposit</label><span>${fmtRs(advAmt)}<span class="date-note"> paid on ${joinDate}</span></span></div>
       <div class="field"><label>Deposit Deducted</label><span>${fmtRs(dedAmt)}</span></div>
+      <div class="field"><label>Profession</label><span>${professionText}</span></div>
     </div>
     <div class="rent-section">
       <div class="field"><label>Monthly Rent</label><span>${fmtRs(p.amount)}</span></div>
