@@ -339,6 +339,63 @@
   letter-spacing: 0.3px;
 }
 
+/* ─── Google Pointer Tooltip ─── */
+.googleBtnWrap {
+  position: relative;
+  width: 100%;
+}
+
+.googleBtnHighlight {
+  animation: jiggle 0.4s ease-in-out;
+  box-shadow: 0 0 0 4px rgba(45, 198, 83, 0.4) !important;
+}
+
+@keyframes jiggle {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-4px); }
+}
+
+.googlePointer {
+  position: absolute;
+  top: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--brand-green);
+  color: #000;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(45, 198, 83, 0.4);
+  z-index: 20;
+  animation: bounceTip 1.5s infinite;
+}
+
+.googlePointer p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.pointerArrowTop {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; 
+  height: 0; 
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid var(--brand-green);
+}
+
+@keyframes bounceTip {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, 5px); }
+}
+
 /* ─── Google Sign-In button ─── */
 .googleBtn {
   width: 100%;

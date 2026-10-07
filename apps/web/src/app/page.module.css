@@ -340,6 +340,33 @@
 }
 
 /* ─── Hidden ADD PG slice for owners ─── */
+.legalLinks {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  font-size: 12px;
+  margin-top: -6px;
+  margin-bottom: 8px;
+}
+
+.legalLink {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s;
+}
+.legalLink:hover {
+  color: var(--text-primary);
+}
+
+.legalDot {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+/* ─── Hidden ADD PG slice for owners ─── */
 .addPgSlice {
   display: flex;
   align-items: center;

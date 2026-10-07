@@ -174,6 +174,14 @@ export default function HomePage() {
         <div className={styles.footerBottom}>
           <p className={styles.footerMeta}>Built for PG owners &amp; tenants across India 🇮🇳</p>
 
+          <div className={styles.legalLinks}>
+            <a href="/terms" className={styles.legalLink}>Terms of Service</a>
+            <span className={styles.legalDot}>•</span>
+            <a href="/privacy" className={styles.legalLink}>Privacy Policy</a>
+            <span className={styles.legalDot}>•</span>
+            <a href="mailto:studentstoreforstudents@gmail.com" className={styles.legalLink}>Support Mail</a>
+          </div>
+
           {/* Hidden-in-plain-sight ADD PG button — only owners know to look */}
           <button
             className={styles.addPgSlice}
