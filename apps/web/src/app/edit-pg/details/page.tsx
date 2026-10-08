@@ -25,6 +25,7 @@ function EditDetailsInner() {
   const [totalFloors, setTotalFloors] = useState(1);
   const [address, setAddress] = useState("");
   const [locationLink, setLocationLink] = useState("");
+  const [baseRent, setBaseRent] = useState("");
   const [selectedSharings, setSelectedSharings] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,6 +48,7 @@ function EditDetailsInner() {
           setOriginalFloors(pg.totalFloors || 1);
           setAddress(pg.address || "");
           setLocationLink(pg.locationLink || "");
+          if (pg.baseRent) setBaseRent(String(pg.baseRent));
           setSelectedSharings(pg.sharings || []);
         }
       })
@@ -78,6 +80,7 @@ function EditDetailsInner() {
           address: address.trim(),
           locationLink: locationLink.trim() || null,
           sharings: selectedSharings,
+          baseRent: baseRent ? parseInt(baseRent) : null,
         }),
       });
       const data = await res.json();
@@ -162,6 +165,16 @@ function EditDetailsInner() {
             </div>
           </div>
 
+          {/* Rent Starting From */}
+          <div className={styles.field}>
+            <label className={styles.label}>Rent Starting From</label>
+            <input className={styles.input} type="number" value={baseRent}
+              onChange={(e) => setBaseRent(e.target.value)} placeholder="e.g. 6500" />
+            <p style={{ marginTop: 5, fontSize: 12, color: "var(--text-muted)" }}>
+              What is the base monthly rent? (Numbers only)
+            </p>
+          </div>
+
           {/* Address */}
           <div className={styles.field}>
             <label className={styles.label}>Address</label>
@@ -173,7 +186,7 @@ function EditDetailsInner() {
           <div className={styles.field}>
             <label className={styles.label}>
               Google Maps Link{" "}
-              <span style={{ color: "var(--brand-red)", fontSize: 11 }}>* Required for Find PG</span>
+              <span style={{ color: "var(--brand-red)", fontSize: 11 }}>* Required for Finding PG</span>
             </label>
             <input className={styles.input} value={locationLink}
               onChange={(e) => setLocationLink(e.target.value)}

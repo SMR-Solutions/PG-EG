@@ -57,6 +57,8 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
+      <body suppressHydrationWarning>
         {/* Theme: apply before paint to prevent flash */}
         <Script id="theme-init" strategy="beforeInteractive">{`
           (function(){
@@ -74,8 +76,6 @@ export default function RootLayout({
             });
           }
         `}</Script>
-      </head>
-      <body>
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>

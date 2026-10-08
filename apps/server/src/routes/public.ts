@@ -37,7 +37,9 @@ router.get("/pgs/nearby", async (req: Request, res: Response) => {
         totalBeds: pgs.totalBeds,
         managerName: pgs.managerName,
         managerPhone: pgs.managerPhone,
+        baseRent: pgs.baseRent,
         coverImageUrl: pgs.coverImageUrl,
+        pgImages: pgs.pgImages,
         latitude: pgs.latitude,
         longitude: pgs.longitude,
       })
@@ -64,7 +66,11 @@ router.get("/pgs/nearby", async (req: Request, res: Response) => {
           totalBeds: pg.totalBeds,
           managerName: pg.managerName,
           managerPhone: pg.managerPhone,
+          baseRent: pg.baseRent,
           coverImageUrl: pg.coverImageUrl,
+          pgImages: (() => {
+            try { return JSON.parse(pg.pgImages || "[]"); } catch { return []; }
+          })(),
           latitude: pg.latitude,
           longitude: pg.longitude,
           distanceKm: Math.round(distKm * 10) / 10, // 1 decimal place

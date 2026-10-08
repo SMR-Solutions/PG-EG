@@ -12,6 +12,7 @@ function formatPg(pg: typeof pgs.$inferSelect) {
     totalFloors: pg.totalFloors, address: pg.address, locationLink: pg.locationLink,
     sharings: JSON.parse(pg.sharings), managerName: pg.managerName || null,
     managerPhone: pg.managerPhone || null,
+    baseRent: pg.baseRent || null,
     latitude: pg.latitude || null, longitude: pg.longitude || null,
     pgImages: JSON.parse(pg.pgImages || "[]"),
     pgDocuments: JSON.parse(pg.pgDocuments || "[]"),
@@ -26,10 +27,10 @@ function formatPg(pg: typeof pgs.$inferSelect) {
 // Caller must be authenticated; ownerId is taken from the token (never from body)
 router.post("/", requireAuth, async (req: Request, res: Response) => {
   try {
-    const { name, type, totalFloors, address, locationLink, sharings, managerName, managerPhone } =
+    const { name, type, totalFloors, address, locationLink, sharings, managerName, managerPhone, baseRent } =
       req.body as {
         name: string; type: string; totalFloors: number; address: string;
-        locationLink?: string; sharings: number[]; managerName?: string; managerPhone?: string;
+        locationLink?: string; sharings: number[]; managerName?: string; managerPhone?: string; baseRent?: number | null;
       };
 
     // ownerId comes from the verified JWT, NOT from the request body
@@ -61,6 +62,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       ownerId, name: name.trim(), type, totalFloors,
       address: address.trim(), locationLink: locationLink || null,
       sharings: sharingJson, managerName: managerName.trim(), managerPhone: managerPhone.trim(),
+      baseRent: baseRent || null,
       latitude, longitude,
     }).returning();
 
@@ -101,10 +103,11 @@ router.get("/:id", requireAuth, async (req: Request, res: Response) => {
 // ─── PATCH /api/pgs/:id ───────────────────
 router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
   try {
-    const { name, type, totalFloors, address, locationLink, sharings, managerName, managerPhone } = req.body as {
+    const { name, type, totalFloors, address, locationLink, sharings, managerName, managerPhone, baseRent } = req.body as {
       name?: string; type?: string; totalFloors?: number;
       address?: string; locationLink?: string | null;
       sharings?: number[]; managerName?: string; managerPhone?: string;
+      baseRent?: number | null;
     };
 
     // Verify caller owns this PG before allowing updates
@@ -162,6 +165,7 @@ router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
     if (sharings !== undefined) updates.sharings = JSON.stringify(sharings.sort((a, b) => a - b));
     if (managerName !== undefined) updates.managerName = managerName.trim();
     if (managerPhone !== undefined) updates.managerPhone = managerPhone.trim();
+    if (baseRent !== undefined) updates.baseRent = baseRent;
     // pgImages / pgDocuments can also be patched here if passed
     const anyReq = req.body as Record<string, unknown>;
     if (anyReq.pgImages !== undefined) updates.pgImages = JSON.stringify(anyReq.pgImages);

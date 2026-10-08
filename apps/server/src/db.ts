@@ -44,6 +44,7 @@ export const pgs = pgTable("pgs", {
   // Per-PG manager contact — can differ from the Google account holder
   managerName: text("manager_name"),
   managerPhone: text("manager_phone"),
+  baseRent: integer("base_rent"),
   pgImages: text("pg_images").default("[]"),       // JSON: [{url, fileId}] — public PG gallery, max 10
   pgDocuments: text("pg_documents").default("[]"), // JSON: [{url, fileId, name}] — private locker, max 10
   paymentQrUrl: text("payment_qr_url"),            // ImageKit URL of UPI QR code image

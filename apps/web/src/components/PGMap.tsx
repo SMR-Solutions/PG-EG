@@ -187,6 +187,7 @@ export default function PGMap({
               address: pg.address ?? "",
               distanceKm: pg.distanceKm,
               managerPhone: pg.managerPhone ?? "",
+              baseRent: pg.baseRent ?? null,
             },
           }));
 
@@ -238,6 +239,7 @@ export default function PGMap({
             address: string;
             distanceKm: number;
             managerPhone: string;
+            baseRent: number | null;
           };
           const geom = e.features[0].geometry as {
             type: "Point";
@@ -256,6 +258,7 @@ export default function PGMap({
               <div style="font-size:12px;color:#555;margin-bottom:6px">
                 ${typeLabel(props.pgType)} · <strong style="color:#16a34a">${distanceLabel(props.distanceKm)}</strong>
               </div>
+              ${props.baseRent ? `<div style="font-size:12px;color:#d97706;font-weight:700;background:rgba(251,191,36,0.15);display:inline-block;padding:2px 8px;border-radius:999px;margin-bottom:6px;border:1px solid rgba(251,191,36,0.25)">Rent Starting from ₹${props.baseRent}</div>` : ""}
               ${props.address ? `<div style="font-size:11px;color:#777;margin-bottom:8px">📍 ${props.address}</div>` : ""}
               <div style="display:flex;gap:6px;flex-wrap:wrap">
                 <a href="${dirUrl}" target="_blank" rel="noopener noreferrer"

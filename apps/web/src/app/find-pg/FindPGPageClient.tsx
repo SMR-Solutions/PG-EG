@@ -6,6 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import styles from "./page.module.css";
 import AppLogo from "@/components/AppLogo";
+import Lightbox from "yet-another-react-lightbox";
+import Zoom from "yet-another-react-lightbox/plugins/zoom";
+import "yet-another-react-lightbox/styles.css";
 
 // Dynamically import map (avoids SSR issues with MapLibre WebGL)
 const PGMap = lazy(() => import("@/components/PGMap"));
@@ -38,6 +41,8 @@ interface PGResult {
   managerPhone: string | null;
   latitude: number | null;
   longitude: number | null;
+  baseRent?: number | null;
+  pgImages?: any[];
 }
 
 type Step = "search" | "results";
@@ -179,6 +184,7 @@ export default function FindPGPage() {
   const [mapView, setMapView] = useState(false);
   // Type filter for results
   const [typeFilter, setTypeFilter] = useState<"all" | "gents" | "ladies" | "coliving">("all");
+  const [viewImagesFor, setViewImagesFor] = useState<PGResult | null>(null);
 
   // Derived: filtered results based on typeFilter
   const filteredResults = typeFilter === "all"
@@ -1059,7 +1065,14 @@ export default function FindPGPage() {
                   <div className={styles.pgCardBody}>
                     <div className={styles.pgInfo}>
                       <h2 className={styles.pgName}>{pg.name}</h2>
-                      <span className={styles.pgType}>{typeLabel(pg.type)}</span>
+                      <div className={styles.pgTypeRow}>
+                        <span className={styles.pgType}>{typeLabel(pg.type)}</span>
+                        {pg.baseRent ? (
+                          <span className={styles.pgBaseRent}>
+                            Rent Starting from ₹{pg.baseRent.toLocaleString("en-IN")}
+                          </span>
+                        ) : null}
+                      </div>
                       {pg.sharings && pg.sharings.length > 0 && (
                         <div className={styles.pgSharings}>
                           {pg.sharings.sort((a, b) => a - b).map((s) => (
@@ -1074,6 +1087,26 @@ export default function FindPGPage() {
 
                     {/* Buttons row */}
                     <div className={styles.pgCardBtns}>
+                      {/* View PG */}
+                      <button
+                        className={styles.viewPgBtn}
+                        onClick={() => setViewImagesFor(pg)}
+                        id={`btn-view-${pg.id}`}
+                      >
+                        📸 View PG
+                      </button>
+
+                      {/* Enquire — call manager */}
+                      {pg.managerPhone && (
+                        <a
+                          href={`tel:${pg.managerPhone.replace(/\D/g, "")}`}
+                          className={styles.enquireBtn}
+                          id={`btn-enquire-${pg.id}`}
+                        >
+                          📞 Enquire
+                        </a>
+                      )}
+
                       {/* Directions */}
                       {(pg.latitude && pg.longitude) || pg.locationLink ? (
                         <a
@@ -1086,17 +1119,6 @@ export default function FindPGPage() {
                           🗺️ Get Directions
                         </a>
                       ) : null}
-
-                      {/* Enquire — call manager */}
-                      {pg.managerPhone && (
-                        <a
-                          href={`tel:${pg.managerPhone.replace(/\D/g, "")}`}
-                          className={styles.enquireBtn}
-                          id={`btn-enquire-${pg.id}`}
-                        >
-                          📞 Enquire
-                        </a>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -1126,6 +1148,35 @@ export default function FindPGPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ── Image Viewer Modal / Lightbox ── */}
+      {viewImagesFor && (!viewImagesFor.pgImages || viewImagesFor.pgImages.length === 0) && (
+        <div className={styles.imageModalOverlay} onClick={() => setViewImagesFor(null)}>
+          <div className={styles.imageModal} style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.imageModalHeader}>
+              <h2 className={styles.imageModalTitle}>{viewImagesFor.name}</h2>
+              <button className={styles.imageModalClose} onClick={() => setViewImagesFor(null)}>×</button>
+            </div>
+            <div className={styles.imageModalBody} style={{ display: 'block' }}>
+              <div className={styles.noImagesState}>
+                <div style={{ fontSize: "32px", marginBottom: "10px" }}>📷</div>
+                <p>No images uploaded yet.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewImagesFor && viewImagesFor.pgImages && viewImagesFor.pgImages.length > 0 && (
+        <Lightbox
+          open={true}
+          close={() => setViewImagesFor(null)}
+          slides={viewImagesFor.pgImages.map(img => ({ src: img.url || img }))}
+          plugins={[Zoom]}
+          carousel={{ padding: 0 }}
+          zoom={{ maxZoomPixelRatio: 3 }}
+        />
       )}
     </main>
   );

@@ -44,6 +44,7 @@ function PGDetailsInner() {
   const [totalFloors, setTotalFloors]     = useState(1);
   const [address, setAddress]             = useState("");
   const [locationLink, setLocationLink]   = useState("");
+  const [baseRent, setBaseRent]           = useState("");
   const [selectedSharings, setSelectedSharings] = useState<number[]>([1, 2]);
   const [showCustom, setShowCustom]       = useState(false);
   const [customValue, setCustomValue]     = useState("");
@@ -116,6 +117,7 @@ function PGDetailsInner() {
           setTotalFloors(pg.totalFloors);
           setAddress(pg.address || "");
           setLocationLink(pg.locationLink || "");
+          if (pg.baseRent) setBaseRent(String(pg.baseRent));
           if (pg.latitude && pg.longitude) setCoordStatus("found");
           else if (pg.locationLink) setCoordStatus("failed");
           const standardSharings = pg.sharings.filter((s: number) => s <= 5);
@@ -215,6 +217,7 @@ function PGDetailsInner() {
           sharings: allSharings,
           managerName: managerName.trim(),
           managerPhone: managerPhone.trim(),
+          baseRent: baseRent ? parseInt(baseRent) : null,
         }),
       });
 
@@ -541,6 +544,20 @@ function PGDetailsInner() {
                 <span className={styles.customLabel}>beds per room</span>
               </div>
             )}
+          </div>
+
+          {/* ── Rent Starting From ─────────────── */}
+          <div className={`${styles.section} animate-fade-up delay-2`} style={{ marginTop: 16 }}>
+            <p className={styles.sectionLabel}>Rent Starting From</p>
+            <p className={styles.subtitle} style={{ fontSize: 13, marginTop: -4 }}>
+              What is the base monthly rent? (Numbers only)
+            </p>
+            <input
+              id="pg-base-rent" className={styles.input}
+              type="number" placeholder="e.g. 6500"
+              value={baseRent} onChange={(e) => setBaseRent(e.target.value)}
+              disabled={saving}
+            />
           </div>
 
           {/* ── Address ──────────────────────── */}
