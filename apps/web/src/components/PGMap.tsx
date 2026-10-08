@@ -12,6 +12,7 @@ interface PGResult {
   longitude: number | null;
   managerPhone: string | null;
   locationLink: string | null;
+  baseRent?: number | null;
 }
 
 interface PGMapProps {
