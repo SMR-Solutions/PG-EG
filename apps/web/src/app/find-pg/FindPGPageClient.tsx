@@ -112,9 +112,13 @@ function loadLandmarkCache(lat: number, lng: number): LandmarkCache | null {
 }
 
 function typeLabel(type: string) {
-  if (type === "gents") return "🚹 Gents";
-  if (type === "ladies") return "🚺 Ladies";
-  return "🧑‍🤝‍🧑 Co-Living";
+  if (type === "gents") {
+    return <span style={{ color: "var(--text-primary)" }}>👦🏻 Gents</span>;
+  }
+  if (type === "ladies") {
+    return <span style={{ color: "#e83e8c" }}>👩🏻‍🦰 Ladies</span>;
+  }
+  return <span style={{ color: "var(--text-primary)" }}>🧑‍🤝‍🧑 Co-Living</span>;
 }
 
 function distanceLabel(km: number) {
@@ -1093,32 +1097,81 @@ export default function FindPGPage() {
                         onClick={() => setViewImagesFor(pg)}
                         id={`btn-view-${pg.id}`}
                       >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          style={{
+                            position: "absolute",
+                            top: "-14px",
+                            left: "50%",
+                            width: "18px",
+                            height: "18px",
+                            color: "#ff4d4d",
+                            transform: "translateX(-50%) rotate(-10deg)",
+                            pointerEvents: "none"
+                          }}
+                        >
+                          <path d="M13 2L9 11h5l-2 9" />
+                          <path d="M6 6l-2 3" />
+                          <path d="M18 6l2 3" />
+                        </svg>
                         📸 View PG
                       </button>
 
                       {/* Enquire — call manager */}
                       {pg.managerPhone && (
-                        <a
-                          href={`tel:${pg.managerPhone.replace(/\D/g, "")}`}
-                          className={styles.enquireBtn}
-                          id={`btn-enquire-${pg.id}`}
-                        >
-                          📞 Enquire
-                        </a>
+                        <>
+                          <span className={styles.transitionArrow}>»</span>
+                          <a
+                            href={`tel:${pg.managerPhone.replace(/\D/g, "")}`}
+                            className={styles.enquireBtn}
+                            id={`btn-enquire-${pg.id}`}
+                          >
+                            📞 Enquire
+                          </a>
+                        </>
                       )}
 
                       {/* Directions */}
-                      {(pg.latitude && pg.longitude) || pg.locationLink ? (
-                        <a
-                          href={getDirectionsUrl(pg, searchCoords || userCoords)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={styles.locationBtn}
-                          id={`btn-map-${pg.id}`}
-                        >
-                          🗺️ Get Directions
-                        </a>
+                      {((pg.latitude && pg.longitude) || pg.locationLink) ? (
+                        <>
+                          <span className={styles.transitionArrow}>»</span>
+                          <a
+                            href={getDirectionsUrl(pg, searchCoords || userCoords)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.locationBtn}
+                            id={`btn-map-${pg.id}`}
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              style={{
+                                position: "absolute",
+                                top: "-14px",
+                                left: "50%",
+                                width: "20px",
+                                height: "20px",
+                                color: "#2dc653",
+                                transform: "translateX(-50%) rotate(15deg)",
+                                pointerEvents: "none"
+                              }}
+                            >
+                              <path d="M12 2C6 2 2 8 2 14c0 3 2 5 2 5s2-2 5-2c6 0 10-6 10-12S12 2 12 2z" />
+                              <path d="M22 6c-4 0-8 4-8 8s2 4 2 4s2-2 4-4c4-4 4-8 4-8S22 6 22 6z" opacity="0.8" />
+                            </svg>
+                            🗺️ Get Directions
+                          </a>
+                        </>
                       ) : null}
+                    </div>
+
+                    <div className={styles.cardLogoWrapper}>
+                      <AppLogo size="xs" />
                     </div>
                   </div>
                 </div>
