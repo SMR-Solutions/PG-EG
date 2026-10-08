@@ -971,7 +971,7 @@
   transform: perspective(1000px) translateZ(0); /* hardware acc */
 }
 .pgCard:hover {
-  border-color: rgba(45, 198, 83, 0.4);
+  border-color: transparent;
   box-shadow: 
     0 24px 38px rgba(0, 0, 0, 0.4), 
     0 8px 16px rgba(0, 0, 0, 0.2), 
@@ -989,12 +989,70 @@
     inset 0 1px 0 rgba(255,255,255,0.8);
 }
 [data-theme="light"] .pgCard:hover {
-  border-color: var(--brand-green);
+  border-color: transparent;
   box-shadow: 
     0 24px 42px rgba(0, 0, 0, 0.16), 
     0 8px 18px rgba(0, 0, 0, 0.08), 
     0 0 24px rgba(45, 198, 83, 0.25),
     inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+/* ─── Animated Hover Border ──────────────────────────────────────── */
+.pgCard::before {
+  content: "";
+  position: absolute;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: conic-gradient(
+    from 0deg,
+    #ff4d4d,
+    #ffb347,
+    #2dc653,
+    #ffb347,
+    #ff4d4d
+  );
+  z-index: -2;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.pgCard::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  background: var(--bg-card);
+  border-radius: calc(var(--radius-lg) - 2px);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+[data-theme="light"] .pgCard::after {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+}
+.pgCard:hover::before {
+  opacity: 1;
+  animation: cardSpinBorder 3s linear infinite;
+}
+.pgCard:hover::after {
+  opacity: 1;
+}
+@keyframes cardSpinBorder {
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 1023px) {
+  .pgCard {
+    border-color: transparent !important;
+  }
+  .pgCard::before {
+    opacity: 1;
+    animation: cardSpinBorder 3s linear infinite;
+  }
+  .pgCard::after {
+    opacity: 1;
+  }
 }
 
 .distanceBadge {
@@ -1004,6 +1062,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: relative;
+  z-index: 1;
 }
 .distanceKm {
   font-size: 15px;
@@ -1024,6 +1084,8 @@
   align-items: stretch;
   justify-content: space-between;
   gap: 16px;
+  position: relative;
+  z-index: 1;
 }
 .pgInfo {
   flex: 1;

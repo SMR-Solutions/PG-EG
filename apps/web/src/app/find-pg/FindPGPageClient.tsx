@@ -1152,17 +1152,17 @@ export default function FindPGPage() {
                               fill="currentColor"
                               style={{
                                 position: "absolute",
-                                top: "-14px",
+                                top: "-18px",
                                 left: "50%",
-                                width: "20px",
-                                height: "20px",
+                                width: "24px",
+                                height: "24px",
                                 color: "#2dc653",
-                                transform: "translateX(-50%) rotate(15deg)",
+                                transform: "translateX(-50%)",
                                 pointerEvents: "none"
                               }}
                             >
-                              <path d="M12 2C6 2 2 8 2 14c0 3 2 5 2 5s2-2 5-2c6 0 10-6 10-12S12 2 12 2z" />
-                              <path d="M22 6c-4 0-8 4-8 8s2 4 2 4s2-2 4-4c4-4 4-8 4-8S22 6 22 6z" opacity="0.8" />
+                              <path d="M12 22c0-4.5 2-8 5-10 2.5-1.5 5-1.5 5-1.5s0 2.5-1.5 5c-2 3-5.5 5-10 5z" />
+                              <path d="M12 22c0-4.5-2-8-5-10-2.5-1.5-5-1.5-5-1.5s0 2.5 1.5 5c2 3 5.5 5 10 5z" opacity="0.9" />
                             </svg>
                             🗺️ Get Directions
                           </a>
@@ -1171,7 +1171,7 @@ export default function FindPGPage() {
                     </div>
 
                     <div className={styles.cardLogoWrapper}>
-                      <AppLogo size="xs" />
+                      <img src="/pg-eg-logo-wide.png" alt="PG-EG Stamp" style={{ pointerEvents: "none" }} />
                     </div>
                   </div>
                 </div>
