@@ -214,11 +214,17 @@ function ExpensesInner() {
         <div className={styles.titleRow}>
           <div>
             <h1 className={styles.title}>📊 Expenses</h1>
-            <p className={styles.subtitle}>{year} — track everything you spend on your PG</p>
+            <p className={styles.subtitle}>track everything you spend on your PG</p>
           </div>
-          <div className={styles.yearTotal}>
-            <span className={styles.yearTotalLabel}>Total {year}</span>
-            <span className={styles.yearTotalAmt}>₹{totalYear.toLocaleString("en-IN")}</span>
+          <div className={styles.totalsContainer}>
+            <div className={styles.totalRow}>
+              <span className={styles.totalLabel}>Total {year}:</span>
+              <span className={styles.totalAmt}>₹{totalYear.toLocaleString("en-IN")}</span>
+            </div>
+            <div className={styles.totalRow}>
+              <span className={styles.totalLabel}>{MONTHS[filterMonth]} Total:</span>
+              <span className={styles.totalAmt} style={{ color: "#6366f1" }}>₹{monthTotal.toLocaleString("en-IN")}</span>
+            </div>
           </div>
         </div>
 

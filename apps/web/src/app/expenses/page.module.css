@@ -16,16 +16,17 @@
 /* ─── Title row ──────────────────────────────────────────────────────────── */
 .titleRow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .title { font-size: 26px; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
-.subtitle { font-size: 13px; color: var(--text-muted); margin: 4px 0 0; }
-.yearTotal { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
-.yearTotalLabel { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
-.yearTotalAmt { font-size: 22px; font-weight: 800; color: #f59e0b; }
+.subtitle { font-size: 13px; color: var(--text-primary); margin: 4px 0 0; }
+.totalsContainer { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.totalRow { display: flex; align-items: baseline; gap: 6px; justify-content: flex-end; }
+.totalLabel { font-size: 12px; color: var(--text-primary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.totalAmt { font-size: 18px; font-weight: 800; color: #f59e0b; }
 
 /* ─── Chart card ─────────────────────────────────────────────────────────── */
 .chartCard { background: var(--bg-overlay); border: 1px solid var(--border-hover); border-radius: 20px; padding: 20px; }
 .chartHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .chartTitle { font-size: 13px; font-weight: 700; color: var(--text-primary); }
-.chartLegend { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+.chartLegend { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-primary); }
 .dotActive { width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; display: inline-block; }
 .chartWrap { cursor: pointer; }
 .barSvg { display: block; }
@@ -41,7 +42,7 @@
 .formRow { display: flex; gap: 10px; flex-wrap: wrap; }
 .formField { flex: 2; min-width: 200px; display: flex; flex-direction: column; gap: 6px; }
 .formFieldSm { flex: 1; min-width: 110px; display: flex; flex-direction: column; gap: 6px; }
-.fieldLabel { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.fieldLabel { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-primary); }
 .fieldInput { background: var(--bg-card); border: 1px solid var(--border-hover); border-radius: 10px; color: var(--text-primary); font-size: 14px; font-family: inherit; padding: 10px 12px; outline: none; transition: border-color 0.15s; width: 100%; box-sizing: border-box; }
 .fieldInput:focus { border-color: #6366f1; }
 .fieldInput::placeholder { color: var(--text-muted); opacity: 0.6; }
@@ -62,7 +63,7 @@
 .expRow:last-child { border-bottom: none; }
 .expLeft { display: flex; flex-direction: column; gap: 3px; }
 .expItem { font-size: 14px; font-weight: 600; color: var(--text-primary); }
-.expDate { font-size: 12px; color: var(--text-muted); }
+.expDate { font-size: 12px; color: var(--text-primary); }
 .expRight { display: flex; align-items: center; gap: 12px; }
 .expAmt { font-size: 16px; font-weight: 700; color: #f59e0b; }
 .delBtn { background: transparent; border: none; color: #ef4444; font-size: 14px; font-weight: 800; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.15s; line-height: 1; }
@@ -91,7 +92,7 @@
 
 /* ─── Light mode contrast overrides ─── */
 :global([data-theme="light"]) .subtitle { color: #1f2937; font-weight: 500; }
-:global([data-theme="light"]) .yearTotalLabel { color: #000000; font-weight: 800; }
+:global([data-theme="light"]) .totalLabel { color: #000000; font-weight: 800; }
 :global([data-theme="light"]) .chartTitle { color: #000000; font-weight: 800; }
 :global([data-theme="light"]) .chartLegend { color: #1f2937; font-weight: 600; }
 :global([data-theme="light"]) .monthTab { color: #1f2937; border-color: #cbd5e1; font-weight: 600; background: #ffffff; }
