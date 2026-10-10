@@ -113,12 +113,12 @@ function loadLandmarkCache(lat: number, lng: number): LandmarkCache | null {
 
 function typeLabel(type: string) {
   if (type === "gents") {
-    return <span style={{ color: "var(--text-primary)" }}>👦🏻 Gents</span>;
+    return "🙎‍♂️ Gents";
   }
   if (type === "ladies") {
-    return <span style={{ color: "#e83e8c" }}>👩🏻‍🦰 Ladies</span>;
+    return "🙋‍♀️ Ladies";
   }
-  return <span style={{ color: "var(--text-primary)" }}>🧑‍🤝‍🧑 Co-Living</span>;
+  return "👥 Co-Living";
 }
 
 function distanceLabel(km: number) {
@@ -129,8 +129,8 @@ function distanceLabel(km: number) {
 
 function walkOrRide(km: number) {
   if (km <= 0.5) return "🚶 Walking distance";
-  if (km <= 2) return "🚲 Quick bike ride";
-  if (km <= 5) return "🛺 Short auto ride";
+  if (km <= 2) return "🛵 Quick bike ride";
+  if (km <= 5) return "🛵 Short auto ride";
   return "🚗 By vehicle";
 }
 
@@ -1060,75 +1060,98 @@ export default function FindPGPage() {
                 </div>
               ) : filteredResults.map((pg, i) => (
                 <div key={pg.id} className={`${styles.pgCard} animate-fade-up`} style={{ animationDelay: `${i * 0.06}s` }}>
-                  {/* Distance Badge */}
-                  <div className={styles.distanceBadge}>
-                    <span className={styles.distanceKm}>{distanceLabel(pg.distanceKm)}</span>
-                    <span className={styles.distanceMode}>{walkOrRide(pg.distanceKm)}</span>
+                  <div className={styles.cardHeader}>
+                    <span className={styles.distanceWrap}>
+                      <span className={styles.pinIcon}>📍</span> {distanceLabel(pg.distanceKm)}
+                    </span>
+                    <span className={styles.dot}>•</span>
+                    <span className={styles.travelWrap}>
+                      {walkOrRide(pg.distanceKm)}
+                    </span>
+                    {pg.address && (
+                      <span className={styles.headerAddressDesk}>
+                        <span className={styles.navIcon}>↗</span> {pg.address.split(",")[0]} <span className={styles.caret}>›</span>
+                      </span>
+                    )}
                   </div>
 
-                  <div className={styles.pgCardBody}>
-                    <div className={styles.pgInfo}>
+                  <div className={styles.cardLayout}>
+                    {/* Left: Image (Top on mobile) */}
+                    <div className={styles.cardImageArea} onClick={() => setViewImagesFor(pg)}>
+                      {pg.pgImages && pg.pgImages.length > 0 ? (
+                        <img src={pg.pgImages[0]?.url || pg.pgImages[0]} alt={pg.name} className={styles.pgMainImg} />
+                      ) : (
+                        <div className={styles.pgMainImgPlaceholder}>No Image</div>
+                      )}
+                      <div className={styles.photosBadge}>
+                        🖼 {pg.pgImages?.length || 0} Photos
+                      </div>
+                    </div>
+
+                    {/* Right: Content (Bottom on mobile) */}
+                    <div className={styles.cardContentArea}>
                       <h2 className={styles.pgName}>{pg.name}</h2>
+                      
                       <div className={styles.pgTypeRow}>
-                        <span className={styles.pgType}>{typeLabel(pg.type)}</span>
+                        <span className={pg.type === "ladies" ? styles.pgTypeLadies : pg.type === "gents" ? styles.pgTypeGents : styles.pgTypeColiving}>
+                          {typeLabel(pg.type)}
+                        </span>
                         {pg.baseRent ? (
                           <span className={styles.pgBaseRent}>
-                            Rent Starting from ₹{pg.baseRent.toLocaleString("en-IN")}
+                            <span className={styles.rupeeIcon}>₹</span> Rent Starting from ₹{pg.baseRent.toLocaleString("en-IN")}
                           </span>
                         ) : null}
                       </div>
+
                       {pg.sharings && pg.sharings.length > 0 && (
                         <div className={styles.pgSharings}>
                           {pg.sharings.sort((a, b) => a - b).map((s) => (
-                            <span key={s} className={styles.sharingChip}>{s}-Share</span>
+                            <span key={s} className={styles.sharingChip}>{s}-Sharing</span>
                           ))}
                         </div>
                       )}
+
                       {pg.address && (
                         <p className={styles.pgAddress}>📍 {pg.address}</p>
                       )}
-                    </div>
 
-                    {/* Buttons row */}
-                    <div className={styles.pgCardBtns}>
-                      {/* View PG */}
-                      <button
-                        className={styles.viewPgBtn}
-                        onClick={() => setViewImagesFor(pg)}
-                        id={`btn-view-${pg.id}`}
-                      >
+                      {/* Buttons */}
+                      <div className={styles.pgCardBtns}>
+                        <button className={styles.actionBtn} onClick={() => setViewImagesFor(pg)} id={`btn-view-${pg.id}`}>
+                          <span className={styles.actionIcon}>🏢</span>
+                          <div className={styles.actionText}>
+                            <span className={styles.actionTitle}>View PG</span>
+                            <span className={styles.actionSub}>Photos & details</span>
+                          </div>
+                        </button>
 
-                        📸 View PG
-                      </button>
+                        <div className={styles.btnDivider} />
 
-                      {/* Enquire — call manager */}
-                      {pg.managerPhone && (
-                        <>
-                          <a
-                            href={`tel:${pg.managerPhone.replace(/\D/g, "")}`}
-                            className={styles.enquireBtn}
-                            id={`btn-enquire-${pg.id}`}
-                          >
-                            📞 Enquire
-                          </a>
-                        </>
-                      )}
+                        {pg.managerPhone && (
+                          <>
+                            <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={styles.actionBtn} id={`btn-enquire-${pg.id}`}>
+                              <span className={styles.actionIcon}>📞</span>
+                              <div className={styles.actionText}>
+                                <span className={styles.actionTitle}>Enquire</span>
+                                <span className={styles.actionSub}>Contact owner</span>
+                              </div>
+                            </a>
+                          </>
+                        )}
 
-                      {/* Directions */}
-                      {((pg.latitude && pg.longitude) || pg.locationLink) ? (
-                        <>
-                          <a
-                            href={getDirectionsUrl(pg, searchCoords || userCoords)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.locationBtn}
-                            id={`btn-map-${pg.id}`}
-                          >
-
-                            🗺️ Get Directions
-                          </a>
-                        </>
-                      ) : null}
+                        {((pg.latitude && pg.longitude) || pg.locationLink) ? (
+                          <>
+                            <div className={styles.btnDivider} />
+                            <a href={getDirectionsUrl(pg, searchCoords || userCoords)} target="_blank" rel="noopener noreferrer" className={styles.actionBtn} id={`btn-map-${pg.id}`}>
+                              <span className={styles.actionIcon}>🗺️</span>
+                              <div className={styles.actionText}>
+                                <span className={styles.actionTitle}>Directions</span>
+                                <span className={styles.actionSub}>Reach easily</span>
+                              </div>
+                            </a>
+                          </>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </div>
