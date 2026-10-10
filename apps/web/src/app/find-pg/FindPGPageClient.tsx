@@ -190,6 +190,24 @@ export default function FindPGPage() {
   const [typeFilter, setTypeFilter] = useState<"all" | "gents" | "ladies" | "coliving">("all");
   const [viewImagesFor, setViewImagesFor] = useState<PGResult | null>(null);
 
+  // Gallery History state management
+  const openGallery = (pg: PGResult) => {
+    window.history.pushState({ gallery: true }, "");
+    setViewImagesFor(pg);
+  };
+  const closeGallery = () => {
+    if (window.history.state?.gallery) {
+      window.history.back();
+    } else {
+      setViewImagesFor(null);
+    }
+  };
+  useEffect(() => {
+    const handlePopState = () => setViewImagesFor(null);
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   // Derived: filtered results based on typeFilter
   const filteredResults = typeFilter === "all"
     ? results
@@ -1077,7 +1095,7 @@ export default function FindPGPage() {
 
                   <div className={styles.cardLayout}>
                     {/* Left: Image (Top on mobile) */}
-                    <div className={styles.cardImageArea} onClick={() => setViewImagesFor(pg)}>
+                    <div className={styles.cardImageArea} onClick={() => openGallery(pg)}>
                       {pg.pgImages && pg.pgImages.length > 0 ? (
                         <img src={pg.pgImages[0]?.url || pg.pgImages[0]} alt={pg.name} className={styles.pgMainImg} />
                       ) : (
@@ -1117,7 +1135,7 @@ export default function FindPGPage() {
 
                       {/* Buttons */}
                       <div className={styles.pgCardBtns}>
-                        <button className={styles.actionBtn} onClick={() => setViewImagesFor(pg)} id={`btn-view-${pg.id}`}>
+                        <button className={styles.actionBtn} onClick={() => openGallery(pg)} id={`btn-view-${pg.id}`}>
                           <span className={styles.actionIcon}>🏢</span>
                           <div className={styles.actionText}>
                             <span className={styles.actionTitle}>View PG</span>
@@ -1130,7 +1148,7 @@ export default function FindPGPage() {
                         {pg.managerPhone && (
                           <>
                             <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={styles.actionBtn} id={`btn-enquire-${pg.id}`}>
-                              <span className={styles.actionIcon}>📞</span>
+                              <span className={styles.actionIcon}>☎️</span>
                               <div className={styles.actionText}>
                                 <span className={styles.actionTitle}>Enquire</span>
                                 <span className={styles.actionSub}>Contact owner</span>
@@ -1185,11 +1203,11 @@ export default function FindPGPage() {
 
       {/* ── Image Viewer Modal / Lightbox ── */}
       {viewImagesFor && (!viewImagesFor.pgImages || viewImagesFor.pgImages.length === 0) && (
-        <div className={styles.imageModalOverlay} onClick={() => setViewImagesFor(null)}>
+        <div className={styles.imageModalOverlay} onClick={closeGallery}>
           <div className={styles.imageModal} style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
             <div className={styles.imageModalHeader}>
               <h2 className={styles.imageModalTitle}>{viewImagesFor.name}</h2>
-              <button className={styles.imageModalClose} onClick={() => setViewImagesFor(null)}>×</button>
+              <button className={styles.imageModalClose} onClick={closeGallery}>×</button>
             </div>
             <div className={styles.imageModalBody} style={{ display: 'block' }}>
               <div className={styles.noImagesState}>
@@ -1204,7 +1222,7 @@ export default function FindPGPage() {
       {viewImagesFor && viewImagesFor.pgImages && viewImagesFor.pgImages.length > 0 && (
         <Lightbox
           open={true}
-          close={() => setViewImagesFor(null)}
+          close={closeGallery}
           slides={viewImagesFor.pgImages.map(img => ({ src: img.url || img }))}
           plugins={[Zoom]}
           carousel={{ padding: 0 }}
