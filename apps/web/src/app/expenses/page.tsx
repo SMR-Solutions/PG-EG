@@ -20,7 +20,7 @@ interface Expense {
 
 // ─── Pure SVG Bar Chart ────────────────────────────────────────────────────
 function BarChart({ monthTotals, year }: { monthTotals: number[]; year: number }) {
-  const W = 600, H = 220, PAD = { top: 20, right: 20, bottom: 40, left: 60 };
+  const W = 600, H = 260, PAD = { top: 30, right: 20, bottom: 45, left: 60 };
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
   const maxVal = Math.max(...monthTotals, 1);
@@ -41,8 +41,8 @@ function BarChart({ monthTotals, year }: { monthTotals: number[]; year: number }
           <g key={i}>
             <line x1={PAD.left} y1={y} x2={PAD.left + innerW} y2={y}
               stroke="var(--border-hover)" strokeWidth="1" strokeOpacity="0.5" />
-            <text x={PAD.left - 8} y={y + 4} textAnchor="end"
-              fill="var(--text-secondary)" fontSize="10" fontWeight="600">
+            <text x={PAD.left - 8} y={y + 5} textAnchor="end"
+              fill="var(--text-secondary)" fontSize="14" fontWeight="600">
               {v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}
             </text>
           </g>
@@ -69,14 +69,14 @@ function BarChart({ monthTotals, year }: { monthTotals: number[]; year: number }
             />
             {/* Amount label on top */}
             {val > 0 && (
-              <text x={x + barW / 2} y={y - 5} textAnchor="middle"
-                fill={isCurrent ? "#d97706" : "var(--text-primary)"} fontSize="9" fontWeight="700">
+              <text x={x + barW / 2} y={y - 8} textAnchor="middle"
+                fill={isCurrent ? "#d97706" : "var(--text-primary)"} fontSize="13" fontWeight="700">
                 {val >= 1000 ? `${(val/1000).toFixed(1)}k` : val}
               </text>
             )}
             {/* Month label */}
-            <text x={x + barW / 2} y={H - PAD.bottom + 14} textAnchor="middle"
-              fill={isCurrent ? "#6366f1" : "var(--text-primary)"} fontSize="10"
+            <text x={x + barW / 2} y={H - PAD.bottom + 20} textAnchor="middle"
+              fill={isCurrent ? "#6366f1" : "var(--text-primary)"} fontSize="14"
               fontWeight={isCurrent ? "800" : "600"}>
               {MONTHS[i]}
             </text>

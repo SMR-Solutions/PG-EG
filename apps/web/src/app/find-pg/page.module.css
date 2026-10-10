@@ -958,8 +958,8 @@
 
 /* ─── PG Card ────────────────────────────────────────────────────── */
 .pgCard {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  background: #171C27;
+  border: 1px solid rgba(255,255,255,0.05);
   border-top: 1px solid rgba(255, 255, 255, 0.08); /* 3D top bevel */
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -971,11 +971,10 @@
   transform: perspective(1000px) translateZ(0); /* hardware acc */
 }
 .pgCard:hover {
-  border-color: transparent;
+  border-color: rgba(255, 255, 255, 0.15);
   box-shadow: 
     0 24px 38px rgba(0, 0, 0, 0.4), 
     0 8px 16px rgba(0, 0, 0, 0.2), 
-    0 0 24px rgba(45, 198, 83, 0.12),
     inset 0 1px 0 rgba(255,255,255,0.06);
   transform: perspective(1000px) translateY(-5px) scale(1.015) translateZ(10px);
 }
@@ -989,70 +988,11 @@
     inset 0 1px 0 rgba(255,255,255,0.8);
 }
 [data-theme="light"] .pgCard:hover {
-  border-color: transparent;
+  border-color: rgba(0, 0, 0, 0.2);
   box-shadow: 
     0 24px 42px rgba(0, 0, 0, 0.16), 
     0 8px 18px rgba(0, 0, 0, 0.08), 
-    0 0 24px rgba(45, 198, 83, 0.25),
     inset 0 1px 0 rgba(255,255,255,0.9);
-}
-
-/* ─── Animated Hover Border ──────────────────────────────────────── */
-.pgCard::before {
-  content: "";
-  position: absolute;
-  top: -50%; left: -50%;
-  width: 200%; height: 200%;
-  background: conic-gradient(
-    from 0deg,
-    #ff4d4d,
-    #ffb347,
-    #2dc653,
-    #ffb347,
-    #ff4d4d
-  );
-  z-index: -2;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-.pgCard::after {
-  content: "";
-  position: absolute;
-  inset: 2px;
-  background: var(--bg-card);
-  border-radius: calc(var(--radius-lg) - 2px);
-  z-index: -1;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
-}
-[data-theme="light"] .pgCard::after {
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
-}
-.pgCard:hover::before {
-  opacity: 1;
-  animation: cardSpinBorder 3s linear infinite;
-}
-.pgCard:hover::after {
-  opacity: 1;
-}
-@keyframes cardSpinBorder {
-  100% { transform: rotate(360deg); }
-}
-
-@media (max-width: 1023px) {
-  .pgCard {
-    border-color: transparent !important;
-  }
-  .pgCard::before {
-    opacity: 1;
-    animation: cardSpinBorder 3s linear infinite;
-  }
-  .pgCard::after {
-    opacity: 1;
-  }
 }
 
 .distanceBadge {
@@ -1159,29 +1099,27 @@
 }
 
 .locationBtn {
-  background: linear-gradient(135deg, #2dc653 0%, #208b3a 100%);
+  background: #22C55E;
   color: #fff;
   border: none;
-  border-radius: var(--radius-sm);
-  font-size: 11px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 700;
-  padding: 8px 4px;
+  padding: 10px 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   text-decoration: none;
   white-space: nowrap;
-  transition: var(--transition);
-  position: relative;
+  transition: all 0.2s ease;
   flex: 1;
-  box-shadow: 0 4px 15px rgba(45, 198, 83, 0.4);
   -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
 }
 .locationBtn:hover {
-  background: linear-gradient(135deg, #4ce073 0%, #25a244 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(45, 198, 83, 0.6);
+  background: #16a34a;
+  transform: translateY(-2px);
 }
 
 /* ─── PG Card Buttons Row ────────────────────────────────────────── */
@@ -1196,29 +1134,27 @@
 
 /* ─── Enquire Button ─────────────────────────────────────────────── */
 .enquireBtn {
-  background: linear-gradient(135deg, #ff4d4d 0%, #ffb347 50%, #2dc653 100%);
+  background: #F59E0B;
   color: #fff;
   border: none;
-  border-radius: var(--radius-sm);
-  font-size: 11px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 700;
-  padding: 8px 4px;
+  padding: 10px 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   text-decoration: none;
   white-space: nowrap;
-  transition: var(--transition);
-  position: relative;
+  transition: all 0.2s ease;
   flex: 1;
-  box-shadow: 0 4px 15px rgba(255, 179, 71, 0.4);
   -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
 }
 .enquireBtn:hover {
-  background: linear-gradient(135deg, #ff6666 0%, #ffcc80 50%, #4ce073 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(255, 179, 71, 0.6);
+  background: #d97706;
+  transform: translateY(-2px);
 }
 
 .transitionArrow {
@@ -1292,7 +1228,8 @@
     gap: 8px;
   }
   .locationBtn,
-  .enquireBtn {
+  .enquireBtn,
+  .viewPgBtn {
     flex: 1;
     text-align: center;
     padding: 9px 6px;
@@ -1368,30 +1305,27 @@
 
 /* ─── View PG Button ─────────────────────────────────────────────── */
 .viewPgBtn {
-  background: linear-gradient(135deg, #ff4d4d 0%, #e60000 100%);
+  background: #EF4444;
   color: #fff;
   border: none;
-  border-radius: var(--radius-sm);
-  font-size: 11px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 700;
-  padding: 8px 4px;
+  padding: 10px 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   text-decoration: none;
   white-space: nowrap;
-  transition: var(--transition);
-  position: relative;
+  transition: all 0.2s ease;
   flex: 1;
-  box-shadow: 0 4px 15px rgba(230, 0, 0, 0.4);
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
 }
 .viewPgBtn:hover {
-  background: linear-gradient(135deg, #ff6666 0%, #ff1a1a 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(230, 0, 0, 0.6);
+  background: #dc2626;
+  transform: translateY(-2px);
 }
 
 /* ─── Image Modal ──────────────────────────────────────────────── */

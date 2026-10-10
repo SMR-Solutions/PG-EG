@@ -1097,35 +1097,13 @@ export default function FindPGPage() {
                         onClick={() => setViewImagesFor(pg)}
                         id={`btn-view-${pg.id}`}
                       >
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          style={{
-                            position: "absolute",
-                            top: "-14px",
-                            left: "50%",
-                            width: "18px",
-                            height: "18px",
-                            color: "#ff4d4d",
-                            transform: "translateX(-50%) rotate(-10deg)",
-                            pointerEvents: "none"
-                          }}
-                        >
-                          <path d="M13 2L9 11h5l-2 9" />
-                          <path d="M6 6l-2 3" />
-                          <path d="M18 6l2 3" />
-                        </svg>
+
                         📸 View PG
                       </button>
 
                       {/* Enquire — call manager */}
                       {pg.managerPhone && (
                         <>
-                          <span className={styles.transitionArrow}>»</span>
                           <a
                             href={`tel:${pg.managerPhone.replace(/\D/g, "")}`}
                             className={styles.enquireBtn}
@@ -1139,7 +1117,6 @@ export default function FindPGPage() {
                       {/* Directions */}
                       {((pg.latitude && pg.longitude) || pg.locationLink) ? (
                         <>
-                          <span className={styles.transitionArrow}>»</span>
                           <a
                             href={getDirectionsUrl(pg, searchCoords || userCoords)}
                             target="_blank"
@@ -1147,31 +1124,11 @@ export default function FindPGPage() {
                             className={styles.locationBtn}
                             id={`btn-map-${pg.id}`}
                           >
-                            <svg
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
-                              style={{
-                                position: "absolute",
-                                top: "-18px",
-                                left: "50%",
-                                width: "24px",
-                                height: "24px",
-                                color: "#2dc653",
-                                transform: "translateX(-50%)",
-                                pointerEvents: "none"
-                              }}
-                            >
-                              <path d="M12 22c0-4.5 2-8 5-10 2.5-1.5 5-1.5 5-1.5s0 2.5-1.5 5c-2 3-5.5 5-10 5z" />
-                              <path d="M12 22c0-4.5-2-8-5-10-2.5-1.5-5-1.5-5-1.5s0 2.5 1.5 5c2 3 5.5 5 10 5z" opacity="0.9" />
-                            </svg>
+
                             🗺️ Get Directions
                           </a>
                         </>
                       ) : null}
-                    </div>
-
-                    <div className={styles.cardLogoWrapper}>
-                      <img src="/pg-eg-logo-wide.png" alt="PG-EG Stamp" style={{ pointerEvents: "none" }} />
                     </div>
                   </div>
                 </div>
