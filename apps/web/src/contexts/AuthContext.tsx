@@ -64,18 +64,54 @@ function readCachedOwner(): Owner | null {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+function getInitialAuthState(): AuthState {
+  if (typeof window === "undefined") {
+    return {
+      owner: null,
+      token: null,
+      pgId: null,
+      activePgId: null,
+      allPgs: [],
+      hasPG: false,
+      role: null,
+      isLoading: true,
+      isAuthenticated: false,
+    };
+  }
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) {
+    return {
+      owner: null,
+      token: null,
+      pgId: null,
+      activePgId: null,
+      allPgs: [],
+      hasPG: false,
+      role: null,
+      isLoading: false,
+      isAuthenticated: false,
+    };
+  }
+  const cachedOwner = readCachedOwner();
+  const cachedRole = localStorage.getItem(ROLE_KEY) || "user";
+  const pgId = localStorage.getItem("pg_eg_pg_id") || null;
+  const activePgId = localStorage.getItem(ACTIVE_PG_KEY) || pgId;
+
+  return {
+    owner: cachedOwner,
+    token,
+    pgId,
+    activePgId,
+    allPgs: pgId ? [{ id: pgId, name: "My PG" }] : [],
+    hasPG: !!pgId,
+    role: cachedRole,
+    isLoading: !cachedOwner,
+    isAuthenticated: !!cachedOwner,
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({
-    owner: null,
-    token: null,
-    pgId: null,
-    activePgId: null,
-    allPgs: [],
-    hasPG: false,
-    role: null,
-    isLoading: true,
-    isAuthenticated: false,
-  });
+  const [state, setState] = useState<AuthState>(getInitialAuthState);
 
   const signIn = useCallback(
     (token: string, owner: Owner, hasPG: boolean, pgId?: string | null, allPgs?: PGSummary[], role?: string) => {
@@ -131,8 +167,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Optimistic: restore cached owner immediately so the UI can show
-    // profile data without waiting for the API round-trip.
     const cachedOwner = readCachedOwner();
     const cachedRole = localStorage.getItem(ROLE_KEY) || "user";
     if (cachedOwner) {
@@ -141,14 +175,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         owner: cachedOwner,
         token,
         role: cachedRole,
-        isAuthenticated: true, // optimistic — corrected below if token is invalid
+        isLoading: false,
+        isAuthenticated: true,
       }));
     }
 
     try {
+      // 3.5s timeout for low internet so UI never hangs waiting for auth validation
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
       const res = await fetch(`${API_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         localStorage.removeItem(TOKEN_KEY);

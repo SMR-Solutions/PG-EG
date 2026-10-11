@@ -1,8 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import OfflineDetector from "@/components/OfflineDetector";
 import Script from "next/script";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const viewport: Viewport = {
   themeColor: "#2dc653",
@@ -54,11 +61,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      </head>
-      <body suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
         {/* Theme: apply before paint to prevent flash */}
         <Script id="theme-init" strategy="beforeInteractive">{`
           (function(){
@@ -77,7 +80,10 @@ export default function RootLayout({
           }
         `}</Script>
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <OfflineDetector />
+            {children}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

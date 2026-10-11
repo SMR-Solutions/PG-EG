@@ -5,12 +5,10 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import styles from "./page.module.css";
+import dynamic from "next/dynamic";
 import AppLogo from "@/components/AppLogo";
-import Lightbox from "yet-another-react-lightbox";
-import Zoom from "yet-another-react-lightbox/plugins/zoom";
-import "yet-another-react-lightbox/styles.css";
 
-// Dynamically import map (avoids SSR issues with MapLibre WebGL)
+const PGPhotoLightbox = dynamic(() => import("@/components/PGPhotoLightbox"), { ssr: false });
 const PGMap = lazy(() => import("@/components/PGMap"));
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -1165,7 +1163,13 @@ export default function FindPGPage() {
                     {/* Left: Image (Top on mobile) */}
                     <div className={styles.cardImageArea} onClick={() => openGallery(pg)}>
                       {pg.pgImages && pg.pgImages.length > 0 ? (
-                        <img src={pg.pgImages[0]?.url || pg.pgImages[0]} alt={pg.name} className={styles.pgMainImg} />
+                        <img
+                          src={pg.pgImages[0]?.url || pg.pgImages[0]}
+                          alt={pg.name}
+                          className={styles.pgMainImg}
+                          loading="lazy"
+                          decoding="async"
+                        />
                       ) : (
                         <div className={styles.pgMainImgPlaceholder}>No Image</div>
                       )}
@@ -1313,13 +1317,10 @@ export default function FindPGPage() {
       )}
 
       {viewImagesFor && viewImagesFor.pgImages && viewImagesFor.pgImages.length > 0 && (
-        <Lightbox
+        <PGPhotoLightbox
           open={true}
           close={closeGallery}
-          slides={viewImagesFor.pgImages.map(img => ({ src: img.url || img }))}
-          plugins={[Zoom]}
-          carousel={{ padding: 0 }}
-          zoom={{ maxZoomPixelRatio: 3 }}
+          images={viewImagesFor.pgImages}
         />
       )}
     </main>
