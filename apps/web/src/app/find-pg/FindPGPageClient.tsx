@@ -208,6 +208,36 @@ export default function FindPGPage() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
+  // Share a PG — attaches first image as File so WhatsApp shows image + text + ONE link
+  const handleSharePg = async (pg: PGResult) => {
+    const pgUrl = `${window.location.origin}/pg/${pg.id}`;
+    // Text has NO URL — url field is separate so WhatsApp appends it ONCE as a rich preview
+    const shareText = [
+      `🏢 ${pg.name}`,
+      pg.type === "ladies" ? "👩‍🦰 Ladies PG" : pg.type === "gents" ? "👨‍🦱 Gents PG" : "🤝 Co-Living",
+      pg.baseRent ? `💰 Rent from ₹${pg.baseRent.toLocaleString("en-IN")}` : null,
+      pg.address ? `📍 ${pg.address}` : null,
+    ].filter(Boolean).join("\n");
+
+    if (navigator.share) {
+      // Attempt to attach first PG image as a File — WhatsApp will show the image
+      const firstImg = pg.pgImages?.[0]?.url || pg.pgImages?.[0];
+      let filesPayload: { files?: File[] } = {};
+      if (firstImg) {
+        try {
+          const imgRes = await fetch(firstImg);
+          const blob = await imgRes.blob();
+          const file = new File([blob], `${pg.name.replace(/[^a-zA-Z0-9]/g, "_") || "pg"}.jpg`, { type: blob.type || "image/jpeg" });
+          if (navigator.canShare?.({ files: [file] })) filesPayload = { files: [file] };
+        } catch { /* image fetch failed, skip */ }
+      }
+      navigator.share({ title: pg.name, text: shareText, url: pgUrl, ...filesPayload }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(`${shareText}\n\n${pgUrl}`);
+      alert("PG details copied!");
+    }
+  };
+
   // Derived: filtered results based on typeFilter
   const filteredResults = typeFilter === "all"
     ? results
@@ -1121,16 +1151,9 @@ export default function FindPGPage() {
                       <span
                         className={styles.cardHeaderIconBtn}
                         title="Share"
-                        onClick={() => {
-                          const pgUrl = `${window.location.origin}/pg/${pg.id}`;
-                          const shareText = [
-                            `🏢 ${pg.name}`,
-                            pg.type === "ladies" ? "👩\u200d🦰 Ladies PG" : pg.type === "gents" ? "👨\u200d🦱 Gents PG" : "🤝 Co-Living",
-                            pg.baseRent ? `💰 Rent from ₹${pg.baseRent.toLocaleString("en-IN")}` : null,
-                            pg.address ? `📍 ${pg.address}` : null,
-                          ].filter(Boolean).join("\n");
-                          if (navigator.share) navigator.share({ title: pg.name, text: shareText, url: pgUrl }).catch(() => {});
-                          else { navigator.clipboard.writeText(`${shareText}\n\n${pgUrl}`); alert("Copied!"); }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSharePg(pg);
                         }}
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -1163,16 +1186,7 @@ export default function FindPGPage() {
                           className={styles.shareBtn}
                           onClick={(e) => {
                             e.stopPropagation();
-                            const pgUrl = `${window.location.origin}/pg/${pg.id}`;
-                            const shareText = [
-                              `🏢 ${pg.name}`,
-                              pg.type === "ladies" ? "👩‍🦰 Ladies PG" : pg.type === "gents" ? "👨‍🦱 Gents PG" : "🤝 Co-Living",
-                              pg.baseRent ? `💰 Rent from ₹${pg.baseRent.toLocaleString("en-IN")}` : null,
-                              pg.address ? `📍 ${pg.address}` : null,
-                              "\n🔗 " + pgUrl,
-                            ].filter(Boolean).join("\n");
-                            if (navigator.share) navigator.share({ title: pg.name, text: shareText, url: pgUrl }).catch(() => {});
-                            else { navigator.clipboard.writeText(shareText); alert("Copied!"); }
+                            handleSharePg(pg);
                           }}
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>

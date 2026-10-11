@@ -17,6 +17,8 @@ interface PGData {
   type: string;
   address: string;
   locationLink: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   sharings: number[];
   managerPhone: string | null;
   baseRent?: number | null;
@@ -139,7 +141,7 @@ export default function PGDetailClient({ pg }: Props) {
                 onClick={triggerInstall}
                 disabled={installing}
               >
-              {installing ? "Installing…" : "📲 Download & Sign In"}
+              {installing ? "Installing…" : "📲 Download App & Sign In"}
               </button>
             )}
             <button
@@ -241,10 +243,20 @@ export default function PGDetailClient({ pg }: Props) {
                   </>
                 )}
 
-                {pg.locationLink && (
+                {((pg.latitude && pg.longitude) || pg.locationLink || pg.address) ? (
                   <>
                     <div className={styles.btnDivider} />
-                    <a href={pg.locationLink} target="_blank" rel="noopener noreferrer" className={styles.actionBtn} id="btn-directions">
+                    <a
+                      href={
+                        pg.latitude && pg.longitude
+                          ? `https://www.google.com/maps/dir/?api=1&destination=${pg.latitude},${pg.longitude}&travelmode=driving`
+                          : pg.locationLink || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${pg.name} ${pg.address || ""}`)}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.actionBtn}
+                      id="btn-directions"
+                    >
                       <span className={styles.actionIcon}>🗺️</span>
                       <div className={styles.actionText}>
                         <span className={styles.actionTitle}>Directions</span>
@@ -252,7 +264,7 @@ export default function PGDetailClient({ pg }: Props) {
                       </div>
                     </a>
                   </>
-                )}
+                ) : null}
               </div>
 
               {!isAuthenticated && !isLoading && (

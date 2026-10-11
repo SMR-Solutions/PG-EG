@@ -65,8 +65,8 @@ export default function SavedPGsClient() {
     return () => window.removeEventListener("popstate", fn);
   }, []);
 
-  const handleShare = useCallback((pg: any, e: { stopPropagation: () => void }) => {
-    e.stopPropagation();
+  const handleShare = useCallback(async (pg: any, e?: { stopPropagation: () => void }) => {
+    if (e?.stopPropagation) e.stopPropagation();
     const pgUrl = `${window.location.origin}/pg/${pg.id}`;
     // Text has NO URL — WhatsApp auto-renders the URL as a rich link preview card (with OG image)
     const shareText = [
@@ -76,8 +76,17 @@ export default function SavedPGsClient() {
       pg.address ? `📍 ${pg.address}` : null,
     ].filter(Boolean).join("\n");
     if (navigator.share) {
-      // url is passed separately — WhatsApp appends it as a link preview, not raw text
-      navigator.share({ title: pg.name, text: shareText, url: pgUrl }).catch(() => {});
+      const firstImg = pg.pgImages?.[0]?.url || pg.pgImages?.[0];
+      let filesPayload: { files?: File[] } = {};
+      if (firstImg) {
+        try {
+          const imgRes = await fetch(firstImg);
+          const blob = await imgRes.blob();
+          const file = new File([blob], `${pg.name.replace(/[^a-zA-Z0-9]/g, "_") || "pg"}.jpg`, { type: blob.type || "image/jpeg" });
+          if (navigator.canShare?.({ files: [file] })) filesPayload = { files: [file] };
+        } catch { /* image fetch failed, skip */ }
+      }
+      navigator.share({ title: pg.name, text: shareText, url: pgUrl, ...filesPayload }).catch(() => {});
     } else {
       navigator.clipboard.writeText(`${shareText}\n\n${pgUrl}`);
       alert("PG details copied to clipboard!");
@@ -291,10 +300,20 @@ export default function SavedPGsClient() {
                         </>
                       )}
 
-                      {pg.locationLink && (
+                      {((pg.latitude && pg.longitude) || pg.locationLink || pg.address) ? (
                         <>
                           <div className={styles.btnDivider} />
-                          <a href={pg.locationLink} target="_blank" rel="noopener noreferrer" className={styles.actionBtn} id={`btn-dir-${pg.id}`}>
+                          <a
+                            href={
+                              pg.latitude && pg.longitude
+                                ? `https://www.google.com/maps/dir/?api=1&destination=${pg.latitude},${pg.longitude}&travelmode=driving`
+                                : pg.locationLink || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${pg.name} ${pg.address || ""}`)}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.actionBtn}
+                            id={`btn-dir-${pg.id}`}
+                          >
                             <span className={styles.actionIcon}>🗺️</span>
                             <div className={styles.actionText}>
                               <span className={styles.actionTitle}>Directions</span>
@@ -302,7 +321,7 @@ export default function SavedPGsClient() {
                             </div>
                           </a>
                         </>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>
