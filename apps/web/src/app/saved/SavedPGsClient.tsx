@@ -374,8 +374,9 @@ export default function SavedPGsClient() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: "var(--card-bg, #1a1f2e)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "#1a1f2e",
+              color: "#ffffff",
+              border: "1px solid rgba(255,255,255,0.15)",
               borderRadius: "20px",
               padding: "32px 28px",
               maxWidth: "360px",
@@ -385,8 +386,10 @@ export default function SavedPGsClient() {
             }}
           >
             <div style={{ fontSize: "48px", marginBottom: "16px" }}>🗑️</div>
-            <h3 style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 8px" }}>Remove All Saved PGs?</h3>
-            <p style={{ fontSize: "14px", opacity: 0.6, margin: "0 0 28px", lineHeight: 1.5 }}>
+            <h3 style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 8px", color: "#ffffff" }}>
+              Remove All Saved PGs?
+            </h3>
+            <p style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.75)", margin: "0 0 28px", lineHeight: 1.5 }}>
               This will remove all {visiblePgs.length} saved PG{visiblePgs.length > 1 ? "s" : ""} from your list. You can always save them again.
             </p>
             <div style={{ display: "flex", gap: "12px" }}>
@@ -394,9 +397,9 @@ export default function SavedPGsClient() {
                 onClick={() => setShowClearModal(false)}
                 style={{
                   flex: 1, padding: "13px", borderRadius: "12px",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  background: "rgba(255,255,255,0.07)",
-                  color: "inherit", fontSize: "15px", fontWeight: 600, cursor: "pointer",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  background: "rgba(255,255,255,0.1)",
+                  color: "#ffffff", fontSize: "15px", fontWeight: 600, cursor: "pointer",
                 }}
               >
                 Cancel
