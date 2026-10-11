@@ -120,7 +120,7 @@ export default function PGDetailClient({ pg }: Props) {
 
       {/* ── Navbar: back ← | theme toggle ── */}
       <div className={pgStyles.navbar}>
-        <button className={pgStyles.navBtn} onClick={() => router.back()} title="Go back">←</button>
+        <button className={pgStyles.navBtn} onClick={() => router.push("/find-pg")} title="Find PGs">←</button>
         <button className={pgStyles.navBtn} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
           {theme === "dark" ? "☀️" : "🌙"}
         </button>
@@ -277,6 +277,16 @@ export default function PGDetailClient({ pg }: Props) {
                   <p style={{ fontSize: "12px", textAlign: "center", opacity: 0.5, marginTop: "8px" }}>
                     Sign-in For Free
                   </p>
+                </div>
+              )}
+
+              {isAuthenticated && (
+                <div style={{ marginTop: "16px" }}>
+                  <button
+                    className={styles.primaryBtn}
+                    onClick={() => router.push("/find-pg")}
+                    style={{ width: "100%", padding: "12px" }}
+                  >🔍 Explore More PGs Near Me</button>
                 </div>
               )}
             </div>
