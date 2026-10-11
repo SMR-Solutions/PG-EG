@@ -139,7 +139,7 @@ export default function PGDetailClient({ pg }: Props) {
                 onClick={triggerInstall}
                 disabled={installing}
               >
-                {installing ? "Installing…" : "📲 Download App"}
+              {installing ? "Installing…" : "📲 Download & Sign In"}
               </button>
             )}
             <button
