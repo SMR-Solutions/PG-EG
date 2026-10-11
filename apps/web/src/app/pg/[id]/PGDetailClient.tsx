@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { usePwaInstall } from "@/hooks/usePwaInstall";
 import styles from "../../find-pg/page.module.css";
 import pgStyles from "./pg.module.css";
 import Lightbox from "yet-another-react-lightbox";
@@ -31,6 +32,7 @@ export default function PGDetailClient({ pg }: Props) {
   const router = useRouter();
   const { isAuthenticated, isLoading, owner, toggleSavePg } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { canInstall, installing, triggerInstall } = usePwaInstall();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
 
@@ -57,41 +59,30 @@ export default function PGDetailClient({ pg }: Props) {
   const handleShare = useCallback(async () => {
     const pgUrl = `${window.location.origin}/pg/${pg.id}`;
 
-    // Try to share with image file (native share drawer on mobile shows image)
+    // Text has NO URL — url field is separate so WhatsApp shows it ONCE as a rich preview card
+    const shareText = [
+      `🏢 ${pg.name}`,
+      pg.type === "ladies" ? "👩‍🦰 Ladies PG" : pg.type === "gents" ? "👨‍🦱 Gents PG" : "🤝 Co-Living",
+      pg.baseRent ? `💰 Rent from ₹${pg.baseRent.toLocaleString("en-IN")}` : null,
+      pg.address ? `📍 ${pg.address}` : null,
+    ].filter(Boolean).join("\n");
+
     if (navigator.share) {
-      // Attempt to fetch + share first image as a File
+      // Attempt to attach first image as a File (shows image in share drawer on mobile)
       const firstImg = pg.pgImages?.[0]?.url || pg.pgImages?.[0];
       let filesPayload: { files?: File[] } = {};
-
       if (firstImg) {
         try {
           const imgRes = await fetch(firstImg);
           const blob = await imgRes.blob();
           const file = new File([blob], `${pg.name}.jpg`, { type: blob.type });
-          if (navigator.canShare?.({ files: [file] })) {
-            filesPayload = { files: [file] };
-          }
+          if (navigator.canShare?.({ files: [file] })) filesPayload = { files: [file] };
         } catch { /* image fetch failed, skip */ }
       }
-
-      const shareText = [
-        `🏢 *${pg.name}*`,
-        pg.type === "ladies" ? "👩‍🦰 Ladies PG" : pg.type === "gents" ? "👨‍🦱 Gents PG" : "🤝 Co-Living",
-        pg.baseRent ? `💰 Rent from ₹${pg.baseRent.toLocaleString("en-IN")}` : null,
-        pg.address ? `📍 ${pg.address}` : null,
-        `\n🔗 ${pgUrl}`,
-      ].filter(Boolean).join("\n");
-
+      // url is separate from text — WhatsApp appends it once as a rich link preview
       navigator.share({ title: pg.name, text: shareText, url: pgUrl, ...filesPayload }).catch(() => {});
     } else {
-      const shareText = [
-        `🏢 ${pg.name}`,
-        pg.type === "ladies" ? "👩‍🦰 Ladies PG" : pg.type === "gents" ? "👨‍🦱 Gents PG" : "🤝 Co-Living",
-        pg.baseRent ? `💰 Rent from ₹${pg.baseRent.toLocaleString("en-IN")}` : null,
-        pg.address ? `📍 ${pg.address}` : null,
-        `\n🔗 ${pgUrl}`,
-      ].filter(Boolean).join("\n");
-      navigator.clipboard.writeText(shareText);
+      navigator.clipboard.writeText(`${shareText}\n\n${pgUrl}`);
       alert("PG details copied to clipboard!");
     }
   }, [pg]);
@@ -133,17 +124,30 @@ export default function PGDetailClient({ pg }: Props) {
         </button>
       </div>
 
-      {/* Sign-in Banner */}
+      {/* Sign-in Banner — left: info | right: Download + Sign In buttons */}
       {showSignInPrompt && (
         <div className={pgStyles.signinBanner}>
-          <div>
+          <div className={pgStyles.signinInfo}>
             <div className={pgStyles.signinTitle}>🔑 Sign in to save & explore more PGs</div>
             <div className={pgStyles.signinSub}>Your friend shared this PG with you — find more PGs nearby!</div>
           </div>
-          <button
-            className={styles.primaryBtn}
-            onClick={() => router.push(`/sign-in?from=/pg/${pg.id}&role=user`)}
-          >Sign In</button>
+          <div className={pgStyles.signinBtns}>
+            {/* PWA Install — only shown if browser supports it and app not yet installed */}
+            {canInstall && (
+              <button
+                className={pgStyles.downloadBtn}
+                onClick={triggerInstall}
+                disabled={installing}
+              >
+                {installing ? "Installing…" : "📲 Download App"}
+              </button>
+            )}
+            <button
+              className={styles.primaryBtn}
+              style={{ whiteSpace: "nowrap", padding: "9px 18px", fontSize: "13px" }}
+              onClick={() => router.push(`/sign-in?from=/pg/${pg.id}&role=user`)}
+            >Sign In</button>
+          </div>
         </div>
       )}
 
@@ -189,7 +193,7 @@ export default function PGDetailClient({ pg }: Props) {
                 <span className={typeClass}>{typeLabel}</span>
                 {pg.baseRent && (
                   <span className={styles.pgBaseRent}>
-                    ₹ Rent Starting from ₹{pg.baseRent.toLocaleString("en-IN")}
+                    <span className={styles.rupeeIcon}>₹</span> Rent Starting from ₹{pg.baseRent.toLocaleString("en-IN")}
                   </span>
                 )}
               </div>
@@ -203,9 +207,7 @@ export default function PGDetailClient({ pg }: Props) {
               )}
 
               {pg.address && (
-                <div className={styles.pgAddressBottom}>
-                  <span className={styles.pinIcon}>📍</span> {pg.address}
-                </div>
+                <p className={styles.pgAddress}>📍 {pg.address}</p>
               )}
 
               {pg.description && (
@@ -214,6 +216,7 @@ export default function PGDetailClient({ pg }: Props) {
                 </p>
               )}
 
+              {/* Buttons — same layout as FindPGs page */}
               <div className={styles.pgCardBtns}>
                 {pg.pgImages && pg.pgImages.length > 0 && (
                   <button className={styles.actionBtn} onClick={openGallery} id="btn-view-photos">
@@ -226,23 +229,29 @@ export default function PGDetailClient({ pg }: Props) {
                 )}
 
                 {pg.managerPhone && (
-                  <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={styles.actionBtn} id="btn-enquire">
-                    <span className={styles.actionIcon}>☎️</span>
-                    <div className={styles.actionText}>
-                      <span className={styles.actionTitle}>Enquire</span>
-                      <span className={styles.actionSub}>Contact owner</span>
-                    </div>
-                  </a>
+                  <>
+                    <div className={styles.btnDivider} />
+                    <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={styles.actionBtn} id="btn-enquire">
+                      <span className={styles.actionIcon}>☎️</span>
+                      <div className={styles.actionText}>
+                        <span className={styles.actionTitle}>Enquire</span>
+                        <span className={styles.actionSub}>Contact owner</span>
+                      </div>
+                    </a>
+                  </>
                 )}
 
                 {pg.locationLink && (
-                  <a href={pg.locationLink} target="_blank" rel="noopener noreferrer" className={styles.directionsBtn} id="btn-directions">
-                    <span className={styles.actionIcon}>🗺️</span>
-                    <div className={styles.actionText}>
-                      <span className={styles.actionTitle}>Directions</span>
-                      <span className={styles.actionSub}>Reach easily</span>
-                    </div>
-                  </a>
+                  <>
+                    <div className={styles.btnDivider} />
+                    <a href={pg.locationLink} target="_blank" rel="noopener noreferrer" className={styles.actionBtn} id="btn-directions">
+                      <span className={styles.actionIcon}>🗺️</span>
+                      <div className={styles.actionText}>
+                        <span className={styles.actionTitle}>Directions</span>
+                        <span className={styles.actionSub}>Reach easily</span>
+                      </div>
+                    </a>
+                  </>
                 )}
               </div>
 
@@ -254,7 +263,7 @@ export default function PGDetailClient({ pg }: Props) {
                     style={{ width: "100%", padding: "12px" }}
                   >🔍 Find More PGs Near Me</button>
                   <p style={{ fontSize: "12px", textAlign: "center", opacity: 0.5, marginTop: "8px" }}>
-                    Free account · No spam
+                    Sign-in For Free
                   </p>
                 </div>
               )}
