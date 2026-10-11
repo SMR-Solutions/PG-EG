@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { isNotNull } from "drizzle-orm";
+import { isNotNull, inArray, eq } from "drizzle-orm";
 import { createDb, pgs } from "../db";
 import { resolveMapsLink, haversineKm } from "../utils/maps";
 
@@ -340,6 +340,46 @@ router.get("/geocode", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Geocode error:", error);
     res.status(500).json({ error: "Geocoding failed" });
+  }
+});
+
+// ─── POST /api/public/pgs/bulk ─────────────────────────────
+router.post("/pgs/bulk", async (req: Request, res: Response) => {
+  try {
+    const { pgIds } = req.body;
+    if (!Array.isArray(pgIds) || pgIds.length === 0) {
+      res.json({ pgs: [] });
+      return;
+    }
+    const db = createDb(process.env.DATABASE_URL!);
+    const pgResults = await db.select().from(pgs).where(inArray(pgs.id, pgIds));
+    res.json({ pgs: pgResults.map(p => ({
+      ...p,
+      pgImages: JSON.parse(p.pgImages || "[]"),
+      sharings: JSON.parse(p.sharings || "[]")
+    }))});
+  } catch (err) {
+    console.error("Bulk PGs fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch PGs" });
+  }
+});
+
+// ─── GET /api/public/pgs/:id  (public — for deep-link & OG metadata) ───
+router.get("/pgs/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = createDb(process.env.DATABASE_URL!);
+    const results = await db.select().from(pgs).where(eq(pgs.id, id)).limit(1);
+    const pg = results[0];
+    if (!pg) { res.status(404).json({ error: "PG not found" }); return; }
+    res.json({
+      ...pg,
+      pgImages: JSON.parse(pg.pgImages || "[]"),
+      sharings: JSON.parse(pg.sharings || "[]"),
+    });
+  } catch (err) {
+    console.error("Single PG fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch PG" });
   }
 });
 

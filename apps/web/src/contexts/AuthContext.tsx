@@ -16,6 +16,7 @@ interface Owner {
   email?: string | null;
   photoUrl?: string | null;
   role?: string | null; // 'owner' | 'user'
+  savedPgs?: string[] | null;
 }
 
 interface PGSummary {
@@ -44,6 +45,7 @@ interface AuthContextType extends AuthState {
   signOut: () => void;
   refreshAuth: () => Promise<void>;
   setActivePg: (pgId: string) => void;
+  toggleSavePg: (pgId: string, save: boolean) => Promise<void>;
 }
 
 const TOKEN_KEY = "pg_eg_token";
@@ -197,9 +199,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshAuth();
   }, [refreshAuth]);
 
+  const toggleSavePg = useCallback(async (pgId: string, save: boolean) => {
+    if (!state.token || !state.owner) return;
+    try {
+      const res = await fetch(`${API_URL}/api/auth/save-pg`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${state.token}`,
+        },
+        body: JSON.stringify({ pgId, save }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const updatedOwner = { ...state.owner, savedPgs: data.savedPgs };
+        localStorage.setItem(OWNER_KEY, JSON.stringify(updatedOwner));
+        setState((s) => ({
+          ...s,
+          owner: updatedOwner,
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to toggle save PG:", err);
+    }
+  }, [state.token, state.owner]);
 
   return (
-    <AuthContext.Provider value={{ ...state, signIn, signOut, refreshAuth, setActivePg }}>
+    <AuthContext.Provider value={{ ...state, signIn, signOut, refreshAuth, setActivePg, toggleSavePg }}>
       {children}
     </AuthContext.Provider>
   );

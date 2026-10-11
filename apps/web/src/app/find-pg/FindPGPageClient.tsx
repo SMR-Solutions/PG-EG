@@ -151,7 +151,7 @@ function getDirectionsUrl(
 
 export default function FindPGPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading, owner, signOut } = useAuth();
+  const { isAuthenticated, isLoading, owner, signOut, toggleSavePg } = useAuth();
   const { theme, setTheme } = useTheme();
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -659,6 +659,21 @@ export default function FindPGPage() {
 
               <div className={styles.sidebarDivider} />
 
+              {/* Saved PGs */}
+              <button
+                className={styles.sidebarAction}
+                id="btn-saved-pgs"
+                onClick={() => { router.push("/saved"); setProfileOpen(false); }}
+              >
+                <div className={styles.sidebarActionIcon}>🔖</div>
+                <div>
+                  <div className={styles.sidebarActionTitle}>Saved PGs</div>
+                  <div className={styles.sidebarActionDesc}>View PGs you've saved</div>
+                </div>
+              </button>
+
+              <div className={styles.sidebarDivider} />
+
               {/* Sign Out */}
               <button
                 className={`${styles.sidebarAction} ${styles.sidebarActionDanger}`}
@@ -1091,6 +1106,36 @@ export default function FindPGPage() {
                         <span className={styles.navIcon}>↗</span> {pg.address.split(",")[0]} <span className={styles.caret}>›</span>
                       </span>
                     )}
+                    {/* Save/Share inline — DESKTOP only (hidden on mobile via CSS) */}
+                    <span className={styles.cardHeaderActions}>
+                      <span
+                        className={styles.cardHeaderIconBtn}
+                        title={owner?.savedPgs?.includes(pg.id) ? "Unsave" : "Save PG"}
+                        onClick={() => {
+                          if (!isAuthenticated) { alert("Sign in to save PGs!"); return; }
+                          if (toggleSavePg) toggleSavePg(pg.id, !owner?.savedPgs?.includes(pg.id));
+                        }}
+                      >
+                        {owner?.savedPgs?.includes(pg.id) ? "❤️" : "🤍"}
+                      </span>
+                      <span
+                        className={styles.cardHeaderIconBtn}
+                        title="Share"
+                        onClick={() => {
+                          const pgUrl = `${window.location.origin}/pg/${pg.id}`;
+                          const shareText = [
+                            `🏢 ${pg.name}`,
+                            pg.type === "ladies" ? "👩\u200d🦰 Ladies PG" : pg.type === "gents" ? "👨\u200d🦱 Gents PG" : "🤝 Co-Living",
+                            pg.baseRent ? `💰 Rent from ₹${pg.baseRent.toLocaleString("en-IN")}` : null,
+                            pg.address ? `📍 ${pg.address}` : null,
+                          ].filter(Boolean).join("\n");
+                          if (navigator.share) navigator.share({ title: pg.name, text: shareText, url: pgUrl }).catch(() => {});
+                          else { navigator.clipboard.writeText(`${shareText}\n\n${pgUrl}`); alert("Copied!"); }
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                      </span>
+                    </span>
                   </div>
 
                   <div className={styles.cardLayout}>
@@ -1101,10 +1146,44 @@ export default function FindPGPage() {
                       ) : (
                         <div className={styles.pgMainImgPlaceholder}>No Image</div>
                       )}
+
+                      {/* Save/Share on IMAGE — MOBILE only (hidden ≥768px via CSS) */}
+                      <div className={styles.cardImageActions}>
+                        <div
+                          className={styles.favBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!isAuthenticated) { alert("Sign in to save PGs!"); return; }
+                            if (toggleSavePg) toggleSavePg(pg.id, !owner?.savedPgs?.includes(pg.id));
+                          }}
+                        >
+                          {owner?.savedPgs?.includes(pg.id) ? "❤️" : "🤍"}
+                        </div>
+                        <div
+                          className={styles.shareBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const pgUrl = `${window.location.origin}/pg/${pg.id}`;
+                            const shareText = [
+                              `🏢 ${pg.name}`,
+                              pg.type === "ladies" ? "👩‍🦰 Ladies PG" : pg.type === "gents" ? "👨‍🦱 Gents PG" : "🤝 Co-Living",
+                              pg.baseRent ? `💰 Rent from ₹${pg.baseRent.toLocaleString("en-IN")}` : null,
+                              pg.address ? `📍 ${pg.address}` : null,
+                              "\n🔗 " + pgUrl,
+                            ].filter(Boolean).join("\n");
+                            if (navigator.share) navigator.share({ title: pg.name, text: shareText, url: pgUrl }).catch(() => {});
+                            else { navigator.clipboard.writeText(shareText); alert("Copied!"); }
+                          }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                        </div>
+                      </div>
+
                       <div className={styles.photosBadge}>
                         🖼 {pg.pgImages?.length || 0} Photos
                       </div>
                     </div>
+
 
                     {/* Right: Content (Bottom on mobile) */}
                     <div className={styles.cardContentArea}>

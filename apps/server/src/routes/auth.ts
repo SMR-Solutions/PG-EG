@@ -92,7 +92,7 @@ router.post("/verify", async (req: Request, res: Response) => {
 
     res.json({
       token,
-      owner: { id: owner.id, name: owner.name, phone: owner.phone, role: owner.role },
+      owner: { id: owner.id, name: owner.name, phone: owner.phone, role: owner.role, savedPgs: JSON.parse(owner.savedPgs || "[]") },
       isNewUser,
       hasPG,
       role: owner.role,
@@ -157,7 +157,7 @@ router.post("/google", async (req: Request, res: Response) => {
 
     res.json({
       token,
-      owner: { id: owner.id, name: owner.name, phone: owner.phone, email: owner.email, role: owner.role },
+      owner: { id: owner.id, name: owner.name, phone: owner.phone, email: owner.email, role: owner.role, savedPgs: JSON.parse(owner.savedPgs || "[]") },
       isNewUser,
       hasPG,
       role: owner.role,
@@ -190,7 +190,7 @@ router.get("/me", async (req: Request, res: Response) => {
       .where(eq(pgs.ownerId, owner.id)).orderBy(asc(pgs.createdAt));
 
     res.json({
-      owner: { id: owner.id, name: owner.name, phone: owner.phone, email: owner.email, photoUrl: owner.photoUrl, role: owner.role, createdAt: owner.createdAt },
+      owner: { id: owner.id, name: owner.name, phone: owner.phone, email: owner.email, photoUrl: owner.photoUrl, role: owner.role, createdAt: owner.createdAt, savedPgs: JSON.parse(owner.savedPgs || "[]") },
       hasPG: ownerPGs.length > 0,
       role: owner.role,
       pgId: ownerPGs[0]?.id || null,
@@ -198,6 +198,49 @@ router.get("/me", async (req: Request, res: Response) => {
     });
   } catch {
     res.status(401).json({ error: "Invalid token" });
+  }
+});
+
+// ─── POST /api/auth/save-pg ───────────────────────────────────────
+router.post("/save-pg", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      res.status(401).json({ error: "Missing token" });
+      return;
+    }
+    const token = authHeader.split(" ")[1];
+    const payload = jwt.verify(token, getJwtSecret()) as { ownerId: string };
+    
+    const { pgId, save } = req.body;
+    if (!pgId) {
+      res.status(400).json({ error: "pgId is required" });
+      return;
+    }
+
+    const db = createDb(process.env.DATABASE_URL!);
+    const existing = await db.select().from(owners).where(eq(owners.id, payload.ownerId)).limit(1);
+    const user = existing[0];
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    let savedPgs = JSON.parse(user.savedPgs || "[]") as string[];
+    if (save) {
+      if (!savedPgs.includes(pgId)) savedPgs.push(pgId);
+    } else {
+      savedPgs = savedPgs.filter((id: string) => id !== pgId);
+    }
+
+    await db.update(owners)
+      .set({ savedPgs: JSON.stringify(savedPgs), updatedAt: new Date() })
+      .where(eq(owners.id, payload.ownerId));
+
+    res.json({ success: true, savedPgs });
+  } catch (err) {
+    console.error("Save PG error:", err);
+    res.status(401).json({ error: "Invalid token or server error" });
   }
 });
 
