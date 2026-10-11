@@ -21,6 +21,7 @@ export const owners = pgTable("owners", {
   email: text("email"),
   photoUrl: text("photo_url"),
   role: text("role").default("owner").notNull(), // 'owner' | 'user' (tenant/student)
+  savedPgs: text("saved_pgs").default("[]"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

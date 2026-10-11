@@ -1415,6 +1415,51 @@
 .headerAddressDesk:hover { background: rgba(16, 185, 129, 0.25); }
 .navIcon { font-size: 12px; color: #10b981; }
 
+/* Inline save/share in header — DESKTOP only */
+.cardHeaderActions {
+  display: none; /* hidden on mobile */
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+}
+.cardHeaderIconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.18s, background 0.18s;
+  flex-shrink: 0;
+  color: inherit;
+}
+.cardHeaderIconBtn:hover { transform: scale(1.12); background: rgba(255,255,255,0.16); }
+:global([data-theme="light"]) .cardHeaderIconBtn {
+  background: rgba(0,0,0,0.06);
+  border-color: rgba(0,0,0,0.12);
+}
+
+/* Save/Share on image — MOBILE only, wrapper */
+.cardImageActions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 3;
+}
+
+/* On desktop: show inline header buttons, hide image buttons */
+@media (min-width: 768px) {
+  .cardHeaderActions { display: flex; }
+  .cardImageActions { display: none; }
+}
+
 .cardLayout { padding: 8px 16px 16px 16px;
   display: flex;
   flex-direction: column;
@@ -1441,13 +1486,10 @@
   font-weight: 600;
 }
 .favBtn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.52);
   color: #fff;
   border: 1px solid rgba(255,255,255,0.2);
   display: flex;
@@ -1456,7 +1498,28 @@
   font-size: 16px;
   cursor: pointer;
   backdrop-filter: blur(4px);
+  flex-shrink: 0;
+  transition: transform 0.2s;
 }
+.favBtn:hover { transform: scale(1.1); }
+
+.shareBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.52);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.shareBtn:hover { transform: scale(1.1); }
 .photosBadge {
   position: absolute;
   bottom: 12px;
