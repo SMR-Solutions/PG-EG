@@ -33,6 +33,7 @@ interface TenantProfile {
   joiningDate: string; leavingDate?: string | null;
   rentAmount?: number; advanceAmount?: number; paymentMode?: string | null;
   depositDeduction?: number | null; refundMode?: string | null;
+  profession?: string | null; professionDetail?: string | null;
   status: string;
 }
 interface Bed { id: string; bedNumber: number; }
@@ -55,6 +56,71 @@ function TenantProfileInner() {
   const [error, setError] = useState("");
   const [idFlipped, setIdFlipped] = useState(false);
 
+  // Lightbox state
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [lightboxZoom, setLightboxZoom] = useState(1);
+  const [touchStart, setTouchStart] = useState<{x: number, y: number} | null>(null);
+  const [touchEnd, setTouchEnd] = useState<{x: number, y: number} | null>(null);
+  const [lastTap, setLastTap] = useState(0);
+  const [pinchDist, setPinchDist] = useState(0);
+
+  const handleLbTouchStart = (e: React.TouchEvent) => {
+    if (e.targetTouches.length === 1) {
+      setTouchEnd(null);
+      setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+    } else if (e.targetTouches.length === 2) {
+      const touch1 = e.targetTouches[0];
+      const touch2 = e.targetTouches[1];
+      setPinchDist(Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY));
+    }
+  };
+
+  const handleLbTouchMove = (e: React.TouchEvent) => {
+    if (e.targetTouches.length === 1) {
+      setTouchEnd({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+    } else if (e.targetTouches.length === 2) {
+      const touch1 = e.targetTouches[0];
+      const touch2 = e.targetTouches[1];
+      const dist = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+      if (pinchDist) {
+        const delta = dist - pinchDist;
+        setLightboxZoom(z => Math.min(5, Math.max(1, z + delta * 0.015)));
+      }
+      setPinchDist(dist);
+    }
+  };
+
+  const handleLbTouchEnd = () => {
+    setPinchDist(0);
+    
+    // Double tap
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      setLightboxZoom(z => (z === 1 ? 2.5 : 1));
+      setLastTap(0);
+    } else {
+      setLastTap(now);
+    }
+
+    // Swipe
+    if (!touchStart || !touchEnd) return;
+    const xDistance = touchStart.x - touchEnd.x;
+    const yDistance = Math.abs(touchStart.y - touchEnd.y);
+    
+    // Swipe left or right if horizontal movement is greater than vertical movement
+    if (Math.abs(xDistance) > 50 && yDistance < 60) {
+      const pUrl = data?.tenant.photoUrl;
+      const iUrl = data?.tenant.idPhotoUrl;
+      if (pUrl && iUrl) {
+        setLightboxImg(prev => prev === pUrl ? iUrl : pUrl);
+        setLightboxZoom(1);
+      }
+    }
+    
+    setTouchStart(null);
+    setTouchEnd(null);
+  };
+
   // Rent payment state
   const [rentPayMode, setRentPayMode] = useState<"cash" | "upi">("cash");
   const [rentPayAmount, setRentPayAmount] = useState("");
@@ -62,6 +128,21 @@ function TenantProfileInner() {
   const [payError, setPayError] = useState("");
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [upiCopied, setUpiCopied] = useState(false);
+
+  // ── Edit / Complete Profile state ──────────────────────────────────────
+  const [editOpen, setEditOpen] = useState(false);
+  const [editAltPhone, setEditAltPhone] = useState("");
+  const [editEmergency, setEditEmergency] = useState("");
+  const [editEmergencyRel, setEditEmergencyRel] = useState("Father");
+  const [editProfession, setEditProfession] = useState<"student"|"jobholder"|"other"|"">("" );
+  const [editProfDetail, setEditProfDetail] = useState("");
+  const [editPhotoUrl, setEditPhotoUrl] = useState<string|null>(null);
+  const [editIdUrl, setEditIdUrl] = useState<string|null>(null);
+  const [uploadingSelfie, setUploadingSelfie] = useState(false);
+  const [uploadingId, setUploadingId] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editSuccess, setEditSuccess] = useState("");
 
   const load = useCallback(async () => {
     if (!tenantId) { setError("No tenant ID"); setLoading(false); return; }
@@ -88,8 +169,69 @@ function TenantProfileInner() {
 
   // Current month rent record
   const currentMonth = currentMonthStr();
-  const currentRent = data?.rentRecords.find((r) => r.month === currentMonth);
+  const currentRent = data?.rentRecords?.find((r) => r.month === currentMonth);
   const remaining = currentRent ? currentRent.amount - (currentRent.paidAmount || 0) : 0;
+
+  function openEdit() {
+    const t = data!.tenant;
+    setEditAltPhone(t.altPhone || "");
+    setEditEmergency(t.emergencyContact || "");
+    setEditEmergencyRel(t.emergencyRelation || "Father");
+    setEditProfession((t.profession as "student"|"jobholder"|"other"|"") || "");
+    setEditProfDetail(t.professionDetail || "");
+    setEditPhotoUrl(t.photoUrl || null);
+    setEditIdUrl(t.idPhotoUrl || null);
+    setEditError(""); setEditSuccess("");
+    setEditOpen(true);
+  }
+
+  async function uploadImage(file: File, field: "selfie" | "id"): Promise<string | null> {
+    const setter = field === "selfie" ? setUploadingSelfie : setUploadingId;
+    setter(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("type", field === "selfie" ? "selfie" : "id");
+      const res = await fetch(`${API_URL}/api/upload`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Upload failed");
+      return j.url as string;
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : "Upload failed");
+      return null;
+    } finally { setter(false); }
+  }
+
+  async function saveProfile() {
+    if (!tenantId) return;
+    setEditSaving(true); setEditError(""); setEditSuccess("");
+    try {
+      const body: Record<string, unknown> = {
+        altPhone: editAltPhone.replace(/\D/g, "").slice(-10) || null,
+        emergencyContact: editEmergency.replace(/\D/g, "").slice(-10) || null,
+        emergencyRelation: editEmergency ? editEmergencyRel : null,
+        profession: editProfession || null,
+        professionDetail: editProfDetail.trim() || null,
+        photoUrl: editPhotoUrl,
+        idPhotoUrl: editIdUrl,
+      };
+      const res = await fetch(`${API_URL}/api/tenants/${tenantId}/contact`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(body),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Failed");
+      setEditSuccess("Profile updated! ✅");
+      await load();
+      setTimeout(() => { setEditOpen(false); setEditSuccess(""); }, 1200);
+    } catch (e) { setEditError(e instanceof Error ? e.message : "Failed"); }
+    setEditSaving(false);
+  }
 
   async function handleMarkPaid() {
     if (!currentRent) return;
@@ -154,13 +296,23 @@ function TenantProfileInner() {
       {/* Header */}
       <header className={styles.header}>
         <button className={styles.backBtn} onClick={() => router.push("/dashboard")} id="btn-back">← Dashboard</button>
-        <AppLogo size="sm" />
+        <AppLogo size="xs" />
       </header>
 
       <div className={styles.content}>
 
-        {/* Hero — photo (click to flip to ID card) */}
-        <div className={styles.heroWrap}>
+        {/* Hero — photo (click to open lightbox) */}
+        <div 
+          className={styles.heroWrap} 
+          onClick={() => {
+            const url = idFlipped ? tenant.idPhotoUrl : tenant.photoUrl;
+            if (url) {
+              setLightboxImg(url);
+              setLightboxZoom(1);
+            }
+          }}
+          style={{ cursor: (idFlipped ? tenant.idPhotoUrl : tenant.photoUrl) ? "zoom-in" : "default" }}
+        >
           {/* Photo side */}
           {!idFlipped && (
             tenant.photoUrl
@@ -224,6 +376,104 @@ function TenantProfileInner() {
               </span>
             </div>
           </div>
+        </section>
+
+        {/* ── Complete / Edit Profile ── */}
+        <section className={styles.section}>
+          <button className={styles.editProfileToggle} onClick={() => editOpen ? setEditOpen(false) : openEdit()} id="btn-edit-profile">
+            ✏️ {editOpen ? "Close Editor" : "Edit / Complete Profile"}
+            <span className={styles.editChevron}>{editOpen ? "▲" : "▼"}</span>
+          </button>
+
+          {editOpen && (
+            <div className={styles.editProfileBody}>
+              {editError && <p className={styles.editErr}>⚠️ {editError}</p>}
+              {editSuccess && <p className={styles.editOk}>{editSuccess}</p>}
+
+              {/* Photos */}
+              <p className={styles.editGroupLabel}>📷 Selfie Photo</p>
+              <div className={styles.editPhotoRow}>
+                {editPhotoUrl
+                  ? <img src={editPhotoUrl} className={styles.editThumb} alt="selfie" />
+                  : <div className={styles.editThumbEmpty}>👤</div>}
+                <label className={styles.editUploadBtn} htmlFor="ep-selfie">
+                  {uploadingSelfie ? "Uploading…" : (editPhotoUrl ? "Change Photo" : "+ Add Selfie")}
+                  <input id="ep-selfie" type="file" accept="image/*" hidden disabled={uploadingSelfie}
+                    onChange={async e => {
+                      const f = e.target.files?.[0]; if (!f) return;
+                      const url = await uploadImage(f, "selfie");
+                      if (url) setEditPhotoUrl(url);
+                    }} />
+                </label>
+              </div>
+
+              <p className={styles.editGroupLabel} style={{ marginTop: 14 }}>🪪 ID Card</p>
+              <div className={styles.editPhotoRow}>
+                {editIdUrl
+                  ? <img src={editIdUrl} className={styles.editThumb} alt="id" style={{ objectFit: "contain" }} />
+                  : <div className={styles.editThumbEmpty}>🪪</div>}
+                <label className={styles.editUploadBtn} htmlFor="ep-id">
+                  {uploadingId ? "Uploading…" : (editIdUrl ? "Change ID" : "+ Add ID Card")}
+                  <input id="ep-id" type="file" accept="image/*" hidden disabled={uploadingId}
+                    onChange={async e => {
+                      const f = e.target.files?.[0]; if (!f) return;
+                      const url = await uploadImage(f, "id");
+                      if (url) setEditIdUrl(url);
+                    }} />
+                </label>
+              </div>
+
+              {/* Alt phone */}
+              <p className={styles.editGroupLabel} style={{ marginTop: 14 }}>📱 Alternate Number</p>
+              <input type="tel" className={styles.editInput} placeholder="Alternate mobile (optional)"
+                value={editAltPhone} onChange={e => setEditAltPhone(e.target.value)} id="ep-alt-phone" />
+
+              {/* Emergency contact */}
+              <p className={styles.editGroupLabel} style={{ marginTop: 14 }}>🏥 Emergency Contact</p>
+              <input type="tel" className={styles.editInput} placeholder="Emergency mobile number"
+                value={editEmergency} onChange={e => setEditEmergency(e.target.value)} id="ep-emergency" />
+              {editEmergency && (
+                <div className={styles.editRelRow}>
+                  {["Father","Mother","Brother","Sister","Friend","Other"].map(rel => (
+                    <button key={rel} type="button"
+                      className={`${styles.editRelTag} ${editEmergencyRel === rel ? styles.editRelTagActive : ""}`}
+                      onClick={() => setEditEmergencyRel(rel)}>{rel}</button>
+                  ))}
+                </div>
+              )}
+
+              {/* Profession */}
+              <p className={styles.editGroupLabel} style={{ marginTop: 14 }}>💼 Profession</p>
+              <div className={styles.editProfRow}>
+                {(["student","jobholder","other"] as const).map(p => (
+                  <button key={p} type="button"
+                    className={`${styles.editProfBtn} ${editProfession === p ? styles.editProfBtnActive : ""}`}
+                    onClick={() => { setEditProfession(p); setEditProfDetail(""); }}>
+                    {p === "student" ? "🎓 Student" : p === "jobholder" ? "💼 Job Holder" : "🔹 Other"}
+                  </button>
+                ))}
+              </div>
+              {editProfession === "student" && (
+                <input type="text" className={styles.editInput} style={{ marginTop: 8 }}
+                  placeholder="e.g. Engineering 3rd Year in JSS College…"
+                  value={editProfDetail} onChange={e => setEditProfDetail(e.target.value)} id="ep-study" />
+              )}
+              {editProfession === "jobholder" && (
+                <input type="text" className={styles.editInput} style={{ marginTop: 8 }}
+                  placeholder="e.g. Software Engineer at Infosys, 140/A ABC Street…"
+                  value={editProfDetail} onChange={e => setEditProfDetail(e.target.value)} id="ep-job" />
+              )}
+              {editProfession === "other" && (
+                <input type="text" className={styles.editInput} style={{ marginTop: 8 }}
+                  placeholder="What do you do? e.g. Freelancer, Business Owner…"
+                  value={editProfDetail} onChange={e => setEditProfDetail(e.target.value)} id="ep-other" />
+              )}
+
+              <button className={styles.editSaveBtn} onClick={saveProfile} disabled={editSaving || uploadingSelfie || uploadingId} id="btn-save-profile">
+                {editSaving ? <><span className={styles.spinnerSm} /> Saving…</> : "💾 Save Profile"}
+              </button>
+            </div>
+          )}
         </section>
 
         {/* ── Stay Details ── */}
@@ -306,7 +556,6 @@ function TenantProfileInner() {
                     <span style={{ color: "#2dc653" }}>Paid: ₹{(currentRent.paidAmount || 0).toLocaleString()}</span>
                     <span style={{ color: "#e63946" }}>Remaining: ₹{remaining.toLocaleString()}</span>
                   </div>
-                  {/* WhatsApp reminder button — only when rent is unpaid */}
                   {/* WhatsApp reminder button — only when rent is unpaid */}
                   {remaining > 0 && (
                     <button
@@ -443,7 +692,7 @@ function TenantProfileInner() {
             <section className={styles.section}>
               <h2 className={styles.sectionTitle}>🕓 Full History</h2>
               <div style={{ position: "relative", paddingLeft: 28 }}>
-                <div style={{ position: "absolute", left: 10, top: 0, bottom: 0, width: 2, background: "rgba(255,255,255,0.08)", borderRadius: 2 }} />
+                <div className={styles.historyLine} />
 
                 {items.map((item, i) => {
                   const isLast = i === items.length - 1;
@@ -451,19 +700,19 @@ function TenantProfileInner() {
                   if (item.kind === "rent") {
                     return (
                       <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: isLast ? 0 : 20, position: "relative" }}>
-                        <div style={{ position: "absolute", left: -22, top: 4, width: 12, height: 12, borderRadius: "50%", background: "#f4a261", border: "2px solid rgba(255,255,255,0.15)" }} />
-                        <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(244,162,97,0.15)", borderRadius: 10, padding: "10px 14px" }}>
+                        <div style={{ position: "absolute", left: -22, top: 4, width: 12, height: 12, borderRadius: "50%", background: "#f4a261", border: "2px solid var(--bg-base)" }} />
+                        <div className={`${styles.historyCard} ${styles.historyCardRent}`}>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                             <span style={{ fontWeight: 700, fontSize: 13, color: "#f4a261" }}>
                               {item.mode === "upi" ? "📱" : "💵"} Rent Paid · {monthLabel(item.month)}
                             </span>
-                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{fmt(item.createdAt)} {fmtTime(item.createdAt)}</span>
+                            <span className={styles.historyTimestamp}>{fmt(item.createdAt)} {fmtTime(item.createdAt)}</span>
                           </div>
                           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                            <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>₹{item.amount.toLocaleString()}</span>
-                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", textTransform: "uppercase" }}>{item.mode}</span>
+                            <span className={styles.historyAmount}>₹{item.amount.toLocaleString()}</span>
+                            <span className={styles.historyMode}>{item.mode}</span>
                           </div>
-                          {item.note && <p style={{ margin: "4px 0 0", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{item.note}</p>}
+                          {item.note && <p className={styles.historyNote}>{item.note}</p>}
                         </div>
                       </div>
                     );
@@ -485,32 +734,32 @@ function TenantProfileInner() {
 
                   return (
                     <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: isLast ? 0 : 20, position: "relative" }}>
-                      <div style={{ position: "absolute", left: -22, top: 4, width: 12, height: 12, borderRadius: "50%", background: dot, border: "2px solid rgba(255,255,255,0.15)" }} />
-                      <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: `1px solid ${dot}26`, borderRadius: 10, padding: "10px 14px" }}>
+                      <div style={{ position: "absolute", left: -22, top: 4, width: 12, height: 12, borderRadius: "50%", background: dot, border: "2px solid var(--bg-base)" }} />
+                      <div className={styles.historyCard} style={{ borderColor: `${dot}40` }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                           <span style={{ fontWeight: 700, fontSize: 13, color: dot }}>{icon} {label}</span>
-                          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{fmt(item.createdAt)} {fmtTime(item.createdAt)}</span>
+                          <span className={styles.historyTimestamp}>{fmt(item.createdAt)} {fmtTime(item.createdAt)}</span>
                         </div>
                         {isMove && item.fromRoom && item.toRoom && (
-                          <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
+                          <p style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>
                             <span style={{ color: "#f4a261" }}>{item.fromRoom}</span>
-                            <span style={{ margin: "0 6px", color: "rgba(255,255,255,0.3)" }}>→</span>
+                            <span className={styles.historyMoveArrow}>→</span>
                             <span style={{ color: "#4dabf7" }}>{item.toRoom}</span>
                           </p>
                         )}
                         {isCheckOut && co && (
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px", marginTop: 6 }}>
-                            {[["Deposit","#fff",co.deposit],["Deduction","#e63946",co.deduction],["Refund","#2dc653",co.refund],["Via","#fff",co.via.toUpperCase()]].map(([lbl,clr,val]) => (
-                              <div key={lbl} style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>{lbl}
-                                <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: clr }}>
+                            {[["Deposit","var(--text-primary)",co.deposit],["Deduction","#e63946",co.deduction],["Refund","#2dc653",co.refund],["Via","var(--text-primary)",co.via.toUpperCase()]].map(([lbl,clr,val]) => (
+                              <div key={lbl} className={styles.historyCoLabel}>{lbl}
+                                <span className={styles.historyCoValue} style={{ color: clr }}>
                                   {lbl !== "Via" ? "₹" : ""}{val}
                                 </span>
                               </div>
                             ))}
                           </div>
                         )}
-                        {isCheckOut && !co && item.note && <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{item.note}</p>}
-                        {(isCheckIn || (!isMove && !isCheckOut)) && item.note && <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{item.note}</p>}
+                        {isCheckOut && !co && item.note && <p className={styles.historyNote}>{item.note}</p>}
+                        {(isCheckIn || (!isMove && !isCheckOut)) && item.note && <p className={styles.historyNote}>{item.note}</p>}
                       </div>
                     </div>
                   );
@@ -520,6 +769,7 @@ function TenantProfileInner() {
           );
         })()}
 
+      </div>
 
       {/* ─── Professional Reminder Modal ─── */}
       {showReminderModal && (() => {
@@ -558,41 +808,155 @@ function TenantProfileInner() {
 
         const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(waMsg)}`;
 
+        function copyText(text: string, setter: (v: boolean) => void) {
+          navigator.clipboard.writeText(text).then(() => {
+            setter(true); setTimeout(() => setter(false), 2000);
+          });
+        }
+
         return (
           <div className={styles.reminderOverlay} onClick={() => setShowReminderModal(false)}>
             <div className={styles.reminderModal} onClick={e => e.stopPropagation()}>
               <button className={styles.reminderClose} onClick={() => setShowReminderModal(false)}>✕</button>
-              <h3 className={styles.reminderTitle}>📤 Send Reminder</h3>
-              <pre className={styles.reminderMsg}>{waMsg}</pre>
 
-              <div className={styles.reminderCopyRow}>
-                {upi && (
-                  <button className={styles.reminderCopyBtn} onClick={() => {
-                    navigator.clipboard.writeText(upi).then(() => { setUpiCopied(true); setTimeout(() => setUpiCopied(false), 2000); });
-                  }}>
-                    {upiCopied ? "✅ Copied!" : "📋 Copy UPI ID"}
-                  </button>
-                )}
-                {payPhone && (
-                  <button className={styles.reminderCopyBtn} onClick={() => navigator.clipboard.writeText(payPhone)}>
-                    📋 Copy Number
-                  </button>
-                )}
+              <div className={styles.invoiceHeader}>
+                <div className={styles.invoicePgName}>{pgName}</div>
+                {pgType && <div className={styles.invoicePgType}>{pgType}</div>}
+                <div className={styles.invoiceDivider} />
               </div>
 
-              <a href={waUrl} target="_blank" rel="noopener noreferrer" className={styles.reminderWaBtn}>
-                <svg viewBox="0 0 32 32" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+              <div className={styles.invoiceRow}>
+                <span className={styles.invoiceLabel}>Tenant</span>
+                <span className={styles.invoiceValue}>{tenant.name}</span>
+              </div>
+              <div className={styles.invoiceRow}>
+                <span className={styles.invoiceLabel}>Room · Bed</span>
+                <span className={styles.invoiceValue}>{room?.roomNumber ?? "—"} · Bed {bed?.bedNumber ?? "—"} · Floor {room?.floor ?? "—"}</span>
+              </div>
+              <div className={styles.invoiceRow}>
+                <span className={styles.invoiceLabel}>Period</span>
+                <span className={styles.invoiceValue}>{monthStr}</span>
+              </div>
+
+              <div className={styles.invoiceDivider} />
+
+              <div className={styles.invoiceAmountRow}>
+                <span className={styles.invoiceAmountLabel}>Amount Due</span>
+                <span className={styles.invoiceAmount}>₹{remaining.toLocaleString("en-IN")}</span>
+              </div>
+
+              <div className={styles.invoiceDivider} />
+
+              <p className={styles.invoicePayTitle}>Pay Instantly</p>
+
+              {upi && (
+                <div className={styles.upiPill}>
+                  <span className={styles.upiPillId}>💸 {upi}</span>
+                  <button className={styles.upiCopyBtn} onClick={() => copyText(upi!, setUpiCopied)}>
+                    {upiCopied ? "✓ Copied!" : "📋 Copy UPI"}
+                  </button>
+                </div>
+              )}
+
+              {payPhone && (
+                <div className={styles.upiPill} style={{ marginTop: 10 }}>
+                  <span className={styles.upiPillId}>📱 {payPhone}</span>
+                  <button className={styles.upiCopyBtn} onClick={() => copyText(payPhone!, setUpiCopied)}>
+                    {upiCopied ? "✓ Copied!" : "📋 Copy"}
+                  </button>
+                </div>
+              )}
+
+              {!upi && !payPhone && (
+                <p className={styles.noPaymentNote}>
+                  ⚠️ No payment details set. Go to <strong>Profile → Payment</strong> to add UPI &amp; number.
+                </p>
+              )}
+
+              <div className={styles.invoiceDivider} />
+
+              <a
+                href={waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.waSendBtn}
+                id="btn-send-whatsapp"
+              >
+                <svg viewBox="0 0 32 32" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="16" cy="16" r="16" fill="#25D366"/>
                   <path fill="#fff" d="M23.5 8.5A10.44 10.44 0 0 0 16 5.5C10.2 5.5 5.5 10.2 5.5 16a10.4 10.4 0 0 0 1.4 5.2L5.5 26.5l5.4-1.4a10.5 10.5 0 0 0 5.1 1.3c5.8 0 10.5-4.7 10.5-10.5a10.4 10.4 0 0 0-3-7.4zm-7.5 16.1a8.7 8.7 0 0 1-4.5-1.2l-.3-.2-3.2.8.9-3.1-.2-.3A8.7 8.7 0 0 1 7.3 16a8.7 8.7 0 0 1 8.7-8.7 8.7 8.7 0 0 1 8.7 8.7 8.7 8.7 0 0 1-8.7 8.6zm4.8-6.5c-.3-.1-1.6-.8-1.8-.9s-.4-.1-.6.1-.7.9-.8 1-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7 7 0 0 1-1.3-1.6c-.1-.3 0-.4.1-.6l.4-.5.3-.4v-.4l-.9-2.1c-.2-.5-.5-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8c.1.2 1.5 2.4 3.8 3.3a13 13 0 0 0 1.3.5 3.1 3.1 0 0 0 1.4.1c.4-.1 1.3-.5 1.5-1s.2-1 .1-1a.5.5 0 0 0-.4-.3z"/>
                 </svg>
-                WhatsApp Now
+                Send Reminder via WhatsApp
               </a>
             </div>
           </div>
         );
       })()}
+      {/* ─── Lightbox Modal ─── */}
+      {lightboxImg && (() => {
+        const pUrl = data?.tenant?.photoUrl;
+        const iUrl = data?.tenant?.idPhotoUrl;
+        const hasBoth = !!(pUrl && iUrl);
+        const toggleImg = () => {
+          if (hasBoth) {
+            setLightboxImg(prev => prev === pUrl ? iUrl : pUrl);
+            setLightboxZoom(1);
+          }
+        };
 
-      </div>
+        return (
+          <div className={styles.lightboxOverlay} onClick={() => setLightboxImg(null)}>
+            <button className={styles.lightboxClose} onClick={() => setLightboxImg(null)}>✕</button>
+            
+            {hasBoth && (
+              <>
+                <button className={`${styles.lightboxChevron} ${styles.lightboxChevronLeft}`} onClick={(e) => { e.stopPropagation(); toggleImg(); }}>❮</button>
+                <button className={`${styles.lightboxChevron} ${styles.lightboxChevronRight}`} onClick={(e) => { e.stopPropagation(); toggleImg(); }}>❯</button>
+              </>
+            )}
+
+            <button className={styles.lightboxDownload} onClick={async (e) => { 
+              e.stopPropagation(); 
+              try {
+                const r = await fetch(lightboxImg);
+                const b = await r.blob();
+                const url = window.URL.createObjectURL(b);
+                const a = document.createElement("a");
+                a.href = url; 
+                a.download = `pg-eg-tenant-${Date.now()}.jpg`;
+                a.click(); 
+                window.URL.revokeObjectURL(url);
+              } catch(err) {
+                window.open(lightboxImg, "_blank");
+              }
+            }}>
+              <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            </button>
+
+            <div className={styles.lightboxControls} onClick={(e) => e.stopPropagation()}>
+              <button className={styles.lightboxBtn} onClick={() => setLightboxZoom(z => Math.max(1, z - 0.5))}>−</button>
+              <span className={styles.lightboxZoomText}>{Math.round(lightboxZoom * 100)}%</span>
+              <button className={styles.lightboxBtn} onClick={() => setLightboxZoom(z => Math.min(5, z + 0.5))}>+</button>
+            </div>
+
+            <div 
+              className={styles.lightboxImageWrapper} 
+              onClick={(e) => e.stopPropagation()}
+              onTouchStart={handleLbTouchStart}
+              onTouchMove={handleLbTouchMove}
+              onTouchEnd={handleLbTouchEnd}
+            >
+              <img 
+                src={lightboxImg} 
+                alt="Zoomed" 
+                className={styles.lightboxImage} 
+                style={{ transform: `scale(${lightboxZoom})` }} 
+              />
+            </div>
+          </div>
+        );
+      })()}
+
     </main>
   );
 }
