@@ -527,8 +527,8 @@ function TenantProfileInner() {
         const activePg = allPgs.find(p => p.id === activePgId);
         const pgName = activePg?.name ?? "PG";
         const pgType = activePg?.type ?? "";
-        const upi = (activePg as any)?.paymentUpiId ?? null;
-        const payPhone = (activePg as any)?.paymentPhone ?? null;
+        const upi = activePg?.paymentUpiId ?? null;
+        const payPhone = activePg?.paymentPhone ?? null;
         const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
         const [yr, m] = currentMonth.split("-");
         const monthStr = m ? `${MONTHS[parseInt(m)-1]} ${yr}` : currentMonth;

@@ -21,6 +21,9 @@ interface Owner {
 interface PGSummary {
   id: string;
   name: string;
+  type?: string | null;
+  paymentUpiId?: string | null;
+  paymentPhone?: string | null;
 }
 
 interface AuthState {
