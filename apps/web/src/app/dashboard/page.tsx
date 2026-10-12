@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -8,12 +8,12 @@ import { useTheme } from "@/contexts/ThemeContext";
 import styles from "./page.module.css";
 import AppLogo from "@/components/AppLogo";
 import Building3DView from "@/components/Building3DView";
-// R3F version — dynamically imported so Three.js is never loaded unless the user picks it
+// R3F version â€” dynamically imported so Three.js is never loaded unless the user picks it
 const Building3DViewR3F = dynamic(() => import("@/components/Building3DViewR3F"), { ssr: false });
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-/* ─── Types ─── */
+/* â”€â”€â”€ Types â”€â”€â”€ */
 interface RentRecord { id: string; status: string; amount: number; paidAmount: number; paymentMode: string | null; paidAt: string | null; }
 interface Tenant {
   id: string; name: string; phone: string; joiningDate: string;
@@ -37,10 +37,10 @@ interface PGData {
 }
 interface DashboardData { pg: PGData; rooms: Room[]; currentMonth: string; }
 
-/* ─── Helpers ─── */
+/* â”€â”€â”€ Helpers â”€â”€â”€ */
 const BED_LETTERS = "ABCDEFGHIJKLMNOP";
-const TYPE_EMOJI: Record<string, string> = { gents: "🚹", ladies: "🚺", "co-living": "🧑‍🤝‍🧑" };
-const SHARE_ICONS = ["", "👤", "👥", "👥", "👨‍👩‍👧‍👦", "🏠"];
+const TYPE_EMOJI: Record<string, string> = { gents: "ðŸš¹", ladies: "ðŸšº", "co-living": "ðŸ§‘â€ðŸ¤â€ðŸ§‘" };
+const SHARE_ICONS = ["", "ðŸ‘¤", "ðŸ‘¥", "ðŸ‘¥", "ðŸ‘¨â€ðŸ‘©â€ðŸ‘§â€ðŸ‘¦", "ðŸ "];
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 function monthLabel(m: string) {
@@ -67,16 +67,16 @@ function floorStats(rooms: Room[], floor: number) {
 
 function floorColor(free: number, total: number) {
   if (total === 0) return "empty";
-  if (free === 0) return "full";        // all filled → green
-  if (free === total) return "available"; // all empty → red
-  return "almost";                      // partial → orange
+  if (free === 0) return "full";        // all filled â†’ green
+  if (free === total) return "available"; // all empty â†’ red
+  return "almost";                      // partial â†’ orange
 }
 
 function roomHasPendingRent(room: Room) {
   return room.beds.some((b) => b.tenant?.rent?.status === "pending");
 }
 
-/** Shared whoosh — lowpass filtered noise sweep (the good one) */
+/** Shared whoosh â€” lowpass filtered noise sweep (the good one) */
 function playWhoosh(short = false) {
   try {
     const ac = new AudioContext();
@@ -98,7 +98,7 @@ function playWhoosh(short = false) {
   } catch { /* ignore */ }
 }
 
-/* ─── Donut Ring ─── */
+/* â”€â”€â”€ Donut Ring â”€â”€â”€ */
 function DonutRing({ pct, free, total }: { pct: number; free: number; total: number }) {
   const r = 38, circ = 2 * Math.PI * r;
   const offset = circ - (Math.min(pct, 100) / 100) * circ;
@@ -117,7 +117,7 @@ function DonutRing({ pct, free, total }: { pct: number; free: number; total: num
         transform="rotate(-90 50 50)"
         style={{ transition: "stroke-dashoffset 0.6s ease", filter: `drop-shadow(0 0 4px ${color}66)` }} />
       <text x="50" y="45" textAnchor="middle" fill={textColor} fontSize="17" fontWeight="800" fontFamily="inherit">
-        {total === 0 ? "—" : free}
+        {total === 0 ? "â€”" : free}
       </text>
       <text x="50" y="60" textAnchor="middle" fill={subColor} fontSize="9" fontFamily="inherit">
         {total === 0 ? "no rooms" : "free"}
@@ -126,7 +126,7 @@ function DonutRing({ pct, free, total }: { pct: number; free: number; total: num
   );
 }
 
-/* ─── Main ─── */
+/* â”€â”€â”€ Main â”€â”€â”€ */
 export default function DashboardPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
@@ -141,7 +141,7 @@ export default function DashboardPage() {
       router.replace("/sign-in?from=/dashboard");
       return;
     }
-    // Users (students/tenants) don't have a dashboard — send to Find PG
+    // Users (students/tenants) don't have a dashboard â€” send to Find PG
     if (!authLoading && isAuthenticated && role === "user") {
       router.replace("/find-pg");
     }
@@ -157,7 +157,7 @@ export default function DashboardPage() {
     return "list";
   });
   const [viewDropOpen, setViewDropOpen] = useState(false);
-  // Building style — which 3D engine renders the building
+  // Building style â€” which 3D engine renders the building
   const [buildingStyle, setBuildingStyle] = useState<"css" | "r3f">(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("pg-eg-building-style") as "css" | "r3f") || "css";
@@ -194,7 +194,7 @@ export default function DashboardPage() {
   const [searching, setSearching] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Viewport — FAB only shows on large screens; search on small screens is inside sidebar
+  // Viewport â€” FAB only shows on large screens; search on small screens is inside sidebar
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   useEffect(() => {
     const check = () => setIsSmallScreen(window.innerWidth <= 640);
@@ -208,15 +208,6 @@ export default function DashboardPage() {
   const [roomHistoryData, setRoomHistoryData] = useState<{ past: TenantWithHistory[]; moveHistory: HistoryEvent[] } | null>(null);
   const [loadingRoomHistory, setLoadingRoomHistory] = useState(false);
 
-  // Edit contact modal state
-  const [editModal, setEditModal] = useState<{
-    tenantId: string; name: string;
-    phone: string; altPhone: string; emergencyContact: string; emergencyRelation: string; idPhotoUrl: string | null;
-  } | null>(null);
-  const [editSaving, setEditSaving] = useState(false);
-  const [editError, setEditError] = useState("");
-  const [editUploading, setEditUploading] = useState(false);
-  const editIdCardRef = useRef<HTMLInputElement>(null);
   const sharingScrollRef = useRef<HTMLDivElement>(null);
   const [sharingCollapsed, setSharingCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -239,7 +230,7 @@ export default function DashboardPage() {
   const onSidebarTouchStart = (e: React.TouchEvent) => { sidebarSwipeX.current = e.touches[0].clientX; };
   const onSidebarTouchEnd   = (e: React.TouchEvent) => { if (e.changedTouches[0].clientX - sidebarSwipeX.current > 60) setProfileOpen(false); };
 
-  // ── Helper: auth header from current token ───────────────────
+  // â”€â”€ Helper: auth header from current token â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const authHeader = useCallback(
     (): Record<string, string> => (token ? { Authorization: `Bearer ${token}` } : {}),
     [token]
@@ -262,10 +253,10 @@ export default function DashboardPage() {
     finally { setLoading(false); }
   }, [activePgId, token, authHeader]);
 
-  // ── Trigger load ONLY after auth has fully resolved ──────────────
+  // â”€â”€ Trigger load ONLY after auth has fully resolved â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Without this guard, load() fires on mount with token=null (React state
   // not yet populated from localStorage), sending an unauthenticated request
-  // before refreshAuth() has finished — causing a 401 on every page refresh.
+  // before refreshAuth() has finished â€” causing a 401 on every page refresh.
   useEffect(() => {
     if (authLoading) return;      // wait for refreshAuth() to finish
     if (!isAuthenticated) return; // redirect handled by the sign-in effect
@@ -292,7 +283,7 @@ export default function DashboardPage() {
     const rent = checkoutModal.tenant.rent;
     const outstanding = rent ? Math.max(0, rent.amount - (rent.paidAmount ?? 0)) : 0;
     if (outstanding > 0) {
-      alert(`Please clear the outstanding rent of ₹${outstanding.toLocaleString("en-IN")} before checkout.`);
+      alert(`Please clear the outstanding rent of â‚¹${outstanding.toLocaleString("en-IN")} before checkout.`);
       return;
     }
 
@@ -375,7 +366,7 @@ export default function DashboardPage() {
   async function handleMarkPaid(rentId: string, fullAmount: number) {
     const raw = rentPayAmount.trim();
     const paidAmount = raw === "" ? fullAmount : Number(raw);
-    // Validation (belt-and-suspenders — button is disabled for invalid values)
+    // Validation (belt-and-suspenders â€” button is disabled for invalid values)
     if (raw !== "" && (!Number.isFinite(paidAmount) || paidAmount <= 0 || !Number.isInteger(paidAmount))) return;
     if (raw !== "" && paidAmount > fullAmount) return;
     setMarkingPaid(rentId);
@@ -403,7 +394,7 @@ export default function DashboardPage() {
     } finally { setMarkingPaid(null); }
   }
 
-  /* ─── Derived ─── */
+  /* â”€â”€â”€ Derived â”€â”€â”€ */
   const totalBeds = data?.rooms.reduce((s, r) => s + r.beds.length, 0) ?? 0;
   const occupiedBeds = data?.rooms.reduce((s, r) => s + r.beds.filter((b) => b.isOccupied).length, 0) ?? 0;
   const pendingRentCount = data?.rooms.reduce((s, r) =>
@@ -434,17 +425,17 @@ export default function DashboardPage() {
       <div className={styles.orb1} /><div className={styles.orb2} />
       <div className={styles.content}>
 
-        {/* ─── PG-EG Logo Bar ─── */}
+        {/* â”€â”€â”€ PG-EG Logo Bar â”€â”€â”€ */}
         <div className={styles.logoBar}>
           <AppLogo size="sm" />
-          {/* Crown above profile button — both absolute in logoBar (position:relative) */}
+          {/* Crown above profile button â€” both absolute in logoBar (position:relative) */}
           <span style={{
             position: "absolute", right: "0", top: "-12px",
             width: "48px", textAlign: "center",
             fontSize: "26px", lineHeight: 1,
             filter: "drop-shadow(0 2px 8px rgba(255,200,0,0.95))",
             pointerEvents: "none", zIndex: 2,
-          }}>👑</span>
+          }}>ðŸ‘‘</span>
           <button
             className={styles.topProfileBtn}
             onClick={() => setProfileOpen(true)}
@@ -457,11 +448,11 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* ─── Header ─── */}
+        {/* â”€â”€â”€ Header â”€â”€â”€ */}
         <header className={styles.header}>
           <div className={styles.headerLeft}>
             <div className={styles.pgName}>{pg.name}</div>
-            <div className={styles.pgMeta}>{TYPE_EMOJI[pg.type]} {pg.type.charAt(0).toUpperCase() + pg.type.slice(1)} · {pg.totalFloors} Floors</div>
+            <div className={styles.pgMeta}>{TYPE_EMOJI[pg.type]} {pg.type.charAt(0).toUpperCase() + pg.type.slice(1)} Â· {pg.totalFloors} Floors</div>
           </div>
           <div className={styles.headerRight}>
             <div className={styles.overallStat}>
@@ -482,7 +473,7 @@ export default function DashboardPage() {
               <>
                 <div className={styles.statDivider} />
                 <div className={styles.overallStat}>
-                  <span className={styles.overallNum} style={{ color: "#f4a261" }}>⚠️ {pendingRentCount}</span>
+                  <span className={styles.overallNum} style={{ color: "#f4a261" }}>âš ï¸ {pendingRentCount}</span>
                   <span className={styles.overallLabel}>rent due</span>
                 </div>
               </>
@@ -490,7 +481,7 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {/* ─── Profile Sidebar ─── */}
+        {/* â”€â”€â”€ Profile Sidebar â”€â”€â”€ */}
         {profileOpen && (
           <div className={styles.sidebarBackdrop} onClick={() => setProfileOpen(false)}>
             <div
@@ -499,17 +490,17 @@ export default function DashboardPage() {
               onTouchStart={onSidebarTouchStart}
               onTouchEnd={onSidebarTouchEnd}
             >
-              {/* ── Center pill tab over the sidebar ── */}
+              {/* â”€â”€ Center pill tab over the sidebar â”€â”€ */}
               <button
                 className={styles.sidebarPillTab}
                 onClick={() => setProfileOpen(false)}
                 id="btn-sidebar-pill-close"
                 aria-label="Close sidebar"
               >
-                <span className={styles.sidebarPillArrow}>→</span>
+                <span className={styles.sidebarPillArrow}>â†’</span>
               </button>
 
-              {/* ── Theme toggle pill (dark | light) ── */}
+              {/* â”€â”€ Theme toggle pill (dark | light) â”€â”€ */}
               <div className={styles.themePill}>
                 <button
                   className={`${styles.themePillHalf} ${styles.themePillDark} ${theme === "dark" ? styles.themePillActive : ""}`}
@@ -517,7 +508,7 @@ export default function DashboardPage() {
                   aria-label="Switch to dark mode"
                   id="btn-theme-dark"
                 >
-                  🌙
+                  ðŸŒ™
                 </button>
                 <button
                   className={`${styles.themePillHalf} ${styles.themePillLight} ${theme === "light" ? styles.themePillActive : ""}`}
@@ -525,12 +516,12 @@ export default function DashboardPage() {
                   aria-label="Switch to light mode"
                   id="btn-theme-light"
                 >
-                  ☀️
+                  â˜€ï¸
                 </button>
               </div>
 
               <div className={styles.sidebarBody}>
-                {/* PG Manager info + Google account — click to open Owner Profile */}
+                {/* PG Manager info + Google account â€” click to open Owner Profile */}
                 <button
                   className={styles.sidebarOwner}
                   style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", width: "100%", padding: 0 }}
@@ -566,7 +557,7 @@ export default function DashboardPage() {
                   onClick={() => { setProfileOpen(false); router.push("/add-pg?new=true"); }}
                   style={{ display: "none" }}
                 >
-                  <div className={styles.sidebarActionIcon}>➕</div>
+                  <div className={styles.sidebarActionIcon}>âž•</div>
                   <div>
                     <div className={styles.sidebarActionTitle}>Add Another PG</div>
                     <div className={styles.sidebarActionDesc}>Register a new property</div>
@@ -578,7 +569,7 @@ export default function DashboardPage() {
                   id="btn-edit-pg"
                   onClick={() => { setProfileOpen(false); router.push("/edit-pg"); }}
                 >
-                  <div className={styles.sidebarActionIcon}>✏️</div>
+                  <div className={styles.sidebarActionIcon}>âœï¸</div>
                   <div>
                     <div className={styles.sidebarActionTitle}>Edit PG</div>
                     <div className={styles.sidebarActionDesc}>Change PG details or rooms</div>
@@ -590,7 +581,7 @@ export default function DashboardPage() {
                   id="btn-rents"
                   onClick={() => { setProfileOpen(false); router.push("/rents"); }}
                 >
-                  <div className={styles.sidebarActionIcon}>💵</div>
+                  <div className={styles.sidebarActionIcon}>ðŸ’µ</div>
                   <div>
                     <div className={styles.sidebarActionTitle}>Rents</div>
                     <div className={styles.sidebarActionDesc}>Monthly rent overview & collection</div>
@@ -603,11 +594,11 @@ export default function DashboardPage() {
                     id="btn-change-pg"
                     onClick={() => { setProfileOpen(false); router.push("/select-pg"); }}
                   >
-                    <div className={styles.sidebarActionIcon}>🔄</div>
+                    <div className={styles.sidebarActionIcon}>ðŸ”„</div>
                     <div>
                       <div className={styles.sidebarActionTitle}>Change PG</div>
                       <div className={styles.sidebarActionDesc}>
-                        {allPgs.length} properties — switch here
+                        {allPgs.length} properties â€” switch here
                       </div>
                     </div>
                   </button>
@@ -620,7 +611,7 @@ export default function DashboardPage() {
                   id="btn-sign-out"
                   onClick={() => { signOut(); router.replace("/sign-in"); }}
                 >
-                  <div className={styles.sidebarActionIcon}>🚪</div>
+                  <div className={styles.sidebarActionIcon}>ðŸšª</div>
                   <div>
                     <div className={styles.sidebarActionTitle}>Sign Out</div>
                     <div className={styles.sidebarActionDesc}>Log out of your account</div>
@@ -629,48 +620,48 @@ export default function DashboardPage() {
 
               </div>{/* end sidebarBody */}
 
-              {/* Building style FAB — bottom-left inside sidebar */}
+              {/* Building style FAB â€” bottom-left inside sidebar */}
               <button
                 className={styles.sidebarBuildingFab}
                 id="btn-sidebar-building-fab"
                 onClick={() => { setProfileOpen(false); setBuildingStylePickerOpen(true); }}
                 aria-label="Choose building style"
               >
-                🏢
+                ðŸ¢
               </button>
-              {/* Search FAB — bottom-right inside sidebar */}
+              {/* Search FAB â€” bottom-right inside sidebar */}
               <button
                 className={styles.sidebarSearchFab}
                 id="btn-sidebar-search-fab"
                 onClick={() => { setProfileOpen(false); setSearchOpen(true); }}
                 aria-label="Search tenant"
               >
-                🔍
+                ðŸ”
               </button>
             </div>
           </div>
         )}
 
-        {/* ─── Building Style Picker ─── */}
+        {/* â”€â”€â”€ Building Style Picker â”€â”€â”€ */}
         {buildingStylePickerOpen && (
           <>
             <div className={styles.sidebarBackdrop} onClick={() => setBuildingStylePickerOpen(false)} />
             <div className={styles.buildingPickerSheet}>
               <div className={styles.buildingPickerHandle} />
               <div className={styles.buildingPickerHeader}>
-                <span className={styles.buildingPickerTitle}>🏢 Choose your PG building style</span>
+                <span className={styles.buildingPickerTitle}>ðŸ¢ Choose your PG building style</span>
                 <button
                   className={styles.buildingPickerClose}
                   onClick={() => setBuildingStylePickerOpen(false)}
                   aria-label="Close"
-                >✕</button>
+                >âœ•</button>
               </div>
               <p className={styles.buildingPickerDesc}>
                 Choose your PG building style.
               </p>
               <div className={styles.buildingPickerGrid}>
 
-                {/* Option 1 — CSS 3D (current) */}
+                {/* Option 1 â€” CSS 3D (current) */}
                 <button
                   id="btn-style-css"
                   className={`${styles.buildingStyleCard} ${buildingStyle === "css" ? styles.buildingStyleCardActive : ""}`}
@@ -691,10 +682,10 @@ export default function DashboardPage() {
                   <div className={styles.bscInfo}>
                     <div className={styles.bscName}>Classic 3D</div>
                   </div>
-                  {buildingStyle === "css" && <span className={styles.bscActiveTag}>✓ Active</span>}
+                  {buildingStyle === "css" && <span className={styles.bscActiveTag}>âœ“ Active</span>}
                 </button>
 
-                {/* Option 2 — React Three Fiber */}
+                {/* Option 2 â€” React Three Fiber */}
                 <button
                   id="btn-style-r3f"
                   className={`${styles.buildingStyleCard} ${buildingStyle === "r3f" ? styles.buildingStyleCardActive : ""}`}
@@ -713,28 +704,28 @@ export default function DashboardPage() {
                     />
                   </div>
                   <div className={styles.bscInfo}>
-                    <div className={styles.bscName}>Full 3D <span className={styles.bscBadge}>Modern ✨</span></div>
+                    <div className={styles.bscName}>Full 3D <span className={styles.bscBadge}>Modern âœ¨</span></div>
                   </div>
-                  {buildingStyle === "r3f" && <span className={styles.bscActiveTag}>✓ Active</span>}
+                  {buildingStyle === "r3f" && <span className={styles.bscActiveTag}>âœ“ Active</span>}
                 </button>
 
               </div>
               <p className={styles.buildingPickerNote}>
-                💡 The 3D view always stays fully interactive with all your PG data.
+                ðŸ’¡ The 3D view always stays fully interactive with all your PG data.
               </p>
             </div>
           </>
         )}
 
-        {/* ─── Sharing Cards — only show types with rooms ─── */}
+        {/* â”€â”€â”€ Sharing Cards â€” only show types with rooms â”€â”€â”€ */}
         {activeShareTypes.length > 0 && (
           <section className={styles.sharingSection}>
             {/* Label row with chevron navigation */}
             <div className={styles.sharingNav}>
               <p className={`${styles.sectionLabel} ${styles.sharingNavLabel}`} style={{ margin: 0 }}>AVAILABILITY BY SHARING TYPE</p>
-              {/* Right side controls — chevrons hidden on small screens, collapse always visible */}
+              {/* Right side controls â€” chevrons hidden on small screens, collapse always visible */}
               <div className={styles.sharingNavRight}>
-                {/* ‹ › scroll chevrons — hidden on small screens via CSS */}
+                {/* â€¹ â€º scroll chevrons â€” hidden on small screens via CSS */}
                 <div className={styles.sharingNavBtns}>
                   <button
                     className={styles.sharingChevron}
@@ -742,27 +733,27 @@ export default function DashboardPage() {
                     aria-label="Scroll left"
                     onClick={() => sharingScrollRef.current?.scrollBy({ left: -160, behavior: "smooth" })}
                     disabled={sharingCollapsed}
-                  >‹</button>
+                  >â€¹</button>
                   <button
                     className={styles.sharingChevron}
                     id="btn-sharing-next"
                     aria-label="Scroll right"
                     onClick={() => sharingScrollRef.current?.scrollBy({ left: 160, behavior: "smooth" })}
                     disabled={sharingCollapsed}
-                  >›</button>
+                  >â€º</button>
                 </div>
-                {/* Collapse toggle — always visible at right end */}
+                {/* Collapse toggle â€” always visible at right end */}
                 <button
                   className={styles.sharingChevron}
                   id="btn-sharing-collapse"
                   aria-label={sharingCollapsed ? "Expand sharing cards" : "Collapse sharing cards"}
                   onClick={toggleSharingCollapsed}
                 >
-                  <span className={`${styles.collapseArrow} ${sharingCollapsed ? styles.collapseArrowUp : ""}`}>⌄</span>
+                  <span className={`${styles.collapseArrow} ${sharingCollapsed ? styles.collapseArrowUp : ""}`}>âŒ„</span>
                 </button>
               </div>
             </div>
-            {/* Cards — collapsible */}
+            {/* Cards â€” collapsible */}
             <div className={`${styles.sharingCardsWrap} ${sharingCollapsed ? styles.sharingCardsCollapsed : ""}`}>
               <div className={styles.sharingScroll} ref={sharingScrollRef}>
                 {activeShareTypes.map((type) => {
@@ -774,25 +765,25 @@ export default function DashboardPage() {
                       onClick={() => { playWhoosh(true); setFilterType(isActive ? null : type); }} id={`sharing-card-${type}`}>
                       <DonutRing pct={stats.pct} free={stats.free} total={stats.totalBeds} />
                       <div className={styles.sharingInfo}>
-                        <span className={styles.sharingIcon}>{SHARE_ICONS[Math.min(type, 5)] || "🏠"}</span>
+                        <span className={styles.sharingIcon}>{SHARE_ICONS[Math.min(type, 5)] || "ðŸ "}</span>
                         <span className={styles.sharingLabel}>{type}-Share</span>
                         <span className={styles.sharingDetail}>{stats.free} of {stats.totalBeds} free</span>
                       </div>
-                      {isActive && <div className={styles.filterPill}>Filtering ✕</div>}
+                      {isActive && <div className={styles.filterPill}>Filtering âœ•</div>}
                     </button>
                   );
                 })}
               </div>
               {filterType && (
                 <p className={styles.filterNote}>
-                  Showing {filterType}-sharing · <button className={styles.clearFilter} onClick={() => setFilterType(null)}>Clear</button>
+                  Showing {filterType}-sharing Â· <button className={styles.clearFilter} onClick={() => setFilterType(null)}>Clear</button>
                 </p>
               )}
             </div>
           </section>
         )}
 
-        {/* ─── 3D Building ─── */}
+        {/* â”€â”€â”€ 3D Building â”€â”€â”€ */}
         <section className={styles.buildingSection}>
           <div className={styles.buildingSectionHeader}>
             <p className={`${styles.sectionLabel} ${styles.buildingLabel}`} style={{ margin: 0 }}>
@@ -807,8 +798,8 @@ export default function DashboardPage() {
                 id="btn-view-drop"
                 onClick={() => setViewDropOpen(v => !v)}
               >
-                {buildingView === "list" ? "☰ List View" : "🏢 3D View"}
-                <span className={`${styles.viewDropChevron} ${viewDropOpen ? styles.viewDropChevronUp : ""}`}>▾</span>
+                {buildingView === "list" ? "â˜° List View" : "ðŸ¢ 3D View"}
+                <span className={`${styles.viewDropChevron} ${viewDropOpen ? styles.viewDropChevronUp : ""}`}>â–¾</span>
               </button>
               {viewDropOpen && (
                 <>
@@ -819,16 +810,16 @@ export default function DashboardPage() {
                       id="btn-view-list"
                       onClick={() => { setBuildingView("list"); localStorage.setItem("pg-eg-view", "list"); setViewDropOpen(false); }}
                     >
-                      <span>☰</span> List View
-                      {buildingView === "list" && <span className={styles.viewDropCheck}>✓</span>}
+                      <span>â˜°</span> List View
+                      {buildingView === "list" && <span className={styles.viewDropCheck}>âœ“</span>}
                     </button>
                     <button
                       className={`${styles.viewDropItem} ${buildingView === "3d" ? styles.viewDropItemActive : ""}`}
                       id="btn-view-3d"
                       onClick={() => { setBuildingView("3d"); localStorage.setItem("pg-eg-view", "3d"); setViewDropOpen(false); }}
                     >
-                      <span>🏢</span> 3D View
-                      {buildingView === "3d" && <span className={styles.viewDropCheck}>✓</span>}
+                      <span>ðŸ¢</span> 3D View
+                      {buildingView === "3d" && <span className={styles.viewDropCheck}>âœ“</span>}
                     </button>
                   </div>
                 </>
@@ -836,7 +827,7 @@ export default function DashboardPage() {
             </div>
           </div>
           {buildingView === "3d" ? (
-            /* Full 3D building — CSS or R3F based on user's Building Structure preference */
+            /* Full 3D building â€” CSS or R3F based on user's Building Structure preference */
             buildingStyle === "r3f" ? (
               <Building3DViewR3F
                 pgName={pg.name}
@@ -847,7 +838,7 @@ export default function DashboardPage() {
                 filterType={filterType}
               />
             ) : (
-              /* Classic 3D — dark styled wrapper; centering/height handled inside Building3DView */
+              /* Classic 3D â€” dark styled wrapper; centering/height handled inside Building3DView */
               <div style={{
                 background: "linear-gradient(135deg, #0a1628 0%, #0d1f3c 50%, #081020 100%)",
                 borderRadius: "18px",
@@ -867,7 +858,7 @@ export default function DashboardPage() {
               </div>
             )
           ) : (
-            /* ── List View (slab building) ── */
+            /* â”€â”€ List View (slab building) â”€â”€ */
             <div className={`${styles.building3dOuter} ${styles.buildingDark}`}>
               <div className={styles.building3dScene}>
                 <div className={styles.building3dStack}>
@@ -897,7 +888,7 @@ export default function DashboardPage() {
                           className={styles.floorSlabBtn}
                           id={`floor3d-${floor}`}
                           onClick={() => {
-                            // Whoosh — same for open and close
+                            // Whoosh â€” same for open and close
                             playWhoosh();
                             setActiveFloor(isActive ? null : floor);
                           }}
@@ -907,7 +898,7 @@ export default function DashboardPage() {
                           <div className={styles.floorSlabFront}>
                             <div className={styles.floorSlabLabel}>
                               <span className={styles.floorSlabNum}>FL {floor}</span>
-                              {all.pendingRent && <span className={styles.floorPendingDot}>⚠️</span>}
+                              {all.pendingRent && <span className={styles.floorPendingDot}>âš ï¸</span>}
                             </div>
                             <div className={styles.floorWindows}>
                               {allBeds.slice(0, 10).map((bed, i) => (
@@ -950,7 +941,7 @@ export default function DashboardPage() {
                                 >
                                   <div className={styles.roomCard3dHeader}>
                                     <span className={styles.roomCard3dName}>{room.roomNumber}</span>
-                                    {hasPending && <span className={styles.roomRentDot}>⚠️</span>}
+                                    {hasPending && <span className={styles.roomRentDot}>âš ï¸</span>}
                                   </div>
                                   <div className={styles.roomBedDots3d}>
                                     {room.beds.map(bed => (
@@ -987,7 +978,7 @@ export default function DashboardPage() {
         </section>
       </div>
 
-      {/* ─── Room Bottom Sheet ─── */}
+      {/* â”€â”€â”€ Room Bottom Sheet â”€â”€â”€ */}
       {selectedRoom && !detailTenant && (
         <>
           <div className={styles.backdrop} onClick={() => { playWhoosh(true); setSelectedRoom(null); }} />
@@ -996,10 +987,10 @@ export default function DashboardPage() {
             <div className={styles.sheetHeader}>
               <div>
                 <p className={styles.sheetFloor}>Floor {selectedRoom.floor}</p>
-                <h3 className={styles.sheetTitle}>🚪 Room {selectedRoom.roomNumber}</h3>
-                <p className={styles.sheetSub}>{selectedRoom.sharingType}-Sharing · {selectedRoom.beds.length} Beds</p>
+                <h3 className={styles.sheetTitle}>ðŸšª Room {selectedRoom.roomNumber}</h3>
+                <p className={styles.sheetSub}>{selectedRoom.sharingType}-Sharing Â· {selectedRoom.beds.length} Beds</p>
               </div>
-              <button className={styles.sheetClose} onClick={() => { playWhoosh(true); setSelectedRoom(null); }}>✕</button>
+              <button className={styles.sheetClose} onClick={() => { playWhoosh(true); setSelectedRoom(null); }}>âœ•</button>
             </div>
 
             <div className={styles.bedsList}>
@@ -1014,41 +1005,24 @@ export default function DashboardPage() {
                     <div className={styles.bedContent}>
                       {bed.isOccupied && bed.tenant ? (
                         <>
-                          <p className={styles.tenantName}>👤 {bed.tenant.name}</p>
-                          <p className={styles.tenantPhone}>📞 {bed.tenant.phone}</p>
+                          <p className={styles.tenantName}>ðŸ‘¤ {bed.tenant.name}</p>
+                          <p className={styles.tenantPhone}>ðŸ“ž {bed.tenant.phone}</p>
                           {isPending && (
-                            <p className={styles.rentPendingTag}>⚠️ Rent pending · {data.currentMonth && monthLabel(data.currentMonth)}</p>
+                            <p className={styles.rentPendingTag}>âš ï¸ Rent pending Â· {data.currentMonth && monthLabel(data.currentMonth)}</p>
                           )}
                           {bed.tenant.rent?.status === "paid" && (
-                            <p className={styles.rentPaidTag}>✅ Rent paid</p>
+                            <p className={styles.rentPaidTag}>âœ… Rent paid</p>
                           )}
                         </>
                       ) : (
-                        <><p className={styles.emptyBedLabel}>🌟 EMPTY BED</p><p className={styles.emptyBedSub}>Ready for a new tenant</p></>
+                        <><p className={styles.emptyBedLabel}>ðŸŒŸ EMPTY BED</p><p className={styles.emptyBedSub}>Ready for a new tenant</p></>
                       )}
                     </div>
                     <div className={styles.bedActionGroup}>
                       {bed.isOccupied && bed.tenant ? (
                         <>
                           <div className={styles.iconStack}>
-                              <button
-                                className={styles.editContactBtn}
-                                title="Edit contact details"
-                                id={`edit-${bed.id}`}
-                                onClick={() => {
-                                  const t = bed.tenant!;
-                                  setEditModal({
-                                    tenantId: t.id, name: t.name,
-                                    phone: t.phone || "",
-                                    altPhone: t.altPhone || "",
-                                    emergencyContact: t.emergencyContact || "",
-                                    emergencyRelation: t.emergencyRelation || "",
-                                    idPhotoUrl: t.idPhotoUrl || null,
-                                  });
-                                  setEditError("");
-                                }}
-                              >✏️</button>
-                              {/* WhatsApp reminder — only when rent is unpaid */}
+                              {/* WhatsApp reminder â€” only when rent is unpaid */}
                               {bed.tenant.rent && bed.tenant.rent.status !== "paid" && (() => {
                                 const rent = bed.tenant.rent!;
                                 const due = rent.amount - (rent.paidAmount ?? 0);
@@ -1103,7 +1077,7 @@ export default function DashboardPage() {
                                   setMovingTenant({ tenant: bed.tenant!, bed, room: selectedRoom });
                                   setMoveFloor(null); setMoveTargetRoom(null); setMoveTargetBed(null); setMoveFilterType(null);
                                 }}
-                                id={`move-${bed.id}`}>🔁 Move</button>
+                                id={`move-${bed.id}`}>ðŸ” Move</button>
                               <button className={styles.checkoutBtn}
                                 onClick={() => openCheckout(bed, selectedRoom)}
                                 id={`checkout-${bed.id}`}>
@@ -1124,14 +1098,14 @@ export default function DashboardPage() {
             <div className={styles.roomHistoryLinkRow}>
               <button className={styles.roomHistoryLink}
                 onClick={() => loadRoomHistory(selectedRoom)}
-                id="btn-room-history">📜 View Room History</button>
+                id="btn-room-history">ðŸ“œ View Room History</button>
             </div>
           </div>
         </>
       )}
 
 
-      {/* ─── Tenant Details Overlay ─── */}
+      {/* â”€â”€â”€ Tenant Details Overlay â”€â”€â”€ */}
       {detailTenant && (
         <>
           <div className={styles.backdrop} onClick={() => setDetailTenant(null)} />
@@ -1140,8 +1114,8 @@ export default function DashboardPage() {
 
             {/* Detail header */}
             <div className={styles.detailHeader}>
-              <button className={styles.detailBack} onClick={() => setDetailTenant(null)}>← Back</button>
-              <button className={styles.sheetClose} onClick={() => { setDetailTenant(null); setSelectedRoom(null); }}>✕</button>
+              <button className={styles.detailBack} onClick={() => setDetailTenant(null)}>â† Back</button>
+              <button className={styles.sheetClose} onClick={() => { setDetailTenant(null); setSelectedRoom(null); }}>âœ•</button>
             </div>
 
             {/* Selfie photo */}
@@ -1151,20 +1125,20 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className={styles.tenantPhotoPlaceholder}>
-                <span>👤</span>
+                <span>ðŸ‘¤</span>
               </div>
             )}
 
             {/* Name + phone */}
             <div className={styles.detailBody}>
               <h2 className={styles.detailName}>{detailTenant.tenant.name}</h2>
-              <p className={styles.detailPhone}>📞 +91 {detailTenant.tenant.phone}</p>
+              <p className={styles.detailPhone}>ðŸ“ž +91 {detailTenant.tenant.phone}</p>
               {detailTenant.tenant.altPhone && (
-                <p className={styles.detailPhone} style={{ fontSize: 13, opacity: 0.7 }}>📞 Alt: +91 {detailTenant.tenant.altPhone}</p>
+                <p className={styles.detailPhone} style={{ fontSize: 13, opacity: 0.7 }}>ðŸ“ž Alt: +91 {detailTenant.tenant.altPhone}</p>
               )}
               {detailTenant.tenant.emergencyContact && (
                 <p className={styles.detailPhone} style={{ fontSize: 13, color: "#f4a261" }}>
-                  🆘 +91 {detailTenant.tenant.emergencyContact}
+                  ðŸ†˜ +91 {detailTenant.tenant.emergencyContact}
                   {detailTenant.tenant.emergencyRelation && (
                     <span style={{ marginLeft: 6, fontSize: 11, background: "rgba(244,162,97,0.15)", border: "1px solid rgba(244,162,97,0.3)", borderRadius: 10, padding: "2px 7px" }}>
                       {detailTenant.tenant.emergencyRelation}
@@ -1178,7 +1152,7 @@ export default function DashboardPage() {
                 <div className={styles.detailInfoItem}>
                   <span className={styles.detailInfoLabel}>Room</span>
                   <span className={styles.detailInfoValue}>
-                    {detailTenant.room.roomNumber} · Bed {detailTenant.bed.bedNumber}
+                    {detailTenant.room.roomNumber} Â· Bed {detailTenant.bed.bedNumber}
                   </span>
                 </div>
                 <div className={styles.detailInfoItem}>
@@ -1202,43 +1176,43 @@ export default function DashboardPage() {
                   <span className={styles.detailInfoLabel}>Monthly Rent</span>
                   <span className={styles.detailInfoValue}>
                     {detailTenant.tenant.rentAmount
-                      ? `₹${detailTenant.tenant.rentAmount.toLocaleString()}`
-                      : "—"}
+                      ? `â‚¹${detailTenant.tenant.rentAmount.toLocaleString()}`
+                      : "â€”"}
                   </span>
                 </div>
                 <div className={styles.detailInfoItem}>
                   <span className={styles.detailInfoLabel}>Deposit</span>
                   <span className={styles.detailInfoValue}>
                     {detailTenant.tenant.advanceAmount
-                      ? `₹${detailTenant.tenant.advanceAmount.toLocaleString()}`
-                      : "—"}
+                      ? `â‚¹${detailTenant.tenant.advanceAmount.toLocaleString()}`
+                      : "â€”"}
                   </span>
                 </div>
               </div>
 
-              {/* ─── Rent Status ─── */}
+              {/* â”€â”€â”€ Rent Status â”€â”€â”€ */}
               <div className={styles.detailDivider} />
               <p className={styles.detailSectionLabel}>
-                📅 {data.currentMonth && monthLabel(data.currentMonth)} RENT
+                ðŸ“… {data.currentMonth && monthLabel(data.currentMonth)} RENT
               </p>
 
               {detailTenant.tenant.rent?.status === "paid" ? (
                 <div className={styles.rentPaidCard}>
-                  <span>✅ PAID</span>
-                  <span>₹{detailTenant.tenant.rent.amount?.toLocaleString()}</span>
+                  <span>âœ… PAID</span>
+                  <span>â‚¹{detailTenant.tenant.rent.amount?.toLocaleString()}</span>
                   <span style={{ textTransform: "uppercase", fontSize: 11 }}>{detailTenant.tenant.rent.paymentMode || ""}</span>
                 </div>
               ) : (
                 <>
                   <div className={styles.rentPendingCard}>
-                    <span>⚠️ RENT PENDING</span>
-                    <span>₹{(detailTenant.tenant.rentAmount || 0).toLocaleString()} / month</span>
+                    <span>âš ï¸ RENT PENDING</span>
+                    <span>â‚¹{(detailTenant.tenant.rentAmount || 0).toLocaleString()} / month</span>
                   </div>
                   {detailTenant.tenant.rent && (
                     <>
                       <p className={styles.paymentLabel}>Amount received</p>
                       <div className={styles.rentAmountRow}>
-                        <span className={styles.rentAmountPrefix}>₹</span>
+                        <span className={styles.rentAmountPrefix}>â‚¹</span>
                         <input
                           type="number"
                           className={styles.rentAmountInput}
@@ -1252,9 +1226,9 @@ export default function DashboardPage() {
                       <p className={styles.paymentLabel} style={{ marginTop: 10 }}>Payment received via</p>
                       <div className={styles.paymentRow}>
                         <button className={`${styles.payBtn} ${rentPayMode === "cash" ? styles.payBtnActive : ""}`}
-                          onClick={() => setRentPayMode("cash")}>💵 CASH</button>
+                          onClick={() => setRentPayMode("cash")}>ðŸ’µ CASH</button>
                         <button className={`${styles.payBtn} ${rentPayMode === "upi" ? styles.payBtnActive : ""}`}
-                          onClick={() => setRentPayMode("upi")}>📱 UPI</button>
+                          onClick={() => setRentPayMode("upi")}>ðŸ“± UPI</button>
                       </div>
                       <button className={styles.markPaidBtn}
                         onClick={() => handleMarkPaid(detailTenant.tenant.rent!.id, detailTenant.tenant.rentAmount || 0)}
@@ -1267,11 +1241,11 @@ export default function DashboardPage() {
                         })()}
                         id="btn-mark-paid">
                         {markingPaid === detailTenant.tenant.rent.id
-                          ? <><span className={styles.spinnerDark} /> Marking…</>
+                          ? <><span className={styles.spinnerDark} /> Markingâ€¦</>
                           : (() => {
                               const raw = rentPayAmount.trim();
                               const display = raw === "" ? (detailTenant.tenant.rentAmount || 0) : (Number.isFinite(Number(raw)) ? Number(raw) : 0);
-                              return `💵 MARK AS PAID · ₹${Math.max(0, display).toLocaleString("en-IN")}`;
+                              return `ðŸ’µ MARK AS PAID Â· â‚¹${Math.max(0, display).toLocaleString("en-IN")}`;
                             })()}
                       </button>
                     </>
@@ -1283,7 +1257,7 @@ export default function DashboardPage() {
               {detailTenant.tenant.idPhotoUrl && (
                 <>
                   <div className={styles.detailDivider} />
-                  <p className={styles.detailSectionLabel}>🪪 ID CARD</p>
+                  <p className={styles.detailSectionLabel}>ðŸªª ID CARD</p>
                   <img src={detailTenant.tenant.idPhotoUrl} alt="ID Card" className={styles.idCardThumb} />
                 </>
               )}
@@ -1293,13 +1267,13 @@ export default function DashboardPage() {
               <button className={styles.checkoutBtnFull}
                 onClick={() => openCheckout(detailTenant.bed, detailTenant.room)}
                 disabled={checkingOut} id="btn-checkout-detail">
-                🚪 Check Out Tenant
+                ðŸšª Check Out Tenant
               </button>
             </div>
           </div>
         </>
       )}
-      {/* ─── Move Tenant Overlay ─── */}
+      {/* â”€â”€â”€ Move Tenant Overlay â”€â”€â”€ */}
       {movingTenant && (
         <>
           <div className={styles.backdrop} onClick={() => { setMovingTenant(null); setMoveTargetBed(null); setMoveTargetRoom(null); }} />
@@ -1311,20 +1285,20 @@ export default function DashboardPage() {
               <button className={styles.detailBack} onClick={() => {
                 if (moveTargetBed) { setMoveTargetBed(null); setMoveTargetRoom(null); }
                 else setMovingTenant(null);
-              }}>← Back</button>
-              <span className={styles.moveTitle}>🔁 MOVE TENANT</span>
-              <button className={styles.sheetClose} onClick={() => setMovingTenant(null)}>✕</button>
+              }}>â† Back</button>
+              <span className={styles.moveTitle}>ðŸ” MOVE TENANT</span>
+              <button className={styles.sheetClose} onClick={() => setMovingTenant(null)}>âœ•</button>
             </div>
 
             {/* Who is moving */}
             <div className={styles.moveBanner}>
               <p className={styles.moveBannerName}>{movingTenant.tenant.name}</p>
               <p className={styles.moveBannerFrom}>
-                From: Room {movingTenant.room.roomNumber} · Bed {BED_LETTERS[movingTenant.bed.bedNumber - 1]} · Floor {movingTenant.room.floor}
+                From: Room {movingTenant.room.roomNumber} Â· Bed {BED_LETTERS[movingTenant.bed.bedNumber - 1]} Â· Floor {movingTenant.room.floor}
               </p>
             </div>
 
-            {/* ─── Step 1: Pick target bed ─── */}
+            {/* â”€â”€â”€ Step 1: Pick target bed â”€â”€â”€ */}
             {!moveTargetBed && (
               <div className={styles.moveBody}>
                 {/* Sharing type filter */}
@@ -1361,9 +1335,9 @@ export default function DashboardPage() {
                         onClick={() => setMoveFloor(isOpen ? null : floor)}>
                         <div className={styles.moveFloorLeft}>
                           <span className={styles.moveFloorLabel}>Floor {floor}</span>
-                          <span className={styles.moveFloorMeta}>🟢 {totalEmpty} empty bed{totalEmpty > 1 ? "s" : ""}</span>
+                          <span className={styles.moveFloorMeta}>ðŸŸ¢ {totalEmpty} empty bed{totalEmpty > 1 ? "s" : ""}</span>
                         </div>
-                        <span className={`${styles.floorChevron} ${isOpen ? styles.floorChevronUp : ""}`}>›</span>
+                        <span className={`${styles.floorChevron} ${isOpen ? styles.floorChevronUp : ""}`}>â€º</span>
                       </button>
 
                       {isOpen && (
@@ -1402,21 +1376,21 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* ─── Step 2: Confirm ─── */}
+            {/* â”€â”€â”€ Step 2: Confirm â”€â”€â”€ */}
             {moveTargetBed && moveTargetRoom && (
               <div className={styles.moveConfirmBody}>
                 <div className={styles.moveConfirmCard}>
                   <div className={styles.moveConfirmRow}>
                     <span className={styles.moveConfirmLabel}>FROM</span>
                     <span className={styles.moveConfirmValue}>
-                      Room {movingTenant.room.roomNumber} · Bed {BED_LETTERS[movingTenant.bed.bedNumber - 1]} · Floor {movingTenant.room.floor}
+                      Room {movingTenant.room.roomNumber} Â· Bed {BED_LETTERS[movingTenant.bed.bedNumber - 1]} Â· Floor {movingTenant.room.floor}
                     </span>
                   </div>
-                  <div className={styles.moveArrow}>↓</div>
+                  <div className={styles.moveArrow}>â†“</div>
                   <div className={styles.moveConfirmRow}>
                     <span className={styles.moveConfirmLabel}>TO</span>
                     <span className={styles.moveConfirmValue} style={{ color: "var(--brand-green)" }}>
-                      Room {moveTargetRoom.roomNumber} · Bed {BED_LETTERS[moveTargetBed.bedNumber - 1]} · Floor {moveTargetRoom.floor}
+                      Room {moveTargetRoom.roomNumber} Â· Bed {BED_LETTERS[moveTargetBed.bedNumber - 1]} Â· Floor {moveTargetRoom.floor}
                     </span>
                   </div>
                 </div>
@@ -1429,41 +1403,41 @@ export default function DashboardPage() {
                   onClick={() => handleMove(movingTenant.tenant.id, moveTargetBed.id)}
                   disabled={moveInProgress} id="btn-confirm-move">
                   {moveInProgress
-                    ? <><span className={styles.spinnerDark} /> Moving…</>
-                    : `🎉 CONFIRM TRANSFER`}
+                    ? <><span className={styles.spinnerDark} /> Movingâ€¦</>
+                    : `ðŸŽ‰ CONFIRM TRANSFER`}
                 </button>
               </div>
             )}
           </div>
         </>
       )}
-      {/* ─── Checkout Modal ─── */}
+      {/* â”€â”€â”€ Checkout Modal â”€â”€â”€ */}
       {checkoutModal && (
         <>
           <div className={styles.backdrop} onClick={() => setCheckoutModal(null)} />
           <div className={styles.checkoutSheet}>
             <div className={styles.sheetHandle} />
             <div className={styles.checkoutHeader}>
-              <span className={styles.checkoutHeaderTitle}>🚪 TENANT CHECK-OUT</span>
-              <button className={styles.sheetClose} onClick={() => setCheckoutModal(null)}>✕</button>
+              <span className={styles.checkoutHeaderTitle}>ðŸšª TENANT CHECK-OUT</span>
+              <button className={styles.sheetClose} onClick={() => setCheckoutModal(null)}>âœ•</button>
             </div>
 
             <div className={styles.checkoutBody}>
               <p className={styles.checkoutTenantName}>{checkoutModal.tenant.name}</p>
               <p className={styles.checkoutTenantRoom}>
-                Room {checkoutModal.room.roomNumber} · Bed {BED_LETTERS[checkoutModal.bed.bedNumber - 1]} · Floor {checkoutModal.room.floor}
+                Room {checkoutModal.room.roomNumber} Â· Bed {BED_LETTERS[checkoutModal.bed.bedNumber - 1]} Â· Floor {checkoutModal.room.floor}
               </p>
 
               <div className={styles.depositCard}>
-                <p className={styles.depositTitle}>💰 DEPOSIT CLOSURE</p>
+                <p className={styles.depositTitle}>ðŸ’° DEPOSIT CLOSURE</p>
                 <div className={styles.depositRow}>
                   <span className={styles.depositLabel}>Initial Deposit</span>
-                  <span className={styles.depositValue}>₹{(checkoutModal.tenant.advanceAmount || 0).toLocaleString()}</span>
+                  <span className={styles.depositValue}>â‚¹{(checkoutModal.tenant.advanceAmount || 0).toLocaleString()}</span>
                 </div>
                 <div className={styles.depositRow}>
                   <span className={styles.depositLabel}>Deductions (Damage/Bills)</span>
                   <div className={styles.deductionInput}>
-                    <span className={styles.rupeePrefix}>₹</span>
+                    <span className={styles.rupeePrefix}>â‚¹</span>
                     <input type="number" className={styles.deductionField}
                       placeholder="0" value={deduction} min="0"
                       max={checkoutModal.tenant.advanceAmount || 0}
@@ -1479,17 +1453,17 @@ export default function DashboardPage() {
                   const deposit = checkoutModal.tenant.advanceAmount || 0;
                   if (dep < 0) return (
                     <p style={{ margin: "4px 0 0", fontSize: 12, color: "#e63946", fontWeight: 600 }}>
-                      ⚠️ Deduction cannot be negative
+                      âš ï¸ Deduction cannot be negative
                     </p>
                   );
                   if (!Number.isInteger(dep)) return (
                     <p style={{ margin: "4px 0 0", fontSize: 12, color: "#e63946", fontWeight: 600 }}>
-                      ⚠️ Please enter a whole rupee amount (no paise/decimals)
+                      âš ï¸ Please enter a whole rupee amount (no paise/decimals)
                     </p>
                   );
                   if (dep > deposit) return (
                     <p style={{ margin: "4px 0 0", fontSize: 12, color: "#e63946", fontWeight: 600 }}>
-                      ⚠️ Deduction (₹{dep.toLocaleString("en-IN")}) cannot exceed the initial deposit (₹{deposit.toLocaleString("en-IN")})
+                      âš ï¸ Deduction (â‚¹{dep.toLocaleString("en-IN")}) cannot exceed the initial deposit (â‚¹{deposit.toLocaleString("en-IN")})
                     </p>
                   );
                   return null;
@@ -1498,17 +1472,17 @@ export default function DashboardPage() {
                 <div className={`${styles.depositRow} ${styles.depositRefundRow}`}>
                   <span className={styles.depositLabel}>Final Refund to Tenant</span>
                   <span className={styles.depositRefundAmount}>
-                    ₹{Math.max(0, (checkoutModal.tenant.advanceAmount || 0) - (Number.isInteger(Number(deduction)) ? Number(deduction) : 0)).toLocaleString()}
+                    â‚¹{Math.max(0, (checkoutModal.tenant.advanceAmount || 0) - (Number.isInteger(Number(deduction)) ? Number(deduction) : 0)).toLocaleString()}
                   </span>
                 </div>
               </div>
 
-              <p className={styles.paymentLabel}>💳 REFUND MODE</p>
+              <p className={styles.paymentLabel}>ðŸ’³ REFUND MODE</p>
               <div className={styles.paymentRow}>
                 <button className={`${styles.payBtn} ${checkoutRefundMode === "cash" ? styles.payBtnActive : ""}`}
-                  onClick={() => setCheckoutRefundMode("cash")}>💵 CASH</button>
+                  onClick={() => setCheckoutRefundMode("cash")}>ðŸ’µ CASH</button>
                 <button className={`${styles.payBtn} ${checkoutRefundMode === "upi" ? styles.payBtnActive : ""}`}
-                  onClick={() => setCheckoutRefundMode("upi")}>📱 UPI</button>
+                  onClick={() => setCheckoutRefundMode("upi")}>ðŸ“± UPI</button>
               </div>
 
               {/* Outstanding rent warning */}
@@ -1523,10 +1497,10 @@ export default function DashboardPage() {
                     borderRadius: 10, padding: "10px 14px", marginBottom: 14,
                   }}>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#e63946" }}>
-                      ⚠️ Outstanding Rent: ₹{outstanding.toLocaleString("en-IN")}
+                      âš ï¸ Outstanding Rent: â‚¹{outstanding.toLocaleString("en-IN")}
                     </p>
                     <p style={{ margin: "4px 0 0", fontSize: 11, color: "rgba(255,255,255,0.6)" }}>
-                      Please clear the outstanding rent of ₹{outstanding.toLocaleString("en-IN")} before checkout.
+                      Please clear the outstanding rent of â‚¹{outstanding.toLocaleString("en-IN")} before checkout.
                     </p>
                   </div>
                 );
@@ -1545,196 +1519,31 @@ export default function DashboardPage() {
                 })()}
                 id="btn-permanent-exit">
                 {checkingOut
-                  ? <><span className={styles.spinnerDark} /> Processing…</>
-                  : "🚨 PERMANENT EXIT"}
+                  ? <><span className={styles.spinnerDark} /> Processingâ€¦</>
+                  : "ðŸš¨ PERMANENT EXIT"}
               </button>
             </div>
           </div>
         </>
       )}
 
-      {/* ─── Edit Contact Modal ─── */}
-      {editModal && (
-        <>
-          <div className={styles.backdrop} onClick={() => setEditModal(null)} />
-          <div className={styles.checkoutSheet}>
-            <div className={styles.sheetHandle} />
-            <div className={styles.checkoutHeader}>
-              <span className={styles.checkoutHeaderTitle}>✏️ EDIT CONTACT — {editModal.name}</span>
-              <button className={styles.sheetClose} onClick={() => setEditModal(null)}>✕</button>
-            </div>
 
-            <div className={styles.checkoutBody} style={{ gap: 14 }}>
 
-              {/* Mobile Number */}
-              <div>
-                <p className={styles.paymentLabel}>📞 Mobile Number</p>
-                <div style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden" }}>
-                  <span style={{ padding: "0 10px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>+91</span>
-                  <input
-                    type="tel" inputMode="numeric" maxLength={10}
-                    value={editModal.phone}
-                    onChange={(e) => setEditModal({ ...editModal, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
-                    placeholder="10-digit mobile"
-                    style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#fff", fontSize: 14, fontWeight: 600, padding: "11px 10px 11px 0", fontFamily: "inherit" }}
-                    id="edit-phone"
-                  />
-                </div>
-              </div>
-
-              {/* Alt Number */}
-              <div>
-                <p className={styles.paymentLabel}>📞 Alternative Number <span style={{ opacity: 0.45, fontWeight: 500 }}>(optional)</span></p>
-                <div style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden" }}>
-                  <span style={{ padding: "0 10px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>+91</span>
-                  <input
-                    type="tel" inputMode="numeric" maxLength={10}
-                    value={editModal.altPhone}
-                    onChange={(e) => setEditModal({ ...editModal, altPhone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
-                    placeholder="Alt. number"
-                    style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#fff", fontSize: 14, fontWeight: 600, padding: "11px 10px 11px 0", fontFamily: "inherit" }}
-                    id="edit-alt-phone"
-                  />
-                </div>
-              </div>
-
-              {/* Emergency Contact */}
-              <div>
-                <p className={styles.paymentLabel}>🆘 Emergency Contact <span style={{ opacity: 0.45, fontWeight: 500 }}>(optional)</span></p>
-                <div style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden" }}>
-                  <span style={{ padding: "0 10px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>+91</span>
-                  <input
-                    type="tel" inputMode="numeric" maxLength={10}
-                    value={editModal.emergencyContact}
-                    onChange={(e) => setEditModal({ ...editModal, emergencyContact: e.target.value.replace(/\D/g, "").slice(0, 10) })}
-                    placeholder="Emergency number"
-                    style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#fff", fontSize: 14, fontWeight: 600, padding: "11px 10px 11px 0", fontFamily: "inherit" }}
-                    id="edit-emergency"
-                  />
-                </div>
-                {/* Relation tags */}
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-                  {["Father","Mother","Sibling","Friend","Other"].map((rel) => (
-                    <button key={rel}
-                      onClick={() => setEditModal({ ...editModal, emergencyRelation: editModal.emergencyRelation === rel ? "" : rel })}
-                      style={{
-                        padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                        background: editModal.emergencyRelation === rel ? "rgba(45,198,83,0.15)" : "rgba(255,255,255,0.05)",
-                        border: `1.5px solid ${editModal.emergencyRelation === rel ? "rgba(45,198,83,0.4)" : "rgba(255,255,255,0.1)"}`,
-                        color: editModal.emergencyRelation === rel ? "#2dc653" : "rgba(255,255,255,0.55)",
-                      }}
-                    >{rel}</button>
-                  ))}
-                </div>
-              </div>
-
-              {/* ID Card */}
-              <div>
-                <p className={styles.paymentLabel}>🪪 ID Card</p>
-                {editModal.idPhotoUrl && (
-                  <img src={editModal.idPhotoUrl} alt="ID Card" style={{ width: "100%", borderRadius: 10, marginBottom: 8, maxHeight: 160, objectFit: "cover" }} />
-                )}
-                <button
-                  onClick={() => editIdCardRef.current?.click()}
-                  disabled={editUploading}
-                  style={{
-                    width: "100%", padding: "11px", border: "1.5px dashed rgba(255,255,255,0.18)", borderRadius: 10,
-                    background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.6)", fontSize: 13,
-                    fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                  }}
-                  id="btn-edit-id-card"
-                >
-                  {editUploading ? "Uploading…" : editModal.idPhotoUrl ? "🔄 Change ID Card" : "📷 Upload ID Card"}
-                </button>
-                <input
-                  ref={editIdCardRef} type="file" accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    setEditUploading(true);
-                    try {
-                      const reader = new FileReader();
-                      reader.onload = async (ev) => {
-                        const base64 = ev.target?.result as string;
-                        const upRes = await fetch(`${API_URL}/api/upload`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json", ...authHeader() },
-                          body: JSON.stringify({ base64, fileName: `id-${editModal.tenantId}.jpg` }),
-                        });
-                        const upJson = await upRes.json();
-                        if (upRes.ok) setEditModal({ ...editModal, idPhotoUrl: upJson.url });
-                        else setEditError(upJson.error || "Upload failed");
-                        setEditUploading(false);
-                      };
-                      reader.readAsDataURL(file);
-                    } catch { setEditUploading(false); setEditError("Upload failed"); }
-                  }}
-                />
-              </div>
-
-              {editError && <p style={{ margin: 0, fontSize: 12, color: "#e63946", fontWeight: 600 }}>⚠️ {editError}</p>}
-
-              <button
-                onClick={async () => {
-                  if (!editModal) return;
-                  setEditError("");
-                  if (editModal.phone.length !== 10) { setEditError("Mobile number must be 10 digits"); return; }
-                  if (editModal.altPhone && editModal.altPhone.length !== 10) { setEditError("Alternative number must be 10 digits"); return; }
-                  if (editModal.emergencyContact && editModal.emergencyContact.length !== 10) { setEditError("Emergency contact must be 10 digits"); return; }
-                  setEditSaving(true);
-                  try {
-                    const res = await fetch(`${API_URL}/api/tenants/${editModal.tenantId}/contact`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json", ...authHeader() },
-                      body: JSON.stringify({
-                        phone: editModal.phone,
-                        altPhone: editModal.altPhone || null,
-                        emergencyContact: editModal.emergencyContact || null,
-                        emergencyRelation: editModal.emergencyRelation || null,
-                        idPhotoUrl: editModal.idPhotoUrl,
-                      }),
-                    });
-                    const json = await res.json().catch(() => ({}));
-                    if (!res.ok) throw new Error(json.error || `Server error (${res.status})`);
-                    setEditModal(null);
-                    await load();
-                  } catch (err) {
-                    setEditError(err instanceof Error ? err.message : "Save failed");
-                  } finally { setEditSaving(false); }
-                }}
-                disabled={editSaving || editUploading}
-                style={{
-                  width: "100%", padding: "14px", borderRadius: 12, border: "none",
-                  background: "linear-gradient(135deg, #2dc653, #1a9e3d)",
-                  color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
-                  opacity: (editSaving || editUploading) ? 0.6 : 1,
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                }}
-                id="btn-save-contact"
-              >
-                {editSaving ? <><span className={styles.spinnerDark} /> Saving…</> : "✅ SAVE CHANGES"}
-              </button>
-
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ─── Search Overlay ─── */}
+      {/* â”€â”€â”€ Search Overlay â”€â”€â”€ */}
+      {/* â”€â”€â”€ Search Overlay â”€â”€â”€ */}
       {searchOpen && (
         <>
           <div className={styles.backdrop} onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }} />
           <div className={styles.searchSheet}>
             <div className={styles.sheetHandle} />
             <div className={styles.searchHeader}>
-              <span className={styles.searchTitle}>🔍 TENANT SEARCH</span>
-              <button className={styles.sheetClose} onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }}>✕</button>
+              <span className={styles.searchTitle}>ðŸ” TENANT SEARCH</span>
+              <button className={styles.sheetClose} onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }}>âœ•</button>
             </div>
             <div className={styles.searchInputWrap}>
-              <span className={styles.searchIcon}>🔍</span>
+              <span className={styles.searchIcon}>ðŸ”</span>
               <input type="text" className={styles.searchInput}
-                placeholder="Name or phone number…"
+                placeholder="Name or phone numberâ€¦"
                 value={searchQuery}
                 onChange={(e) => handleSearchInput(e.target.value)}
                 autoFocus id="input-search" />
@@ -1760,12 +1569,12 @@ export default function DashboardPage() {
                   <div className={styles.searchCardTop}>
                     {t.photoUrl
                       ? <img src={t.photoUrl} alt={t.name} className={styles.searchAvatar} />
-                      : <div className={styles.searchAvatarPlaceholder}>👤</div>}
+                      : <div className={styles.searchAvatarPlaceholder}>ðŸ‘¤</div>}
                     <div className={styles.searchCardInfo}>
                       <p className={styles.searchCardName}>{t.name}</p>
-                      <p className={styles.searchCardPhone}>📞 {t.phone}</p>
+                      <p className={styles.searchCardPhone}>ðŸ“ž {t.phone}</p>
                       <span className={`${styles.searchCardStatus} ${t.status === "active" ? styles.searchStatusActive : styles.searchStatusInactive}`}>
-                        {t.status === "active" ? "● ACTIVE" : "● CHECKED OUT"}
+                        {t.status === "active" ? "â— ACTIVE" : "â— CHECKED OUT"}
                       </span>
                     </div>
                   </div>
@@ -1777,7 +1586,7 @@ export default function DashboardPage() {
                           <div className={`${styles.timelineDot} ${h.eventType === "check_out" ? styles.dotRed : h.eventType === "move" ? styles.dotPurple : styles.dotGreen}`} />
                           <div className={styles.timelineText}>
                             <span className={styles.timelineType}>
-                              {h.eventType === "check_in" ? "✅ Checked In" : h.eventType === "move" ? "🔁 Moved" : "🚪 Checked Out"}
+                              {h.eventType === "check_in" ? "âœ… Checked In" : h.eventType === "move" ? "ðŸ” Moved" : "ðŸšª Checked Out"}
                             </span>
                             <span className={styles.timelineNote}>{h.note || (h.toRoom || h.fromRoom || "")}</span>
                             <span className={styles.timelineDate}>
@@ -1791,10 +1600,10 @@ export default function DashboardPage() {
                   {t.joiningDate && (
                     <p className={styles.searchJoined}>
                       Joined: {new Date(t.joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                      {t.leavingDate && ` · Left: ${new Date(t.leavingDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`}
+                      {t.leavingDate && ` Â· Left: ${new Date(t.leavingDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`}
                     </p>
                   )}
-                  {tenantBed && <p style={{ fontSize: 11, color: "var(--brand-green)", marginTop: 4 }}>Tap to view full profile →</p>}
+                  {tenantBed && <p style={{ fontSize: 11, color: "var(--brand-green)", marginTop: 4 }}>Tap to view full profile â†’</p>}
                 </div>
               );
               })}
@@ -1803,15 +1612,15 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/* ─── Room History Overlay ─── */}
+      {/* â”€â”€â”€ Room History Overlay â”€â”€â”€ */}
       {roomHistoryRoom && (
         <>
           <div className={styles.backdrop} onClick={() => { setRoomHistoryRoom(null); setRoomHistoryData(null); }} />
           <div className={styles.roomHistorySheet}>
             <div className={styles.sheetHandle} />
             <div className={styles.checkoutHeader}>
-              <span className={styles.checkoutHeaderTitle}>📜 PAST TENANTS · Room {roomHistoryRoom.roomNumber}</span>
-              <button className={styles.sheetClose} onClick={() => { setRoomHistoryRoom(null); setRoomHistoryData(null); }}>✕</button>
+              <span className={styles.checkoutHeaderTitle}>ðŸ“œ PAST TENANTS Â· Room {roomHistoryRoom.roomNumber}</span>
+              <button className={styles.sheetClose} onClick={() => { setRoomHistoryRoom(null); setRoomHistoryData(null); }}>âœ•</button>
             </div>
             <div className={styles.checkoutBody}>
               {loadingRoomHistory && <div className={styles.searchLoading}><span className={styles.spinner} /></div>}
@@ -1823,22 +1632,22 @@ export default function DashboardPage() {
                   <div className={styles.historyAvatarWrap}>
                     {t.photoUrl
                       ? <img src={t.photoUrl} alt={t.name} className={styles.historyAvatar} />
-                      : <div className={styles.historyAvatarPlaceholder}>👤</div>}
+                      : <div className={styles.historyAvatarPlaceholder}>ðŸ‘¤</div>}
                   </div>
                   <div className={styles.historyTenantInfo}>
                     <p className={styles.historyTenantName}>{t.name}</p>
-                    <p className={styles.historyTenantPhone}>📞 {t.phone}</p>
+                    <p className={styles.historyTenantPhone}>ðŸ“ž {t.phone}</p>
                     <p className={styles.historyTenantDates}>
                       {t.joiningDate && new Date(t.joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                      {" ➔ "}
+                      {" âž” "}
                       {t.leavingDate ? new Date(t.leavingDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Present"}
                     </p>
                     {typeof t.advanceAmount === "number" && t.advanceAmount > 0 && (
                       <p className={styles.historyDeposit}>
-                        Deposit: ₹{t.advanceAmount.toLocaleString()}
+                        Deposit: â‚¹{t.advanceAmount.toLocaleString()}
                         {typeof t.depositDeduction === "number" && t.depositDeduction > 0
-                          ? ` · Deducted: ₹${t.depositDeduction.toLocaleString()} · Refund: ₹${Math.max(0, t.advanceAmount - t.depositDeduction).toLocaleString()}`
-                          : " · Fully refunded"}
+                          ? ` Â· Deducted: â‚¹${t.depositDeduction.toLocaleString()} Â· Refund: â‚¹${Math.max(0, t.advanceAmount - t.depositDeduction).toLocaleString()}`
+                          : " Â· Fully refunded"}
                       </p>
                     )}
                   </div>
@@ -1849,10 +1658,10 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/* ─── Search FAB (large screens only — small screens use sidebar) ─── */}
+      {/* â”€â”€â”€ Search FAB (large screens only â€” small screens use sidebar) â”€â”€â”€ */}
       {!isSmallScreen && !searchOpen && !checkoutModal && !roomHistoryRoom && (
         <button className={styles.searchFab} onClick={() => setSearchOpen(true)} id="btn-search-fab">
-          🔍
+          ðŸ”
         </button>
       )}
     </main>
