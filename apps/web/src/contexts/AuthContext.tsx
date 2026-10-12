@@ -16,14 +16,12 @@ interface Owner {
   email?: string | null;
   photoUrl?: string | null;
   role?: string | null; // 'owner' | 'user'
-  savedPgs?: string[] | null;
 }
 
 interface PGSummary {
   id: string;
   name: string;
   type?: string | null;
-  paymentQrUrl?: string | null;
   paymentUpiId?: string | null;
   paymentPhone?: string | null;
 }
@@ -45,73 +43,27 @@ interface AuthContextType extends AuthState {
   signOut: () => void;
   refreshAuth: () => Promise<void>;
   setActivePg: (pgId: string) => void;
-  toggleSavePg: (pgId: string, save: boolean) => Promise<void>;
 }
 
 const TOKEN_KEY = "pg_eg_token";
 const ACTIVE_PG_KEY = "pg_eg_active_pg_id";
 const ROLE_KEY = "pg_eg_role";
-const OWNER_KEY = "pg_eg_owner";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-
-/** Safely read cached owner from localStorage (survives refresh). */
-function readCachedOwner(): Owner | null {
-  try {
-    const raw = localStorage.getItem(OWNER_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-function getInitialAuthState(): AuthState {
-  if (typeof window === "undefined") {
-    return {
-      owner: null,
-      token: null,
-      pgId: null,
-      activePgId: null,
-      allPgs: [],
-      hasPG: false,
-      role: null,
-      isLoading: true,
-      isAuthenticated: false,
-    };
-  }
-  const token = localStorage.getItem(TOKEN_KEY);
-  if (!token) {
-    return {
-      owner: null,
-      token: null,
-      pgId: null,
-      activePgId: null,
-      allPgs: [],
-      hasPG: false,
-      role: null,
-      isLoading: false,
-      isAuthenticated: false,
-    };
-  }
-  const cachedOwner = readCachedOwner();
-  const cachedRole = localStorage.getItem(ROLE_KEY) || "user";
-  const pgId = localStorage.getItem("pg_eg_pg_id") || null;
-  const activePgId = localStorage.getItem(ACTIVE_PG_KEY) || pgId;
-
-  return {
-    owner: cachedOwner,
-    token,
-    pgId,
-    activePgId,
-    allPgs: pgId ? [{ id: pgId, name: "My PG" }] : [],
-    hasPG: !!pgId,
-    role: cachedRole,
-    isLoading: !cachedOwner,
-    isAuthenticated: !!cachedOwner,
-  };
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>(getInitialAuthState);
+  const [state, setState] = useState<AuthState>({
+    owner: null,
+    token: null,
+    pgId: null,
+    activePgId: null,
+    allPgs: [],
+    hasPG: false,
+    role: null,
+    isLoading: true,
+    isAuthenticated: false,
+  });
 
   const signIn = useCallback(
     (token: string, owner: Owner, hasPG: boolean, pgId?: string | null, allPgs?: PGSummary[], role?: string) => {
@@ -125,8 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         : (pgId || null);
       if (activePgId) localStorage.setItem(ACTIVE_PG_KEY, activePgId);
       if (pgId) localStorage.setItem("pg_eg_pg_id", pgId);
-      // Cache owner so it can be restored on next page load without waiting for API
-      try { localStorage.setItem(OWNER_KEY, JSON.stringify(owner)); } catch { /* noop */ }
       setState({
         owner, token,
         pgId: pgId || null,
@@ -146,7 +96,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("pg_eg_pg_id");
     localStorage.removeItem(ACTIVE_PG_KEY);
     localStorage.removeItem(ROLE_KEY);
-    localStorage.removeItem(OWNER_KEY);
     setState({
       owner: null, token: null,
       pgId: null, activePgId: null, allPgs: [],
@@ -167,29 +116,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const cachedOwner = readCachedOwner();
-    const cachedRole = localStorage.getItem(ROLE_KEY) || "user";
-    if (cachedOwner) {
-      setState((s) => ({
-        ...s,
-        owner: cachedOwner,
-        token,
-        role: cachedRole,
-        isLoading: false,
-        isAuthenticated: true,
-      }));
-    }
-
     try {
-      // 3.5s timeout for low internet so UI never hangs waiting for auth validation
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
-
       const res = await fetch(`${API_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
       });
-      clearTimeout(timeoutId);
 
       if (!res.ok) {
         localStorage.removeItem(TOKEN_KEY);
@@ -226,12 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: true,
       });
     } catch {
-      // Network error (server unreachable, timeout, CORS, etc.)
-      // Do NOT log the user out for a transient network failure —
-      // their token is still in localStorage and may be valid.
-      // Only a server-confirmed 401/403 should revoke access.
-      const stillHasToken = !!localStorage.getItem(TOKEN_KEY);
-      setState((s) => ({ ...s, isLoading: false, isAuthenticated: stillHasToken }));
+      setState((s) => ({ ...s, isLoading: false }));
     }
   }, []);
 
@@ -240,33 +165,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshAuth();
   }, [refreshAuth]);
 
-  const toggleSavePg = useCallback(async (pgId: string, save: boolean) => {
-    if (!state.token || !state.owner) return;
-    try {
-      const res = await fetch(`${API_URL}/api/auth/save-pg`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${state.token}`,
-        },
-        body: JSON.stringify({ pgId, save }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const updatedOwner = { ...state.owner, savedPgs: data.savedPgs };
-        localStorage.setItem(OWNER_KEY, JSON.stringify(updatedOwner));
-        setState((s) => ({
-          ...s,
-          owner: updatedOwner,
-        }));
-      }
-    } catch (err) {
-      console.error("Failed to toggle save PG:", err);
-    }
-  }, [state.token, state.owner]);
 
   return (
-    <AuthContext.Provider value={{ ...state, signIn, signOut, refreshAuth, setActivePg, toggleSavePg }}>
+    <AuthContext.Provider value={{ ...state, signIn, signOut, refreshAuth, setActivePg }}>
       {children}
     </AuthContext.Provider>
   );

@@ -40,12 +40,7 @@ interface DashboardData { pg: PGData; rooms: Room[]; currentMonth: string; }
 /* ─── Helpers ─── */
 const BED_LETTERS = "ABCDEFGHIJKLMNOP";
 const TYPE_EMOJI: Record<string, string> = { gents: "🚹", ladies: "🚺", "co-living": "🧑‍🤝‍🧑" };
-function getSharingEmoji(type: number): string {
-  if (type <= 0) return "🏠";
-  const pairs = Math.floor(type / 2);
-  const single = type % 2;
-  return "👥".repeat(pairs) + (single ? "👤" : "");
-}
+const SHARE_ICONS = ["", "👤", "👥", "👥", "👨‍👩‍👧‍👦", "🏠"];
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 function monthLabel(m: string) {
@@ -213,15 +208,6 @@ export default function DashboardPage() {
   const [roomHistoryData, setRoomHistoryData] = useState<{ past: TenantWithHistory[]; moveHistory: HistoryEvent[] } | null>(null);
   const [loadingRoomHistory, setLoadingRoomHistory] = useState(false);
 
-  // Edit contact modal state
-  const [editModal, setEditModal] = useState<{
-    tenantId: string; name: string;
-    phone: string; altPhone: string; emergencyContact: string; emergencyRelation: string; idPhotoUrl: string | null;
-  } | null>(null);
-  const [editSaving, setEditSaving] = useState(false);
-  const [editError, setEditError] = useState("");
-  const [editUploading, setEditUploading] = useState(false);
-  const editIdCardRef = useRef<HTMLInputElement>(null);
   const sharingScrollRef = useRef<HTMLDivElement>(null);
   const [sharingCollapsed, setSharingCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -471,17 +457,17 @@ export default function DashboardPage() {
           <div className={styles.headerRight}>
             <div className={styles.overallStat}>
               <span className={styles.overallNum}>{totalBeds}</span>
-              <span className={styles.overallLabel}>total <span className={styles.bedIcon}>🛏️</span></span>
+              <span className={styles.overallLabel}>total</span>
             </div>
             <div className={styles.statDivider} />
             <div className={styles.overallStat}>
               <span className={styles.overallNum} style={{ color: "var(--brand-green)" }}>{occupiedBeds}</span>
-              <span className={styles.overallLabel}>filled <span className={styles.bedIcon}>🛏️</span></span>
+              <span className={styles.overallLabel}>filled</span>
             </div>
             <div className={styles.statDivider} />
             <div className={styles.overallStat}>
               <span className={styles.overallNum} style={{ color: "#e63946" }}>{totalBeds - occupiedBeds}</span>
-              <span className={styles.overallLabel}>free <span className={styles.bedIcon}>🛏️</span></span>
+              <span className={styles.overallLabel}>free</span>
             </div>
             {pendingRentCount > 0 && (
               <>
@@ -599,18 +585,6 @@ export default function DashboardPage() {
                   <div>
                     <div className={styles.sidebarActionTitle}>Rents</div>
                     <div className={styles.sidebarActionDesc}>Monthly rent overview & collection</div>
-                  </div>
-                </button>
-
-                <button
-                  className={styles.sidebarAction}
-                  id="btn-expenses"
-                  onClick={() => { setProfileOpen(false); router.push("/expenses"); }}
-                >
-                  <div className={styles.sidebarActionIcon}>📊</div>
-                  <div>
-                    <div className={styles.sidebarActionTitle}>Expenses</div>
-                    <div className={styles.sidebarActionDesc}>Track monthly PG spending</div>
                   </div>
                 </button>
 
@@ -748,7 +722,7 @@ export default function DashboardPage() {
           <section className={styles.sharingSection}>
             {/* Label row with chevron navigation */}
             <div className={styles.sharingNav}>
-              <p className={`${styles.sectionLabel} ${styles.sharingNavLabel}`} style={{ margin: 0, color: "#ffffff", opacity: 1 }}>AVAILABILITY BY SHARING TYPE</p>
+              <p className={`${styles.sectionLabel} ${styles.sharingNavLabel}`} style={{ margin: 0 }}>AVAILABILITY BY SHARING TYPE</p>
               {/* Right side controls — chevrons hidden on small screens, collapse always visible */}
               <div className={styles.sharingNavRight}>
                 {/* ‹ › scroll chevrons — hidden on small screens via CSS */}
@@ -791,7 +765,7 @@ export default function DashboardPage() {
                       onClick={() => { playWhoosh(true); setFilterType(isActive ? null : type); }} id={`sharing-card-${type}`}>
                       <DonutRing pct={stats.pct} free={stats.free} total={stats.totalBeds} />
                       <div className={styles.sharingInfo}>
-                        <span className={styles.sharingIcon}>{getSharingEmoji(type)}</span>
+                        <span className={styles.sharingIcon}>{SHARE_ICONS[Math.min(type, 5)] || "🏠"}</span>
                         <span className={styles.sharingLabel}>{type}-Share</span>
                         <span className={styles.sharingDetail}>{stats.free} of {stats.totalBeds} free</span>
                       </div>
@@ -1047,80 +1021,6 @@ export default function DashboardPage() {
                     <div className={styles.bedActionGroup}>
                       {bed.isOccupied && bed.tenant ? (
                         <>
-                          <div className={styles.iconStack}>
-                              <button
-                                className={styles.editContactBtn}
-                                title="Edit contact details"
-                                id={`edit-${bed.id}`}
-                                onClick={() => {
-                                  const t = bed.tenant!;
-                                  setEditModal({
-                                    tenantId: t.id, name: t.name,
-                                    phone: t.phone || "",
-                                    altPhone: t.altPhone || "",
-                                    emergencyContact: t.emergencyContact || "",
-                                    emergencyRelation: t.emergencyRelation || "",
-                                    idPhotoUrl: t.idPhotoUrl || null,
-                                  });
-                                  setEditError("");
-                                }}
-                              >✏️</button>
-                              {/* WhatsApp reminder — only when rent is unpaid */}
-                              {bed.tenant.rent && bed.tenant.rent.status !== "paid" && (() => {
-                                const rent = bed.tenant.rent!;
-                                const due = rent.amount - (rent.paidAmount ?? 0);
-                                const rawPhone = (bed.tenant.phone || "").replace(/\D/g, "");
-                                const waPhone = rawPhone.startsWith("91") ? rawPhone : `91${rawPhone}`;
-                                const mo = data.currentMonth ?? "";
-                                const [yr, m] = mo.split("-");
-                                const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-                                const monthStr = m ? `${MONTHS[parseInt(m)-1]} ${yr}` : mo;
-                                const activePg = allPgs.find(p => p.id === activePgId);
-                                const pgName = activePg?.name ?? data.pg.name;
-                                const pgType = activePg?.type ?? "";
-                                const upi = activePg?.paymentUpiId ?? null;
-                                const payPhone = activePg?.paymentPhone ?? null;
-                                const roomNo = selectedRoom.roomNumber ?? "—";
-                                const bedNo = bed.bedNumber ?? "—";
-                                const floor = selectedRoom.floor ?? "—";
-                                const msg = [
-                                  `★ *${pgName}${pgType ? ` — ${pgType}` : ""}*`,
-                                  ``,
-                                  `Dear *${bed.tenant.name}*,`,
-                                  ``,
-                                  `This is a friendly reminder that your rent for *${monthStr}* is due.`,
-                                  ``,
-                                  `▸ Bed ${bedNo} · Room: ${roomNo} · Floor ${floor}`,
-                                  `▸ Amount Due: *₹${due.toLocaleString("en-IN")}*`,
-                                  ``,
-                                  `━━━━━━━━━━━━━━━`,
-                                  `▸ *Pay Instantly:*`,
-                                  upi ? `UPI ID: ${upi}` : null,
-                                  payPhone ? `Number: ${payPhone}` : null,
-                                  (upi || payPhone) ? `${bed.tenant.name}, you can just copy UPI ID / Mobile Number and pay.` : null,
-                                  `━━━━━━━━━━━━━━━`,
-                                  ``,
-                                  `Kindly make the payment at your earliest convenience.`,
-                                  `Thank you! :)`,
-                                ].filter(l => l !== null).join("\n");
-                                const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`;
-                                return (
-                                  <a
-                                    href={waUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={styles.waBtnIcon}
-                                    title="Send WhatsApp reminder"
-                                    id={`wa-${bed.id}`}
-                                  >
-                                    <svg viewBox="0 0 32 32" width="22" height="22" xmlns="http://www.w3.org/2000/svg">
-                                      <circle cx="16" cy="16" r="16" fill="#25D366"/>
-                                      <path fill="#fff" d="M23.5 8.5A10.44 10.44 0 0 0 16 5.5C10.2 5.5 5.5 10.2 5.5 16a10.4 10.4 0 0 0 1.4 5.2L5.5 26.5l5.4-1.4a10.5 10.5 0 0 0 5.1 1.3c5.8 0 10.5-4.7 10.5-10.5a10.4 10.4 0 0 0-3-7.4zm-7.5 16.1a8.7 8.7 0 0 1-4.5-1.2l-.3-.2-3.2.8.9-3.1-.2-.3A8.7 8.7 0 0 1 7.3 16a8.7 8.7 0 0 1 8.7-8.7 8.7 8.7 0 0 1 8.7 8.7 8.7 8.7 0 0 1-8.7 8.6zm4.8-6.5c-.3-.1-1.6-.8-1.8-.9s-.4-.1-.6.1-.7.9-.8 1-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7 7 0 0 1-1.3-1.6c-.1-.3 0-.4.1-.6l.4-.5.3-.4v-.4l-.9-2.1c-.2-.5-.5-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8c.1.2 1.5 2.4 3.8 3.3a13 13 0 0 0 1.3.5 3.1 3.1 0 0 0 1.4.1c.4-.1 1.3-.5 1.5-1s.2-1 .1-1a.5.5 0 0 0-.4-.3z"/>
-                                    </svg>
-                                  </a>
-                                );
-                              })()}
-                            </div>
                             <div className={styles.actionBtnStack}>
                               <button className={styles.detailsBtn}
                                 onClick={() => router.push(`/tenants/profile?id=${bed.tenant!.id}`)}
@@ -1580,173 +1480,6 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/* ─── Edit Contact Modal ─── */}
-      {editModal && (
-        <>
-          <div className={styles.backdrop} onClick={() => setEditModal(null)} />
-          <div className={styles.checkoutSheet}>
-            <div className={styles.sheetHandle} />
-            <div className={styles.checkoutHeader}>
-              <span className={styles.checkoutHeaderTitle}>✏️ EDIT CONTACT — {editModal.name}</span>
-              <button className={styles.sheetClose} onClick={() => setEditModal(null)}>✕</button>
-            </div>
-
-            <div className={styles.checkoutBody} style={{ gap: 14 }}>
-
-              {/* Mobile Number */}
-              <div>
-                <p className={styles.paymentLabel}>📞 Mobile Number</p>
-                <div style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden" }}>
-                  <span style={{ padding: "0 10px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>+91</span>
-                  <input
-                    type="tel" inputMode="numeric" maxLength={10}
-                    value={editModal.phone}
-                    onChange={(e) => setEditModal({ ...editModal, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
-                    placeholder="10-digit mobile"
-                    style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#fff", fontSize: 14, fontWeight: 600, padding: "11px 10px 11px 0", fontFamily: "inherit" }}
-                    id="edit-phone"
-                  />
-                </div>
-              </div>
-
-              {/* Alt Number */}
-              <div>
-                <p className={styles.paymentLabel}>📞 Alternative Number <span style={{ opacity: 0.45, fontWeight: 500 }}>(optional)</span></p>
-                <div style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden" }}>
-                  <span style={{ padding: "0 10px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>+91</span>
-                  <input
-                    type="tel" inputMode="numeric" maxLength={10}
-                    value={editModal.altPhone}
-                    onChange={(e) => setEditModal({ ...editModal, altPhone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
-                    placeholder="Alt. number"
-                    style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#fff", fontSize: 14, fontWeight: 600, padding: "11px 10px 11px 0", fontFamily: "inherit" }}
-                    id="edit-alt-phone"
-                  />
-                </div>
-              </div>
-
-              {/* Emergency Contact */}
-              <div>
-                <p className={styles.paymentLabel}>🆘 Emergency Contact <span style={{ opacity: 0.45, fontWeight: 500 }}>(optional)</span></p>
-                <div style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden" }}>
-                  <span style={{ padding: "0 10px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>+91</span>
-                  <input
-                    type="tel" inputMode="numeric" maxLength={10}
-                    value={editModal.emergencyContact}
-                    onChange={(e) => setEditModal({ ...editModal, emergencyContact: e.target.value.replace(/\D/g, "").slice(0, 10) })}
-                    placeholder="Emergency number"
-                    style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#fff", fontSize: 14, fontWeight: 600, padding: "11px 10px 11px 0", fontFamily: "inherit" }}
-                    id="edit-emergency"
-                  />
-                </div>
-                {/* Relation tags */}
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-                  {["Father","Mother","Sibling","Friend","Other"].map((rel) => (
-                    <button key={rel}
-                      onClick={() => setEditModal({ ...editModal, emergencyRelation: editModal.emergencyRelation === rel ? "" : rel })}
-                      style={{
-                        padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                        background: editModal.emergencyRelation === rel ? "rgba(45,198,83,0.15)" : "rgba(255,255,255,0.05)",
-                        border: `1.5px solid ${editModal.emergencyRelation === rel ? "rgba(45,198,83,0.4)" : "rgba(255,255,255,0.1)"}`,
-                        color: editModal.emergencyRelation === rel ? "#2dc653" : "rgba(255,255,255,0.55)",
-                      }}
-                    >{rel}</button>
-                  ))}
-                </div>
-              </div>
-
-              {/* ID Card */}
-              <div>
-                <p className={styles.paymentLabel}>🪪 ID Card</p>
-                {editModal.idPhotoUrl && (
-                  <img src={editModal.idPhotoUrl} alt="ID Card" style={{ width: "100%", borderRadius: 10, marginBottom: 8, maxHeight: 160, objectFit: "cover" }} />
-                )}
-                <button
-                  onClick={() => editIdCardRef.current?.click()}
-                  disabled={editUploading}
-                  style={{
-                    width: "100%", padding: "11px", border: "1.5px dashed rgba(255,255,255,0.18)", borderRadius: 10,
-                    background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.6)", fontSize: 13,
-                    fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                  }}
-                  id="btn-edit-id-card"
-                >
-                  {editUploading ? "Uploading…" : editModal.idPhotoUrl ? "🔄 Change ID Card" : "📷 Upload ID Card"}
-                </button>
-                <input
-                  ref={editIdCardRef} type="file" accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    setEditUploading(true);
-                    try {
-                      const reader = new FileReader();
-                      reader.onload = async (ev) => {
-                        const base64 = ev.target?.result as string;
-                        const upRes = await fetch(`${API_URL}/api/upload`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json", ...authHeader() },
-                          body: JSON.stringify({ base64, fileName: `id-${editModal.tenantId}.jpg` }),
-                        });
-                        const upJson = await upRes.json();
-                        if (upRes.ok) setEditModal({ ...editModal, idPhotoUrl: upJson.url });
-                        else setEditError(upJson.error || "Upload failed");
-                        setEditUploading(false);
-                      };
-                      reader.readAsDataURL(file);
-                    } catch { setEditUploading(false); setEditError("Upload failed"); }
-                  }}
-                />
-              </div>
-
-              {editError && <p style={{ margin: 0, fontSize: 12, color: "#e63946", fontWeight: 600 }}>⚠️ {editError}</p>}
-
-              <button
-                onClick={async () => {
-                  if (!editModal) return;
-                  setEditError("");
-                  if (editModal.phone.length !== 10) { setEditError("Mobile number must be 10 digits"); return; }
-                  if (editModal.altPhone && editModal.altPhone.length !== 10) { setEditError("Alternative number must be 10 digits"); return; }
-                  if (editModal.emergencyContact && editModal.emergencyContact.length !== 10) { setEditError("Emergency contact must be 10 digits"); return; }
-                  setEditSaving(true);
-                  try {
-                    const res = await fetch(`${API_URL}/api/tenants/${editModal.tenantId}/contact`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json", ...authHeader() },
-                      body: JSON.stringify({
-                        phone: editModal.phone,
-                        altPhone: editModal.altPhone || null,
-                        emergencyContact: editModal.emergencyContact || null,
-                        emergencyRelation: editModal.emergencyRelation || null,
-                        idPhotoUrl: editModal.idPhotoUrl,
-                      }),
-                    });
-                    const json = await res.json().catch(() => ({}));
-                    if (!res.ok) throw new Error(json.error || `Server error (${res.status})`);
-                    setEditModal(null);
-                    await load();
-                  } catch (err) {
-                    setEditError(err instanceof Error ? err.message : "Save failed");
-                  } finally { setEditSaving(false); }
-                }}
-                disabled={editSaving || editUploading}
-                style={{
-                  width: "100%", padding: "14px", borderRadius: 12, border: "none",
-                  background: "linear-gradient(135deg, #2dc653, #1a9e3d)",
-                  color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
-                  opacity: (editSaving || editUploading) ? 0.6 : 1,
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                }}
-                id="btn-save-contact"
-              >
-                {editSaving ? <><span className={styles.spinnerDark} /> Saving…</> : "✅ SAVE CHANGES"}
-              </button>
-
-            </div>
-          </div>
-        </>
-      )}
 
       {/* ─── Search Overlay ─── */}
       {searchOpen && (
