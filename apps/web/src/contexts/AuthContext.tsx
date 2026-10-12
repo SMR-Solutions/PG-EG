@@ -16,6 +16,7 @@ interface Owner {
   email?: string | null;
   photoUrl?: string | null;
   role?: string | null; // 'owner' | 'user'
+  savedPgs?: string[];  // array of saved PG ids (for user role)
 }
 
 interface PGSummary {
@@ -43,6 +44,7 @@ interface AuthContextType extends AuthState {
   signOut: () => void;
   refreshAuth: () => Promise<void>;
   setActivePg: (pgId: string) => void;
+  toggleSavePg: (pgId: string, save: boolean) => Promise<void>;
 }
 
 const TOKEN_KEY = "pg_eg_token";
@@ -109,6 +111,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, activePgId: pgId }));
   }, []);
 
+  /** Save / unsave a PG for the current user — optimistic update */
+  const toggleSavePg = useCallback(async (pgId: string, save: boolean) => {
+    setState((s) => {
+      if (!s.owner) return s;
+      const current = s.owner.savedPgs || [];
+      const updated = save
+        ? [...new Set([...current, pgId])]
+        : current.filter((id) => id !== pgId);
+      return { ...s, owner: { ...s.owner, savedPgs: updated } };
+    });
+    try {
+      const token = localStorage.getItem(TOKEN_KEY);
+      await fetch(`${API_URL}/api/users/save-pg`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ pgId, save }),
+      });
+    } catch { /* silent — optimistic update already applied */ }
+  }, []);
+
   const refreshAuth = useCallback(async () => {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
@@ -167,7 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <AuthContext.Provider value={{ ...state, signIn, signOut, refreshAuth, setActivePg }}>
+    <AuthContext.Provider value={{ ...state, signIn, signOut, refreshAuth, setActivePg, toggleSavePg }}>
       {children}
     </AuthContext.Provider>
   );
