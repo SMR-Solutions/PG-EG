@@ -1074,30 +1074,6 @@
 }
 .detailsBtn:hover { background: var(--border-hover); color: var(--text-primary); border-color: var(--border-hover); }
 
-.editContactBtn {
-  width: 36px; height: 36px;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--border);
-  border: 1.5px solid var(--border-hover);
-  border-radius: var(--radius-sm);
-  font-size: 16px; cursor: pointer;
-  transition: var(--transition);
-  flex-shrink: 0;
-}
-.editContactBtn:hover { background: rgba(255,200,50,0.12); border-color: rgba(255,200,50,0.35); }
-.iconStack { display: flex; flex-direction: column; gap: 6px; }
-
-.waBtnIcon {
-  width: 36px; height: 36px;
-  display: flex; align-items: center; justify-content: center;
-  background: transparent;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer; text-decoration: none;
-  transition: var(--transition);
-  flex-shrink: 0;
-}
-.waBtnIcon:hover { transform: scale(1.12); filter: brightness(1.1); }
 
 
 .bedBadgeOrange {
