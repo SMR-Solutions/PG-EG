@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -8,12 +8,12 @@ import { useTheme } from "@/contexts/ThemeContext";
 import styles from "./page.module.css";
 import AppLogo from "@/components/AppLogo";
 import Building3DView from "@/components/Building3DView";
-// R3F version â€” dynamically imported so Three.js is never loaded unless the user picks it
+// R3F version — dynamically imported so Three.js is never loaded unless the user picks it
 const Building3DViewR3F = dynamic(() => import("@/components/Building3DViewR3F"), { ssr: false });
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-/* â”€â”€â”€ Types â”€â”€â”€ */
+/* ─── Types ─── */
 interface RentRecord { id: string; status: string; amount: number; paidAmount: number; paymentMode: string | null; paidAt: string | null; }
 interface Tenant {
   id: string; name: string; phone: string; joiningDate: string;
@@ -37,10 +37,10 @@ interface PGData {
 }
 interface DashboardData { pg: PGData; rooms: Room[]; currentMonth: string; }
 
-/* â”€â”€â”€ Helpers â”€â”€â”€ */
+/* ─── Helpers ─── */
 const BED_LETTERS = "ABCDEFGHIJKLMNOP";
-const TYPE_EMOJI: Record<string, string> = { gents: "ðŸš¹", ladies: "ðŸšº", "co-living": "ðŸ§‘â€ðŸ¤â€ðŸ§‘" };
-const SHARE_ICONS = ["", "ðŸ‘¤", "ðŸ‘¥", "ðŸ‘¥", "ðŸ‘¨â€ðŸ‘©â€ðŸ‘§â€ðŸ‘¦", "ðŸ "];
+const TYPE_EMOJI: Record<string, string> = { gents: "🚹", ladies: "🚺", "co-living": "🧑‍🤝‍🧑" };
+const SHARE_ICONS = ["", "👤", "👥", "👥", "👨‍👩‍👧‍👦", "🏠"];
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 function monthLabel(m: string) {
@@ -67,16 +67,16 @@ function floorStats(rooms: Room[], floor: number) {
 
 function floorColor(free: number, total: number) {
   if (total === 0) return "empty";
-  if (free === 0) return "full";        // all filled â†’ green
-  if (free === total) return "available"; // all empty â†’ red
-  return "almost";                      // partial â†’ orange
+  if (free === 0) return "full";        // all filled → green
+  if (free === total) return "available"; // all empty → red
+  return "almost";                      // partial → orange
 }
 
 function roomHasPendingRent(room: Room) {
   return room.beds.some((b) => b.tenant?.rent?.status === "pending");
 }
 
-/** Shared whoosh â€” lowpass filtered noise sweep (the good one) */
+/** Shared whoosh — lowpass filtered noise sweep (the good one) */
 function playWhoosh(short = false) {
   try {
     const ac = new AudioContext();
@@ -98,7 +98,7 @@ function playWhoosh(short = false) {
   } catch { /* ignore */ }
 }
 
-/* â”€â”€â”€ Donut Ring â”€â”€â”€ */
+/* ─── Donut Ring ─── */
 function DonutRing({ pct, free, total }: { pct: number; free: number; total: number }) {
   const r = 38, circ = 2 * Math.PI * r;
   const offset = circ - (Math.min(pct, 100) / 100) * circ;
@@ -117,7 +117,7 @@ function DonutRing({ pct, free, total }: { pct: number; free: number; total: num
         transform="rotate(-90 50 50)"
         style={{ transition: "stroke-dashoffset 0.6s ease", filter: `drop-shadow(0 0 4px ${color}66)` }} />
       <text x="50" y="45" textAnchor="middle" fill={textColor} fontSize="17" fontWeight="800" fontFamily="inherit">
-        {total === 0 ? "â€”" : free}
+        {total === 0 ? "—" : free}
       </text>
       <text x="50" y="60" textAnchor="middle" fill={subColor} fontSize="9" fontFamily="inherit">
         {total === 0 ? "no rooms" : "free"}
@@ -126,7 +126,7 @@ function DonutRing({ pct, free, total }: { pct: number; free: number; total: num
   );
 }
 
-/* â”€â”€â”€ Main â”€â”€â”€ */
+/* ─── Main ─── */
 export default function DashboardPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
@@ -141,7 +141,7 @@ export default function DashboardPage() {
       router.replace("/sign-in?from=/dashboard");
       return;
     }
-    // Users (students/tenants) don't have a dashboard â€” send to Find PG
+    // Users (students/tenants) don't have a dashboard — send to Find PG
     if (!authLoading && isAuthenticated && role === "user") {
       router.replace("/find-pg");
     }
@@ -157,7 +157,7 @@ export default function DashboardPage() {
     return "list";
   });
   const [viewDropOpen, setViewDropOpen] = useState(false);
-  // Building style â€” which 3D engine renders the building
+  // Building style — which 3D engine renders the building
   const [buildingStyle, setBuildingStyle] = useState<"css" | "r3f">(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("pg-eg-building-style") as "css" | "r3f") || "css";
@@ -194,7 +194,7 @@ export default function DashboardPage() {
   const [searching, setSearching] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Viewport â€” FAB only shows on large screens; search on small screens is inside sidebar
+  // Viewport — FAB only shows on large screens; search on small screens is inside sidebar
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   useEffect(() => {
     const check = () => setIsSmallScreen(window.innerWidth <= 640);
@@ -230,7 +230,7 @@ export default function DashboardPage() {
   const onSidebarTouchStart = (e: React.TouchEvent) => { sidebarSwipeX.current = e.touches[0].clientX; };
   const onSidebarTouchEnd   = (e: React.TouchEvent) => { if (e.changedTouches[0].clientX - sidebarSwipeX.current > 60) setProfileOpen(false); };
 
-  // â”€â”€ Helper: auth header from current token â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Helper: auth header from current token ───────────────────
   const authHeader = useCallback(
     (): Record<string, string> => (token ? { Authorization: `Bearer ${token}` } : {}),
     [token]
@@ -253,10 +253,10 @@ export default function DashboardPage() {
     finally { setLoading(false); }
   }, [activePgId, token, authHeader]);
 
-  // â”€â”€ Trigger load ONLY after auth has fully resolved â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Trigger load ONLY after auth has fully resolved ──────────────
   // Without this guard, load() fires on mount with token=null (React state
   // not yet populated from localStorage), sending an unauthenticated request
-  // before refreshAuth() has finished â€” causing a 401 on every page refresh.
+  // before refreshAuth() has finished — causing a 401 on every page refresh.
   useEffect(() => {
     if (authLoading) return;      // wait for refreshAuth() to finish
     if (!isAuthenticated) return; // redirect handled by the sign-in effect
@@ -283,7 +283,7 @@ export default function DashboardPage() {
     const rent = checkoutModal.tenant.rent;
     const outstanding = rent ? Math.max(0, rent.amount - (rent.paidAmount ?? 0)) : 0;
     if (outstanding > 0) {
-      alert(`Please clear the outstanding rent of â‚¹${outstanding.toLocaleString("en-IN")} before checkout.`);
+      alert(`Please clear the outstanding rent of ₹${outstanding.toLocaleString("en-IN")} before checkout.`);
       return;
     }
 
@@ -366,7 +366,7 @@ export default function DashboardPage() {
   async function handleMarkPaid(rentId: string, fullAmount: number) {
     const raw = rentPayAmount.trim();
     const paidAmount = raw === "" ? fullAmount : Number(raw);
-    // Validation (belt-and-suspenders â€” button is disabled for invalid values)
+    // Validation (belt-and-suspenders — button is disabled for invalid values)
     if (raw !== "" && (!Number.isFinite(paidAmount) || paidAmount <= 0 || !Number.isInteger(paidAmount))) return;
     if (raw !== "" && paidAmount > fullAmount) return;
     setMarkingPaid(rentId);
@@ -394,7 +394,7 @@ export default function DashboardPage() {
     } finally { setMarkingPaid(null); }
   }
 
-  /* â”€â”€â”€ Derived â”€â”€â”€ */
+  /* ─── Derived ─── */
   const totalBeds = data?.rooms.reduce((s, r) => s + r.beds.length, 0) ?? 0;
   const occupiedBeds = data?.rooms.reduce((s, r) => s + r.beds.filter((b) => b.isOccupied).length, 0) ?? 0;
   const pendingRentCount = data?.rooms.reduce((s, r) =>
@@ -425,17 +425,17 @@ export default function DashboardPage() {
       <div className={styles.orb1} /><div className={styles.orb2} />
       <div className={styles.content}>
 
-        {/* â”€â”€â”€ PG-EG Logo Bar â”€â”€â”€ */}
+        {/* ─── PG-EG Logo Bar ─── */}
         <div className={styles.logoBar}>
           <AppLogo size="sm" />
-          {/* Crown above profile button â€” both absolute in logoBar (position:relative) */}
+          {/* Crown above profile button — both absolute in logoBar (position:relative) */}
           <span style={{
             position: "absolute", right: "0", top: "-12px",
             width: "48px", textAlign: "center",
             fontSize: "26px", lineHeight: 1,
             filter: "drop-shadow(0 2px 8px rgba(255,200,0,0.95))",
             pointerEvents: "none", zIndex: 2,
-          }}>ðŸ‘‘</span>
+          }}>👑</span>
           <button
             className={styles.topProfileBtn}
             onClick={() => setProfileOpen(true)}
@@ -448,11 +448,11 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* â”€â”€â”€ Header â”€â”€â”€ */}
+        {/* ─── Header ─── */}
         <header className={styles.header}>
           <div className={styles.headerLeft}>
             <div className={styles.pgName}>{pg.name}</div>
-            <div className={styles.pgMeta}>{TYPE_EMOJI[pg.type]} {pg.type.charAt(0).toUpperCase() + pg.type.slice(1)} Â· {pg.totalFloors} Floors</div>
+            <div className={styles.pgMeta}>{TYPE_EMOJI[pg.type]} {pg.type.charAt(0).toUpperCase() + pg.type.slice(1)} · {pg.totalFloors} Floors</div>
           </div>
           <div className={styles.headerRight}>
             <div className={styles.overallStat}>
@@ -473,7 +473,7 @@ export default function DashboardPage() {
               <>
                 <div className={styles.statDivider} />
                 <div className={styles.overallStat}>
-                  <span className={styles.overallNum} style={{ color: "#f4a261" }}>âš ï¸ {pendingRentCount}</span>
+                  <span className={styles.overallNum} style={{ color: "#f4a261" }}>⚠️ {pendingRentCount}</span>
                   <span className={styles.overallLabel}>rent due</span>
                 </div>
               </>
@@ -481,7 +481,7 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {/* â”€â”€â”€ Profile Sidebar â”€â”€â”€ */}
+        {/* ─── Profile Sidebar ─── */}
         {profileOpen && (
           <div className={styles.sidebarBackdrop} onClick={() => setProfileOpen(false)}>
             <div
@@ -490,17 +490,17 @@ export default function DashboardPage() {
               onTouchStart={onSidebarTouchStart}
               onTouchEnd={onSidebarTouchEnd}
             >
-              {/* â”€â”€ Center pill tab over the sidebar â”€â”€ */}
+              {/* ── Center pill tab over the sidebar ── */}
               <button
                 className={styles.sidebarPillTab}
                 onClick={() => setProfileOpen(false)}
                 id="btn-sidebar-pill-close"
                 aria-label="Close sidebar"
               >
-                <span className={styles.sidebarPillArrow}>â†’</span>
+                <span className={styles.sidebarPillArrow}>→</span>
               </button>
 
-              {/* â”€â”€ Theme toggle pill (dark | light) â”€â”€ */}
+              {/* ── Theme toggle pill (dark | light) ── */}
               <div className={styles.themePill}>
                 <button
                   className={`${styles.themePillHalf} ${styles.themePillDark} ${theme === "dark" ? styles.themePillActive : ""}`}
@@ -508,7 +508,7 @@ export default function DashboardPage() {
                   aria-label="Switch to dark mode"
                   id="btn-theme-dark"
                 >
-                  ðŸŒ™
+                  🌙
                 </button>
                 <button
                   className={`${styles.themePillHalf} ${styles.themePillLight} ${theme === "light" ? styles.themePillActive : ""}`}
@@ -516,12 +516,12 @@ export default function DashboardPage() {
                   aria-label="Switch to light mode"
                   id="btn-theme-light"
                 >
-                  â˜€ï¸
+                  ☀️
                 </button>
               </div>
 
               <div className={styles.sidebarBody}>
-                {/* PG Manager info + Google account â€” click to open Owner Profile */}
+                {/* PG Manager info + Google account — click to open Owner Profile */}
                 <button
                   className={styles.sidebarOwner}
                   style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", width: "100%", padding: 0 }}
@@ -557,7 +557,7 @@ export default function DashboardPage() {
                   onClick={() => { setProfileOpen(false); router.push("/add-pg?new=true"); }}
                   style={{ display: "none" }}
                 >
-                  <div className={styles.sidebarActionIcon}>âž•</div>
+                  <div className={styles.sidebarActionIcon}>➕</div>
                   <div>
                     <div className={styles.sidebarActionTitle}>Add Another PG</div>
                     <div className={styles.sidebarActionDesc}>Register a new property</div>
@@ -569,7 +569,7 @@ export default function DashboardPage() {
                   id="btn-edit-pg"
                   onClick={() => { setProfileOpen(false); router.push("/edit-pg"); }}
                 >
-                  <div className={styles.sidebarActionIcon}>âœï¸</div>
+                  <div className={styles.sidebarActionIcon}>✏️</div>
                   <div>
                     <div className={styles.sidebarActionTitle}>Edit PG</div>
                     <div className={styles.sidebarActionDesc}>Change PG details or rooms</div>
@@ -581,7 +581,7 @@ export default function DashboardPage() {
                   id="btn-rents"
                   onClick={() => { setProfileOpen(false); router.push("/rents"); }}
                 >
-                  <div className={styles.sidebarActionIcon}>ðŸ’µ</div>
+                  <div className={styles.sidebarActionIcon}>💵</div>
                   <div>
                     <div className={styles.sidebarActionTitle}>Rents</div>
                     <div className={styles.sidebarActionDesc}>Monthly rent overview & collection</div>
@@ -594,11 +594,11 @@ export default function DashboardPage() {
                     id="btn-change-pg"
                     onClick={() => { setProfileOpen(false); router.push("/select-pg"); }}
                   >
-                    <div className={styles.sidebarActionIcon}>ðŸ”„</div>
+                    <div className={styles.sidebarActionIcon}>🔄</div>
                     <div>
                       <div className={styles.sidebarActionTitle}>Change PG</div>
                       <div className={styles.sidebarActionDesc}>
-                        {allPgs.length} properties â€” switch here
+                        {allPgs.length} properties — switch here
                       </div>
                     </div>
                   </button>
@@ -611,7 +611,7 @@ export default function DashboardPage() {
                   id="btn-sign-out"
                   onClick={() => { signOut(); router.replace("/sign-in"); }}
                 >
-                  <div className={styles.sidebarActionIcon}>ðŸšª</div>
+                  <div className={styles.sidebarActionIcon}>🚪</div>
                   <div>
                     <div className={styles.sidebarActionTitle}>Sign Out</div>
                     <div className={styles.sidebarActionDesc}>Log out of your account</div>
@@ -620,48 +620,48 @@ export default function DashboardPage() {
 
               </div>{/* end sidebarBody */}
 
-              {/* Building style FAB â€” bottom-left inside sidebar */}
+              {/* Building style FAB — bottom-left inside sidebar */}
               <button
                 className={styles.sidebarBuildingFab}
                 id="btn-sidebar-building-fab"
                 onClick={() => { setProfileOpen(false); setBuildingStylePickerOpen(true); }}
                 aria-label="Choose building style"
               >
-                ðŸ¢
+                🏢
               </button>
-              {/* Search FAB â€” bottom-right inside sidebar */}
+              {/* Search FAB — bottom-right inside sidebar */}
               <button
                 className={styles.sidebarSearchFab}
                 id="btn-sidebar-search-fab"
                 onClick={() => { setProfileOpen(false); setSearchOpen(true); }}
                 aria-label="Search tenant"
               >
-                ðŸ”
+                🔍
               </button>
             </div>
           </div>
         )}
 
-        {/* â”€â”€â”€ Building Style Picker â”€â”€â”€ */}
+        {/* ─── Building Style Picker ─── */}
         {buildingStylePickerOpen && (
           <>
             <div className={styles.sidebarBackdrop} onClick={() => setBuildingStylePickerOpen(false)} />
             <div className={styles.buildingPickerSheet}>
               <div className={styles.buildingPickerHandle} />
               <div className={styles.buildingPickerHeader}>
-                <span className={styles.buildingPickerTitle}>ðŸ¢ Choose your PG building style</span>
+                <span className={styles.buildingPickerTitle}>🏢 Choose your PG building style</span>
                 <button
                   className={styles.buildingPickerClose}
                   onClick={() => setBuildingStylePickerOpen(false)}
                   aria-label="Close"
-                >âœ•</button>
+                >✕</button>
               </div>
               <p className={styles.buildingPickerDesc}>
                 Choose your PG building style.
               </p>
               <div className={styles.buildingPickerGrid}>
 
-                {/* Option 1 â€” CSS 3D (current) */}
+                {/* Option 1 — CSS 3D (current) */}
                 <button
                   id="btn-style-css"
                   className={`${styles.buildingStyleCard} ${buildingStyle === "css" ? styles.buildingStyleCardActive : ""}`}
@@ -682,10 +682,10 @@ export default function DashboardPage() {
                   <div className={styles.bscInfo}>
                     <div className={styles.bscName}>Classic 3D</div>
                   </div>
-                  {buildingStyle === "css" && <span className={styles.bscActiveTag}>âœ“ Active</span>}
+                  {buildingStyle === "css" && <span className={styles.bscActiveTag}>✓ Active</span>}
                 </button>
 
-                {/* Option 2 â€” React Three Fiber */}
+                {/* Option 2 — React Three Fiber */}
                 <button
                   id="btn-style-r3f"
                   className={`${styles.buildingStyleCard} ${buildingStyle === "r3f" ? styles.buildingStyleCardActive : ""}`}
@@ -704,28 +704,28 @@ export default function DashboardPage() {
                     />
                   </div>
                   <div className={styles.bscInfo}>
-                    <div className={styles.bscName}>Full 3D <span className={styles.bscBadge}>Modern âœ¨</span></div>
+                    <div className={styles.bscName}>Full 3D <span className={styles.bscBadge}>Modern ✨</span></div>
                   </div>
-                  {buildingStyle === "r3f" && <span className={styles.bscActiveTag}>âœ“ Active</span>}
+                  {buildingStyle === "r3f" && <span className={styles.bscActiveTag}>✓ Active</span>}
                 </button>
 
               </div>
               <p className={styles.buildingPickerNote}>
-                ðŸ’¡ The 3D view always stays fully interactive with all your PG data.
+                💡 The 3D view always stays fully interactive with all your PG data.
               </p>
             </div>
           </>
         )}
 
-        {/* â”€â”€â”€ Sharing Cards â€” only show types with rooms â”€â”€â”€ */}
+        {/* ─── Sharing Cards — only show types with rooms ─── */}
         {activeShareTypes.length > 0 && (
           <section className={styles.sharingSection}>
             {/* Label row with chevron navigation */}
             <div className={styles.sharingNav}>
               <p className={`${styles.sectionLabel} ${styles.sharingNavLabel}`} style={{ margin: 0 }}>AVAILABILITY BY SHARING TYPE</p>
-              {/* Right side controls â€” chevrons hidden on small screens, collapse always visible */}
+              {/* Right side controls — chevrons hidden on small screens, collapse always visible */}
               <div className={styles.sharingNavRight}>
-                {/* â€¹ â€º scroll chevrons â€” hidden on small screens via CSS */}
+                {/* ‹ › scroll chevrons — hidden on small screens via CSS */}
                 <div className={styles.sharingNavBtns}>
                   <button
                     className={styles.sharingChevron}
@@ -733,27 +733,27 @@ export default function DashboardPage() {
                     aria-label="Scroll left"
                     onClick={() => sharingScrollRef.current?.scrollBy({ left: -160, behavior: "smooth" })}
                     disabled={sharingCollapsed}
-                  >â€¹</button>
+                  >‹</button>
                   <button
                     className={styles.sharingChevron}
                     id="btn-sharing-next"
                     aria-label="Scroll right"
                     onClick={() => sharingScrollRef.current?.scrollBy({ left: 160, behavior: "smooth" })}
                     disabled={sharingCollapsed}
-                  >â€º</button>
+                  >›</button>
                 </div>
-                {/* Collapse toggle â€” always visible at right end */}
+                {/* Collapse toggle — always visible at right end */}
                 <button
                   className={styles.sharingChevron}
                   id="btn-sharing-collapse"
                   aria-label={sharingCollapsed ? "Expand sharing cards" : "Collapse sharing cards"}
                   onClick={toggleSharingCollapsed}
                 >
-                  <span className={`${styles.collapseArrow} ${sharingCollapsed ? styles.collapseArrowUp : ""}`}>âŒ„</span>
+                  <span className={`${styles.collapseArrow} ${sharingCollapsed ? styles.collapseArrowUp : ""}`}>⌄</span>
                 </button>
               </div>
             </div>
-            {/* Cards â€” collapsible */}
+            {/* Cards — collapsible */}
             <div className={`${styles.sharingCardsWrap} ${sharingCollapsed ? styles.sharingCardsCollapsed : ""}`}>
               <div className={styles.sharingScroll} ref={sharingScrollRef}>
                 {activeShareTypes.map((type) => {
@@ -765,25 +765,25 @@ export default function DashboardPage() {
                       onClick={() => { playWhoosh(true); setFilterType(isActive ? null : type); }} id={`sharing-card-${type}`}>
                       <DonutRing pct={stats.pct} free={stats.free} total={stats.totalBeds} />
                       <div className={styles.sharingInfo}>
-                        <span className={styles.sharingIcon}>{SHARE_ICONS[Math.min(type, 5)] || "ðŸ "}</span>
+                        <span className={styles.sharingIcon}>{SHARE_ICONS[Math.min(type, 5)] || "🏠"}</span>
                         <span className={styles.sharingLabel}>{type}-Share</span>
                         <span className={styles.sharingDetail}>{stats.free} of {stats.totalBeds} free</span>
                       </div>
-                      {isActive && <div className={styles.filterPill}>Filtering âœ•</div>}
+                      {isActive && <div className={styles.filterPill}>Filtering ✕</div>}
                     </button>
                   );
                 })}
               </div>
               {filterType && (
                 <p className={styles.filterNote}>
-                  Showing {filterType}-sharing Â· <button className={styles.clearFilter} onClick={() => setFilterType(null)}>Clear</button>
+                  Showing {filterType}-sharing · <button className={styles.clearFilter} onClick={() => setFilterType(null)}>Clear</button>
                 </p>
               )}
             </div>
           </section>
         )}
 
-        {/* â”€â”€â”€ 3D Building â”€â”€â”€ */}
+        {/* ─── 3D Building ─── */}
         <section className={styles.buildingSection}>
           <div className={styles.buildingSectionHeader}>
             <p className={`${styles.sectionLabel} ${styles.buildingLabel}`} style={{ margin: 0 }}>
@@ -798,8 +798,8 @@ export default function DashboardPage() {
                 id="btn-view-drop"
                 onClick={() => setViewDropOpen(v => !v)}
               >
-                {buildingView === "list" ? "â˜° List View" : "ðŸ¢ 3D View"}
-                <span className={`${styles.viewDropChevron} ${viewDropOpen ? styles.viewDropChevronUp : ""}`}>â–¾</span>
+                {buildingView === "list" ? "☰ List View" : "🏢 3D View"}
+                <span className={`${styles.viewDropChevron} ${viewDropOpen ? styles.viewDropChevronUp : ""}`}>▾</span>
               </button>
               {viewDropOpen && (
                 <>
@@ -810,16 +810,16 @@ export default function DashboardPage() {
                       id="btn-view-list"
                       onClick={() => { setBuildingView("list"); localStorage.setItem("pg-eg-view", "list"); setViewDropOpen(false); }}
                     >
-                      <span>â˜°</span> List View
-                      {buildingView === "list" && <span className={styles.viewDropCheck}>âœ“</span>}
+                      <span>☰</span> List View
+                      {buildingView === "list" && <span className={styles.viewDropCheck}>✓</span>}
                     </button>
                     <button
                       className={`${styles.viewDropItem} ${buildingView === "3d" ? styles.viewDropItemActive : ""}`}
                       id="btn-view-3d"
                       onClick={() => { setBuildingView("3d"); localStorage.setItem("pg-eg-view", "3d"); setViewDropOpen(false); }}
                     >
-                      <span>ðŸ¢</span> 3D View
-                      {buildingView === "3d" && <span className={styles.viewDropCheck}>âœ“</span>}
+                      <span>🏢</span> 3D View
+                      {buildingView === "3d" && <span className={styles.viewDropCheck}>✓</span>}
                     </button>
                   </div>
                 </>
@@ -827,7 +827,7 @@ export default function DashboardPage() {
             </div>
           </div>
           {buildingView === "3d" ? (
-            /* Full 3D building â€” CSS or R3F based on user's Building Structure preference */
+            /* Full 3D building — CSS or R3F based on user's Building Structure preference */
             buildingStyle === "r3f" ? (
               <Building3DViewR3F
                 pgName={pg.name}
@@ -838,7 +838,7 @@ export default function DashboardPage() {
                 filterType={filterType}
               />
             ) : (
-              /* Classic 3D â€” dark styled wrapper; centering/height handled inside Building3DView */
+              /* Classic 3D — dark styled wrapper; centering/height handled inside Building3DView */
               <div style={{
                 background: "linear-gradient(135deg, #0a1628 0%, #0d1f3c 50%, #081020 100%)",
                 borderRadius: "18px",
@@ -858,7 +858,7 @@ export default function DashboardPage() {
               </div>
             )
           ) : (
-            /* â”€â”€ List View (slab building) â”€â”€ */
+            /* ── List View (slab building) ── */
             <div className={`${styles.building3dOuter} ${styles.buildingDark}`}>
               <div className={styles.building3dScene}>
                 <div className={styles.building3dStack}>
@@ -888,7 +888,7 @@ export default function DashboardPage() {
                           className={styles.floorSlabBtn}
                           id={`floor3d-${floor}`}
                           onClick={() => {
-                            // Whoosh â€” same for open and close
+                            // Whoosh — same for open and close
                             playWhoosh();
                             setActiveFloor(isActive ? null : floor);
                           }}
@@ -898,7 +898,7 @@ export default function DashboardPage() {
                           <div className={styles.floorSlabFront}>
                             <div className={styles.floorSlabLabel}>
                               <span className={styles.floorSlabNum}>FL {floor}</span>
-                              {all.pendingRent && <span className={styles.floorPendingDot}>âš ï¸</span>}
+                              {all.pendingRent && <span className={styles.floorPendingDot}>⚠️</span>}
                             </div>
                             <div className={styles.floorWindows}>
                               {allBeds.slice(0, 10).map((bed, i) => (
@@ -941,7 +941,7 @@ export default function DashboardPage() {
                                 >
                                   <div className={styles.roomCard3dHeader}>
                                     <span className={styles.roomCard3dName}>{room.roomNumber}</span>
-                                    {hasPending && <span className={styles.roomRentDot}>âš ï¸</span>}
+                                    {hasPending && <span className={styles.roomRentDot}>⚠️</span>}
                                   </div>
                                   <div className={styles.roomBedDots3d}>
                                     {room.beds.map(bed => (
@@ -978,7 +978,7 @@ export default function DashboardPage() {
         </section>
       </div>
 
-      {/* â”€â”€â”€ Room Bottom Sheet â”€â”€â”€ */}
+      {/* ─── Room Bottom Sheet ─── */}
       {selectedRoom && !detailTenant && (
         <>
           <div className={styles.backdrop} onClick={() => { playWhoosh(true); setSelectedRoom(null); }} />
@@ -987,10 +987,10 @@ export default function DashboardPage() {
             <div className={styles.sheetHeader}>
               <div>
                 <p className={styles.sheetFloor}>Floor {selectedRoom.floor}</p>
-                <h3 className={styles.sheetTitle}>ðŸšª Room {selectedRoom.roomNumber}</h3>
-                <p className={styles.sheetSub}>{selectedRoom.sharingType}-Sharing Â· {selectedRoom.beds.length} Beds</p>
+                <h3 className={styles.sheetTitle}>🚪 Room {selectedRoom.roomNumber}</h3>
+                <p className={styles.sheetSub}>{selectedRoom.sharingType}-Sharing · {selectedRoom.beds.length} Beds</p>
               </div>
-              <button className={styles.sheetClose} onClick={() => { playWhoosh(true); setSelectedRoom(null); }}>âœ•</button>
+              <button className={styles.sheetClose} onClick={() => { playWhoosh(true); setSelectedRoom(null); }}>✕</button>
             </div>
 
             <div className={styles.bedsList}>
@@ -1005,24 +1005,24 @@ export default function DashboardPage() {
                     <div className={styles.bedContent}>
                       {bed.isOccupied && bed.tenant ? (
                         <>
-                          <p className={styles.tenantName}>ðŸ‘¤ {bed.tenant.name}</p>
-                          <p className={styles.tenantPhone}>ðŸ“ž {bed.tenant.phone}</p>
+                          <p className={styles.tenantName}>👤 {bed.tenant.name}</p>
+                          <p className={styles.tenantPhone}>📞 {bed.tenant.phone}</p>
                           {isPending && (
-                            <p className={styles.rentPendingTag}>âš ï¸ Rent pending Â· {data.currentMonth && monthLabel(data.currentMonth)}</p>
+                            <p className={styles.rentPendingTag}>⚠️ Rent pending · {data.currentMonth && monthLabel(data.currentMonth)}</p>
                           )}
                           {bed.tenant.rent?.status === "paid" && (
-                            <p className={styles.rentPaidTag}>âœ… Rent paid</p>
+                            <p className={styles.rentPaidTag}>✅ Rent paid</p>
                           )}
                         </>
                       ) : (
-                        <><p className={styles.emptyBedLabel}>ðŸŒŸ EMPTY BED</p><p className={styles.emptyBedSub}>Ready for a new tenant</p></>
+                        <><p className={styles.emptyBedLabel}>🌟 EMPTY BED</p><p className={styles.emptyBedSub}>Ready for a new tenant</p></>
                       )}
                     </div>
                     <div className={styles.bedActionGroup}>
                       {bed.isOccupied && bed.tenant ? (
                         <>
                           <div className={styles.iconStack}>
-                              {/* WhatsApp reminder â€” only when rent is unpaid */}
+                              {/* WhatsApp reminder — only when rent is unpaid */}
                               {bed.tenant.rent && bed.tenant.rent.status !== "paid" && (() => {
                                 const rent = bed.tenant.rent!;
                                 const due = rent.amount - (rent.paidAmount ?? 0);
@@ -1077,7 +1077,7 @@ export default function DashboardPage() {
                                   setMovingTenant({ tenant: bed.tenant!, bed, room: selectedRoom });
                                   setMoveFloor(null); setMoveTargetRoom(null); setMoveTargetBed(null); setMoveFilterType(null);
                                 }}
-                                id={`move-${bed.id}`}>ðŸ” Move</button>
+                                id={`move-${bed.id}`}>🔁 Move</button>
                               <button className={styles.checkoutBtn}
                                 onClick={() => openCheckout(bed, selectedRoom)}
                                 id={`checkout-${bed.id}`}>
@@ -1098,14 +1098,14 @@ export default function DashboardPage() {
             <div className={styles.roomHistoryLinkRow}>
               <button className={styles.roomHistoryLink}
                 onClick={() => loadRoomHistory(selectedRoom)}
-                id="btn-room-history">ðŸ“œ View Room History</button>
+                id="btn-room-history">📜 View Room History</button>
             </div>
           </div>
         </>
       )}
 
 
-      {/* â”€â”€â”€ Tenant Details Overlay â”€â”€â”€ */}
+      {/* ─── Tenant Details Overlay ─── */}
       {detailTenant && (
         <>
           <div className={styles.backdrop} onClick={() => setDetailTenant(null)} />
@@ -1114,8 +1114,8 @@ export default function DashboardPage() {
 
             {/* Detail header */}
             <div className={styles.detailHeader}>
-              <button className={styles.detailBack} onClick={() => setDetailTenant(null)}>â† Back</button>
-              <button className={styles.sheetClose} onClick={() => { setDetailTenant(null); setSelectedRoom(null); }}>âœ•</button>
+              <button className={styles.detailBack} onClick={() => setDetailTenant(null)}>← Back</button>
+              <button className={styles.sheetClose} onClick={() => { setDetailTenant(null); setSelectedRoom(null); }}>✕</button>
             </div>
 
             {/* Selfie photo */}
@@ -1125,20 +1125,20 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className={styles.tenantPhotoPlaceholder}>
-                <span>ðŸ‘¤</span>
+                <span>👤</span>
               </div>
             )}
 
             {/* Name + phone */}
             <div className={styles.detailBody}>
               <h2 className={styles.detailName}>{detailTenant.tenant.name}</h2>
-              <p className={styles.detailPhone}>ðŸ“ž +91 {detailTenant.tenant.phone}</p>
+              <p className={styles.detailPhone}>📞 +91 {detailTenant.tenant.phone}</p>
               {detailTenant.tenant.altPhone && (
-                <p className={styles.detailPhone} style={{ fontSize: 13, opacity: 0.7 }}>ðŸ“ž Alt: +91 {detailTenant.tenant.altPhone}</p>
+                <p className={styles.detailPhone} style={{ fontSize: 13, opacity: 0.7 }}>📞 Alt: +91 {detailTenant.tenant.altPhone}</p>
               )}
               {detailTenant.tenant.emergencyContact && (
                 <p className={styles.detailPhone} style={{ fontSize: 13, color: "#f4a261" }}>
-                  ðŸ†˜ +91 {detailTenant.tenant.emergencyContact}
+                  🆘 +91 {detailTenant.tenant.emergencyContact}
                   {detailTenant.tenant.emergencyRelation && (
                     <span style={{ marginLeft: 6, fontSize: 11, background: "rgba(244,162,97,0.15)", border: "1px solid rgba(244,162,97,0.3)", borderRadius: 10, padding: "2px 7px" }}>
                       {detailTenant.tenant.emergencyRelation}
@@ -1152,7 +1152,7 @@ export default function DashboardPage() {
                 <div className={styles.detailInfoItem}>
                   <span className={styles.detailInfoLabel}>Room</span>
                   <span className={styles.detailInfoValue}>
-                    {detailTenant.room.roomNumber} Â· Bed {detailTenant.bed.bedNumber}
+                    {detailTenant.room.roomNumber} · Bed {detailTenant.bed.bedNumber}
                   </span>
                 </div>
                 <div className={styles.detailInfoItem}>
@@ -1176,43 +1176,43 @@ export default function DashboardPage() {
                   <span className={styles.detailInfoLabel}>Monthly Rent</span>
                   <span className={styles.detailInfoValue}>
                     {detailTenant.tenant.rentAmount
-                      ? `â‚¹${detailTenant.tenant.rentAmount.toLocaleString()}`
-                      : "â€”"}
+                      ? `₹${detailTenant.tenant.rentAmount.toLocaleString()}`
+                      : "—"}
                   </span>
                 </div>
                 <div className={styles.detailInfoItem}>
                   <span className={styles.detailInfoLabel}>Deposit</span>
                   <span className={styles.detailInfoValue}>
                     {detailTenant.tenant.advanceAmount
-                      ? `â‚¹${detailTenant.tenant.advanceAmount.toLocaleString()}`
-                      : "â€”"}
+                      ? `₹${detailTenant.tenant.advanceAmount.toLocaleString()}`
+                      : "—"}
                   </span>
                 </div>
               </div>
 
-              {/* â”€â”€â”€ Rent Status â”€â”€â”€ */}
+              {/* ─── Rent Status ─── */}
               <div className={styles.detailDivider} />
               <p className={styles.detailSectionLabel}>
-                ðŸ“… {data.currentMonth && monthLabel(data.currentMonth)} RENT
+                📅 {data.currentMonth && monthLabel(data.currentMonth)} RENT
               </p>
 
               {detailTenant.tenant.rent?.status === "paid" ? (
                 <div className={styles.rentPaidCard}>
-                  <span>âœ… PAID</span>
-                  <span>â‚¹{detailTenant.tenant.rent.amount?.toLocaleString()}</span>
+                  <span>✅ PAID</span>
+                  <span>₹{detailTenant.tenant.rent.amount?.toLocaleString()}</span>
                   <span style={{ textTransform: "uppercase", fontSize: 11 }}>{detailTenant.tenant.rent.paymentMode || ""}</span>
                 </div>
               ) : (
                 <>
                   <div className={styles.rentPendingCard}>
-                    <span>âš ï¸ RENT PENDING</span>
-                    <span>â‚¹{(detailTenant.tenant.rentAmount || 0).toLocaleString()} / month</span>
+                    <span>⚠️ RENT PENDING</span>
+                    <span>₹{(detailTenant.tenant.rentAmount || 0).toLocaleString()} / month</span>
                   </div>
                   {detailTenant.tenant.rent && (
                     <>
                       <p className={styles.paymentLabel}>Amount received</p>
                       <div className={styles.rentAmountRow}>
-                        <span className={styles.rentAmountPrefix}>â‚¹</span>
+                        <span className={styles.rentAmountPrefix}>₹</span>
                         <input
                           type="number"
                           className={styles.rentAmountInput}
@@ -1226,9 +1226,9 @@ export default function DashboardPage() {
                       <p className={styles.paymentLabel} style={{ marginTop: 10 }}>Payment received via</p>
                       <div className={styles.paymentRow}>
                         <button className={`${styles.payBtn} ${rentPayMode === "cash" ? styles.payBtnActive : ""}`}
-                          onClick={() => setRentPayMode("cash")}>ðŸ’µ CASH</button>
+                          onClick={() => setRentPayMode("cash")}>💵 CASH</button>
                         <button className={`${styles.payBtn} ${rentPayMode === "upi" ? styles.payBtnActive : ""}`}
-                          onClick={() => setRentPayMode("upi")}>ðŸ“± UPI</button>
+                          onClick={() => setRentPayMode("upi")}>📱 UPI</button>
                       </div>
                       <button className={styles.markPaidBtn}
                         onClick={() => handleMarkPaid(detailTenant.tenant.rent!.id, detailTenant.tenant.rentAmount || 0)}
@@ -1241,11 +1241,11 @@ export default function DashboardPage() {
                         })()}
                         id="btn-mark-paid">
                         {markingPaid === detailTenant.tenant.rent.id
-                          ? <><span className={styles.spinnerDark} /> Markingâ€¦</>
+                          ? <><span className={styles.spinnerDark} /> Marking…</>
                           : (() => {
                               const raw = rentPayAmount.trim();
                               const display = raw === "" ? (detailTenant.tenant.rentAmount || 0) : (Number.isFinite(Number(raw)) ? Number(raw) : 0);
-                              return `ðŸ’µ MARK AS PAID Â· â‚¹${Math.max(0, display).toLocaleString("en-IN")}`;
+                              return `💵 MARK AS PAID · ₹${Math.max(0, display).toLocaleString("en-IN")}`;
                             })()}
                       </button>
                     </>
@@ -1257,7 +1257,7 @@ export default function DashboardPage() {
               {detailTenant.tenant.idPhotoUrl && (
                 <>
                   <div className={styles.detailDivider} />
-                  <p className={styles.detailSectionLabel}>ðŸªª ID CARD</p>
+                  <p className={styles.detailSectionLabel}>🪪 ID CARD</p>
                   <img src={detailTenant.tenant.idPhotoUrl} alt="ID Card" className={styles.idCardThumb} />
                 </>
               )}
@@ -1267,13 +1267,13 @@ export default function DashboardPage() {
               <button className={styles.checkoutBtnFull}
                 onClick={() => openCheckout(detailTenant.bed, detailTenant.room)}
                 disabled={checkingOut} id="btn-checkout-detail">
-                ðŸšª Check Out Tenant
+                🚪 Check Out Tenant
               </button>
             </div>
           </div>
         </>
       )}
-      {/* â”€â”€â”€ Move Tenant Overlay â”€â”€â”€ */}
+      {/* ─── Move Tenant Overlay ─── */}
       {movingTenant && (
         <>
           <div className={styles.backdrop} onClick={() => { setMovingTenant(null); setMoveTargetBed(null); setMoveTargetRoom(null); }} />
@@ -1285,20 +1285,20 @@ export default function DashboardPage() {
               <button className={styles.detailBack} onClick={() => {
                 if (moveTargetBed) { setMoveTargetBed(null); setMoveTargetRoom(null); }
                 else setMovingTenant(null);
-              }}>â† Back</button>
-              <span className={styles.moveTitle}>ðŸ” MOVE TENANT</span>
-              <button className={styles.sheetClose} onClick={() => setMovingTenant(null)}>âœ•</button>
+              }}>← Back</button>
+              <span className={styles.moveTitle}>🔁 MOVE TENANT</span>
+              <button className={styles.sheetClose} onClick={() => setMovingTenant(null)}>✕</button>
             </div>
 
             {/* Who is moving */}
             <div className={styles.moveBanner}>
               <p className={styles.moveBannerName}>{movingTenant.tenant.name}</p>
               <p className={styles.moveBannerFrom}>
-                From: Room {movingTenant.room.roomNumber} Â· Bed {BED_LETTERS[movingTenant.bed.bedNumber - 1]} Â· Floor {movingTenant.room.floor}
+                From: Room {movingTenant.room.roomNumber} · Bed {BED_LETTERS[movingTenant.bed.bedNumber - 1]} · Floor {movingTenant.room.floor}
               </p>
             </div>
 
-            {/* â”€â”€â”€ Step 1: Pick target bed â”€â”€â”€ */}
+            {/* ─── Step 1: Pick target bed ─── */}
             {!moveTargetBed && (
               <div className={styles.moveBody}>
                 {/* Sharing type filter */}
@@ -1335,9 +1335,9 @@ export default function DashboardPage() {
                         onClick={() => setMoveFloor(isOpen ? null : floor)}>
                         <div className={styles.moveFloorLeft}>
                           <span className={styles.moveFloorLabel}>Floor {floor}</span>
-                          <span className={styles.moveFloorMeta}>ðŸŸ¢ {totalEmpty} empty bed{totalEmpty > 1 ? "s" : ""}</span>
+                          <span className={styles.moveFloorMeta}>🟢 {totalEmpty} empty bed{totalEmpty > 1 ? "s" : ""}</span>
                         </div>
-                        <span className={`${styles.floorChevron} ${isOpen ? styles.floorChevronUp : ""}`}>â€º</span>
+                        <span className={`${styles.floorChevron} ${isOpen ? styles.floorChevronUp : ""}`}>›</span>
                       </button>
 
                       {isOpen && (
@@ -1376,21 +1376,21 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* â”€â”€â”€ Step 2: Confirm â”€â”€â”€ */}
+            {/* ─── Step 2: Confirm ─── */}
             {moveTargetBed && moveTargetRoom && (
               <div className={styles.moveConfirmBody}>
                 <div className={styles.moveConfirmCard}>
                   <div className={styles.moveConfirmRow}>
                     <span className={styles.moveConfirmLabel}>FROM</span>
                     <span className={styles.moveConfirmValue}>
-                      Room {movingTenant.room.roomNumber} Â· Bed {BED_LETTERS[movingTenant.bed.bedNumber - 1]} Â· Floor {movingTenant.room.floor}
+                      Room {movingTenant.room.roomNumber} · Bed {BED_LETTERS[movingTenant.bed.bedNumber - 1]} · Floor {movingTenant.room.floor}
                     </span>
                   </div>
-                  <div className={styles.moveArrow}>â†“</div>
+                  <div className={styles.moveArrow}>↓</div>
                   <div className={styles.moveConfirmRow}>
                     <span className={styles.moveConfirmLabel}>TO</span>
                     <span className={styles.moveConfirmValue} style={{ color: "var(--brand-green)" }}>
-                      Room {moveTargetRoom.roomNumber} Â· Bed {BED_LETTERS[moveTargetBed.bedNumber - 1]} Â· Floor {moveTargetRoom.floor}
+                      Room {moveTargetRoom.roomNumber} · Bed {BED_LETTERS[moveTargetBed.bedNumber - 1]} · Floor {moveTargetRoom.floor}
                     </span>
                   </div>
                 </div>
@@ -1403,41 +1403,41 @@ export default function DashboardPage() {
                   onClick={() => handleMove(movingTenant.tenant.id, moveTargetBed.id)}
                   disabled={moveInProgress} id="btn-confirm-move">
                   {moveInProgress
-                    ? <><span className={styles.spinnerDark} /> Movingâ€¦</>
-                    : `ðŸŽ‰ CONFIRM TRANSFER`}
+                    ? <><span className={styles.spinnerDark} /> Moving…</>
+                    : `🎉 CONFIRM TRANSFER`}
                 </button>
               </div>
             )}
           </div>
         </>
       )}
-      {/* â”€â”€â”€ Checkout Modal â”€â”€â”€ */}
+      {/* ─── Checkout Modal ─── */}
       {checkoutModal && (
         <>
           <div className={styles.backdrop} onClick={() => setCheckoutModal(null)} />
           <div className={styles.checkoutSheet}>
             <div className={styles.sheetHandle} />
             <div className={styles.checkoutHeader}>
-              <span className={styles.checkoutHeaderTitle}>ðŸšª TENANT CHECK-OUT</span>
-              <button className={styles.sheetClose} onClick={() => setCheckoutModal(null)}>âœ•</button>
+              <span className={styles.checkoutHeaderTitle}>🚪 TENANT CHECK-OUT</span>
+              <button className={styles.sheetClose} onClick={() => setCheckoutModal(null)}>✕</button>
             </div>
 
             <div className={styles.checkoutBody}>
               <p className={styles.checkoutTenantName}>{checkoutModal.tenant.name}</p>
               <p className={styles.checkoutTenantRoom}>
-                Room {checkoutModal.room.roomNumber} Â· Bed {BED_LETTERS[checkoutModal.bed.bedNumber - 1]} Â· Floor {checkoutModal.room.floor}
+                Room {checkoutModal.room.roomNumber} · Bed {BED_LETTERS[checkoutModal.bed.bedNumber - 1]} · Floor {checkoutModal.room.floor}
               </p>
 
               <div className={styles.depositCard}>
-                <p className={styles.depositTitle}>ðŸ’° DEPOSIT CLOSURE</p>
+                <p className={styles.depositTitle}>💰 DEPOSIT CLOSURE</p>
                 <div className={styles.depositRow}>
                   <span className={styles.depositLabel}>Initial Deposit</span>
-                  <span className={styles.depositValue}>â‚¹{(checkoutModal.tenant.advanceAmount || 0).toLocaleString()}</span>
+                  <span className={styles.depositValue}>₹{(checkoutModal.tenant.advanceAmount || 0).toLocaleString()}</span>
                 </div>
                 <div className={styles.depositRow}>
                   <span className={styles.depositLabel}>Deductions (Damage/Bills)</span>
                   <div className={styles.deductionInput}>
-                    <span className={styles.rupeePrefix}>â‚¹</span>
+                    <span className={styles.rupeePrefix}>₹</span>
                     <input type="number" className={styles.deductionField}
                       placeholder="0" value={deduction} min="0"
                       max={checkoutModal.tenant.advanceAmount || 0}
@@ -1453,17 +1453,17 @@ export default function DashboardPage() {
                   const deposit = checkoutModal.tenant.advanceAmount || 0;
                   if (dep < 0) return (
                     <p style={{ margin: "4px 0 0", fontSize: 12, color: "#e63946", fontWeight: 600 }}>
-                      âš ï¸ Deduction cannot be negative
+                      ⚠️ Deduction cannot be negative
                     </p>
                   );
                   if (!Number.isInteger(dep)) return (
                     <p style={{ margin: "4px 0 0", fontSize: 12, color: "#e63946", fontWeight: 600 }}>
-                      âš ï¸ Please enter a whole rupee amount (no paise/decimals)
+                      ⚠️ Please enter a whole rupee amount (no paise/decimals)
                     </p>
                   );
                   if (dep > deposit) return (
                     <p style={{ margin: "4px 0 0", fontSize: 12, color: "#e63946", fontWeight: 600 }}>
-                      âš ï¸ Deduction (â‚¹{dep.toLocaleString("en-IN")}) cannot exceed the initial deposit (â‚¹{deposit.toLocaleString("en-IN")})
+                      ⚠️ Deduction (₹{dep.toLocaleString("en-IN")}) cannot exceed the initial deposit (₹{deposit.toLocaleString("en-IN")})
                     </p>
                   );
                   return null;
@@ -1472,17 +1472,17 @@ export default function DashboardPage() {
                 <div className={`${styles.depositRow} ${styles.depositRefundRow}`}>
                   <span className={styles.depositLabel}>Final Refund to Tenant</span>
                   <span className={styles.depositRefundAmount}>
-                    â‚¹{Math.max(0, (checkoutModal.tenant.advanceAmount || 0) - (Number.isInteger(Number(deduction)) ? Number(deduction) : 0)).toLocaleString()}
+                    ₹{Math.max(0, (checkoutModal.tenant.advanceAmount || 0) - (Number.isInteger(Number(deduction)) ? Number(deduction) : 0)).toLocaleString()}
                   </span>
                 </div>
               </div>
 
-              <p className={styles.paymentLabel}>ðŸ’³ REFUND MODE</p>
+              <p className={styles.paymentLabel}>💳 REFUND MODE</p>
               <div className={styles.paymentRow}>
                 <button className={`${styles.payBtn} ${checkoutRefundMode === "cash" ? styles.payBtnActive : ""}`}
-                  onClick={() => setCheckoutRefundMode("cash")}>ðŸ’µ CASH</button>
+                  onClick={() => setCheckoutRefundMode("cash")}>💵 CASH</button>
                 <button className={`${styles.payBtn} ${checkoutRefundMode === "upi" ? styles.payBtnActive : ""}`}
-                  onClick={() => setCheckoutRefundMode("upi")}>ðŸ“± UPI</button>
+                  onClick={() => setCheckoutRefundMode("upi")}>📱 UPI</button>
               </div>
 
               {/* Outstanding rent warning */}
@@ -1497,10 +1497,10 @@ export default function DashboardPage() {
                     borderRadius: 10, padding: "10px 14px", marginBottom: 14,
                   }}>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#e63946" }}>
-                      âš ï¸ Outstanding Rent: â‚¹{outstanding.toLocaleString("en-IN")}
+                      ⚠️ Outstanding Rent: ₹{outstanding.toLocaleString("en-IN")}
                     </p>
                     <p style={{ margin: "4px 0 0", fontSize: 11, color: "rgba(255,255,255,0.6)" }}>
-                      Please clear the outstanding rent of â‚¹{outstanding.toLocaleString("en-IN")} before checkout.
+                      Please clear the outstanding rent of ₹{outstanding.toLocaleString("en-IN")} before checkout.
                     </p>
                   </div>
                 );
@@ -1519,8 +1519,8 @@ export default function DashboardPage() {
                 })()}
                 id="btn-permanent-exit">
                 {checkingOut
-                  ? <><span className={styles.spinnerDark} /> Processingâ€¦</>
-                  : "ðŸš¨ PERMANENT EXIT"}
+                  ? <><span className={styles.spinnerDark} /> Processing…</>
+                  : "🚨 PERMANENT EXIT"}
               </button>
             </div>
           </div>
@@ -1528,22 +1528,20 @@ export default function DashboardPage() {
       )}
 
 
-
-      {/* â”€â”€â”€ Search Overlay â”€â”€â”€ */}
-      {/* â”€â”€â”€ Search Overlay â”€â”€â”€ */}
+      {/* ─── Search Overlay ─── */}
       {searchOpen && (
         <>
           <div className={styles.backdrop} onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }} />
           <div className={styles.searchSheet}>
             <div className={styles.sheetHandle} />
             <div className={styles.searchHeader}>
-              <span className={styles.searchTitle}>ðŸ” TENANT SEARCH</span>
-              <button className={styles.sheetClose} onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }}>âœ•</button>
+              <span className={styles.searchTitle}>🔍 TENANT SEARCH</span>
+              <button className={styles.sheetClose} onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }}>✕</button>
             </div>
             <div className={styles.searchInputWrap}>
-              <span className={styles.searchIcon}>ðŸ”</span>
+              <span className={styles.searchIcon}>🔍</span>
               <input type="text" className={styles.searchInput}
-                placeholder="Name or phone numberâ€¦"
+                placeholder="Name or phone number…"
                 value={searchQuery}
                 onChange={(e) => handleSearchInput(e.target.value)}
                 autoFocus id="input-search" />
@@ -1569,12 +1567,12 @@ export default function DashboardPage() {
                   <div className={styles.searchCardTop}>
                     {t.photoUrl
                       ? <img src={t.photoUrl} alt={t.name} className={styles.searchAvatar} />
-                      : <div className={styles.searchAvatarPlaceholder}>ðŸ‘¤</div>}
+                      : <div className={styles.searchAvatarPlaceholder}>👤</div>}
                     <div className={styles.searchCardInfo}>
                       <p className={styles.searchCardName}>{t.name}</p>
-                      <p className={styles.searchCardPhone}>ðŸ“ž {t.phone}</p>
+                      <p className={styles.searchCardPhone}>📞 {t.phone}</p>
                       <span className={`${styles.searchCardStatus} ${t.status === "active" ? styles.searchStatusActive : styles.searchStatusInactive}`}>
-                        {t.status === "active" ? "â— ACTIVE" : "â— CHECKED OUT"}
+                        {t.status === "active" ? "● ACTIVE" : "● CHECKED OUT"}
                       </span>
                     </div>
                   </div>
@@ -1586,7 +1584,7 @@ export default function DashboardPage() {
                           <div className={`${styles.timelineDot} ${h.eventType === "check_out" ? styles.dotRed : h.eventType === "move" ? styles.dotPurple : styles.dotGreen}`} />
                           <div className={styles.timelineText}>
                             <span className={styles.timelineType}>
-                              {h.eventType === "check_in" ? "âœ… Checked In" : h.eventType === "move" ? "ðŸ” Moved" : "ðŸšª Checked Out"}
+                              {h.eventType === "check_in" ? "✅ Checked In" : h.eventType === "move" ? "🔁 Moved" : "🚪 Checked Out"}
                             </span>
                             <span className={styles.timelineNote}>{h.note || (h.toRoom || h.fromRoom || "")}</span>
                             <span className={styles.timelineDate}>
@@ -1600,10 +1598,10 @@ export default function DashboardPage() {
                   {t.joiningDate && (
                     <p className={styles.searchJoined}>
                       Joined: {new Date(t.joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                      {t.leavingDate && ` Â· Left: ${new Date(t.leavingDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`}
+                      {t.leavingDate && ` · Left: ${new Date(t.leavingDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`}
                     </p>
                   )}
-                  {tenantBed && <p style={{ fontSize: 11, color: "var(--brand-green)", marginTop: 4 }}>Tap to view full profile â†’</p>}
+                  {tenantBed && <p style={{ fontSize: 11, color: "var(--brand-green)", marginTop: 4 }}>Tap to view full profile →</p>}
                 </div>
               );
               })}
@@ -1612,15 +1610,15 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/* â”€â”€â”€ Room History Overlay â”€â”€â”€ */}
+      {/* ─── Room History Overlay ─── */}
       {roomHistoryRoom && (
         <>
           <div className={styles.backdrop} onClick={() => { setRoomHistoryRoom(null); setRoomHistoryData(null); }} />
           <div className={styles.roomHistorySheet}>
             <div className={styles.sheetHandle} />
             <div className={styles.checkoutHeader}>
-              <span className={styles.checkoutHeaderTitle}>ðŸ“œ PAST TENANTS Â· Room {roomHistoryRoom.roomNumber}</span>
-              <button className={styles.sheetClose} onClick={() => { setRoomHistoryRoom(null); setRoomHistoryData(null); }}>âœ•</button>
+              <span className={styles.checkoutHeaderTitle}>📜 PAST TENANTS · Room {roomHistoryRoom.roomNumber}</span>
+              <button className={styles.sheetClose} onClick={() => { setRoomHistoryRoom(null); setRoomHistoryData(null); }}>✕</button>
             </div>
             <div className={styles.checkoutBody}>
               {loadingRoomHistory && <div className={styles.searchLoading}><span className={styles.spinner} /></div>}
@@ -1632,22 +1630,22 @@ export default function DashboardPage() {
                   <div className={styles.historyAvatarWrap}>
                     {t.photoUrl
                       ? <img src={t.photoUrl} alt={t.name} className={styles.historyAvatar} />
-                      : <div className={styles.historyAvatarPlaceholder}>ðŸ‘¤</div>}
+                      : <div className={styles.historyAvatarPlaceholder}>👤</div>}
                   </div>
                   <div className={styles.historyTenantInfo}>
                     <p className={styles.historyTenantName}>{t.name}</p>
-                    <p className={styles.historyTenantPhone}>ðŸ“ž {t.phone}</p>
+                    <p className={styles.historyTenantPhone}>📞 {t.phone}</p>
                     <p className={styles.historyTenantDates}>
                       {t.joiningDate && new Date(t.joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                      {" âž” "}
+                      {" ➔ "}
                       {t.leavingDate ? new Date(t.leavingDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Present"}
                     </p>
                     {typeof t.advanceAmount === "number" && t.advanceAmount > 0 && (
                       <p className={styles.historyDeposit}>
-                        Deposit: â‚¹{t.advanceAmount.toLocaleString()}
+                        Deposit: ₹{t.advanceAmount.toLocaleString()}
                         {typeof t.depositDeduction === "number" && t.depositDeduction > 0
-                          ? ` Â· Deducted: â‚¹${t.depositDeduction.toLocaleString()} Â· Refund: â‚¹${Math.max(0, t.advanceAmount - t.depositDeduction).toLocaleString()}`
-                          : " Â· Fully refunded"}
+                          ? ` · Deducted: ₹${t.depositDeduction.toLocaleString()} · Refund: ₹${Math.max(0, t.advanceAmount - t.depositDeduction).toLocaleString()}`
+                          : " · Fully refunded"}
                       </p>
                     )}
                   </div>
@@ -1658,10 +1656,10 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/* â”€â”€â”€ Search FAB (large screens only â€” small screens use sidebar) â”€â”€â”€ */}
+      {/* ─── Search FAB (large screens only — small screens use sidebar) ─── */}
       {!isSmallScreen && !searchOpen && !checkoutModal && !roomHistoryRoom && (
         <button className={styles.searchFab} onClick={() => setSearchOpen(true)} id="btn-search-fab">
-          ðŸ”
+          🔍
         </button>
       )}
     </main>
