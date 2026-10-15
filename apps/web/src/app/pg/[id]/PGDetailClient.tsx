@@ -227,7 +227,7 @@ export default function PGDetailClient({ pg }: Props) {
               {/* Buttons — same layout as FindPGs page */}
               <div className={styles.pgCardBtns}>
                 {pg.pgImages && pg.pgImages.length > 0 && (
-                  <button className={styles.actionBtn} onClick={openGallery} id="btn-view-photos">
+                  <button className={`${styles.actionBtn} ${styles.actionBtnView}`} onClick={openGallery} id="btn-view-photos">
                     <span className={styles.actionIcon}>🏢</span>
                     <div className={styles.actionText}>
                       <span className={styles.actionTitle}>View PG</span>
@@ -239,7 +239,7 @@ export default function PGDetailClient({ pg }: Props) {
                 {pg.managerPhone && (
                   <>
                     <div className={styles.btnDivider} />
-                    <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={styles.actionBtn} id="btn-enquire">
+                    <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={`${styles.actionBtn} ${styles.actionBtnEnquire}`} id="btn-enquire">
                       <span className={styles.actionIcon}>☎️</span>
                       <div className={styles.actionText}>
                         <span className={styles.actionTitle}>Enquire</span>
@@ -260,7 +260,7 @@ export default function PGDetailClient({ pg }: Props) {
                       }
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={styles.actionBtn}
+                      className={`${styles.actionBtn} ${styles.actionBtnDirections}`}
                       id="btn-directions"
                     >
                       <span className={styles.actionIcon}>🗺️</span>

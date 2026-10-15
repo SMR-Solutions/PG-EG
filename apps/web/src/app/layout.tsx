@@ -62,11 +62,20 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <body className={inter.className} suppressHydrationWarning>
-        {/* Theme: apply before paint to prevent flash */}
+        {/* Theme: apply before paint to prevent flash & filter known legacy 3D deprecation noise */}
         <Script id="theme-init" strategy="beforeInteractive">{`
           (function(){
             var t = localStorage.getItem('pg-eg-theme');
             document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+            if (typeof console !== 'undefined' && console.warn) {
+              var _origWarn = console.warn;
+              console.warn = function() {
+                if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].indexOf('THREE.Clock: This module has been deprecated') !== -1) {
+                  return;
+                }
+                _origWarn.apply(console, arguments);
+              };
+            }
           })()
         `}</Script>
         {/* PWA: Service Worker registration */}

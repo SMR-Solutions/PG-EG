@@ -5,6 +5,16 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import styles from "./Building3DView.module.css";
 
+// Suppress THREE.Clock deprecation warning from internal R3F/three-stdlib submodules
+if (typeof (THREE as any).setConsoleFunction === "function") {
+  (THREE as any).setConsoleFunction((type: string, message: string, ...params: any[]) => {
+    if (typeof message === "string" && message.includes("Clock: This module has been deprecated")) return;
+    if (type === "warn") console.warn(message, ...params);
+    else if (type === "error") console.error(message, ...params);
+    else console.log(message, ...params);
+  });
+}
+
 interface Tenant {
   id: string; name: string; phone: string;
   rent?: { status: string; amount: number; paidAmount: number } | null;

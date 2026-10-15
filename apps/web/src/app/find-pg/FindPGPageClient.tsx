@@ -1232,7 +1232,7 @@ export default function FindPGPage() {
 
                       {/* Buttons */}
                       <div className={styles.pgCardBtns}>
-                        <button className={styles.actionBtn} onClick={() => openGallery(pg)} id={`btn-view-${pg.id}`}>
+                        <button className={`${styles.actionBtn} ${styles.actionBtnView}`} onClick={() => openGallery(pg)} id={`btn-view-${pg.id}`}>
                           <span className={styles.actionIcon}>🏢</span>
                           <div className={styles.actionText}>
                             <span className={styles.actionTitle}>View PG</span>
@@ -1244,7 +1244,7 @@ export default function FindPGPage() {
 
                         {pg.managerPhone && (
                           <>
-                            <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={styles.actionBtn} id={`btn-enquire-${pg.id}`}>
+                            <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={`${styles.actionBtn} ${styles.actionBtnEnquire}`} id={`btn-enquire-${pg.id}`}>
                               <span className={styles.actionIcon}>☎️</span>
                               <div className={styles.actionText}>
                                 <span className={styles.actionTitle}>Enquire</span>
@@ -1257,7 +1257,7 @@ export default function FindPGPage() {
                         {((pg.latitude && pg.longitude) || pg.locationLink) ? (
                           <>
                             <div className={styles.btnDivider} />
-                            <a href={getDirectionsUrl(pg, searchCoords || userCoords)} target="_blank" rel="noopener noreferrer" className={styles.actionBtn} id={`btn-map-${pg.id}`}>
+                            <a href={getDirectionsUrl(pg, searchCoords || userCoords)} target="_blank" rel="noopener noreferrer" className={`${styles.actionBtn} ${styles.actionBtnDirections}`} id={`btn-map-${pg.id}`}>
                               <span className={styles.actionIcon}>🗺️</span>
                               <div className={styles.actionText}>
                                 <span className={styles.actionTitle}>Directions</span>

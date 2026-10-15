@@ -284,7 +284,7 @@ export default function SavedPGsClient() {
 
                     {/* Buttons — same structure as FindPGPageClient */}
                     <div className={styles.pgCardBtns}>
-                      <button className={styles.actionBtn} onClick={() => openGallery(pg)} id={`btn-view-${pg.id}`}>
+                      <button className={`${styles.actionBtn} ${styles.actionBtnView}`} onClick={() => openGallery(pg)} id={`btn-view-${pg.id}`}>
                         <span className={styles.actionIcon}>🏢</span>
                         <div className={styles.actionText}>
                           <span className={styles.actionTitle}>View PG</span>
@@ -296,7 +296,7 @@ export default function SavedPGsClient() {
 
                       {pg.managerPhone && (
                         <>
-                          <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={styles.actionBtn} id={`btn-enquire-${pg.id}`}>
+                          <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={`${styles.actionBtn} ${styles.actionBtnEnquire}`} id={`btn-enquire-${pg.id}`}>
                             <span className={styles.actionIcon}>☎️</span>
                             <div className={styles.actionText}>
                               <span className={styles.actionTitle}>Enquire</span>
@@ -317,7 +317,7 @@ export default function SavedPGsClient() {
                             }
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={styles.actionBtn}
+                            className={`${styles.actionBtn} ${styles.actionBtnDirections}`}
                             id={`btn-dir-${pg.id}`}
                           >
                             <span className={styles.actionIcon}>🗺️</span>
