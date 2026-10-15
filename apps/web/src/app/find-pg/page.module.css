@@ -1419,28 +1419,37 @@
 .cardHeaderActions {
   display: none; /* hidden on mobile */
   align-items: center;
-  gap: 6px;
-  margin-left: 6px;
+  gap: 8px;
+  margin-left: 8px;
 }
 .cardHeaderIconBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.15);
-  font-size: 14px;
+  font-size: 16px;
+  line-height: 1;
   cursor: pointer;
-  transition: transform 0.18s, background 0.18s;
+  transition: transform 0.18s, background 0.18s, border-color 0.18s;
   flex-shrink: 0;
   color: inherit;
 }
-.cardHeaderIconBtn:hover { transform: scale(1.12); background: rgba(255,255,255,0.16); }
+.cardHeaderIconBtn:hover {
+  transform: scale(1.06);
+  background: rgba(255,255,255,0.16);
+  border-color: rgba(255,255,255,0.26);
+}
 :global([data-theme="light"]) .cardHeaderIconBtn {
   background: rgba(0,0,0,0.06);
   border-color: rgba(0,0,0,0.12);
+}
+:global([data-theme="light"]) .cardHeaderIconBtn:hover {
+  background: rgba(0,0,0,0.1);
+  border-color: rgba(0,0,0,0.2);
 }
 
 /* Save/Share on image — MOBILE only, wrapper */
