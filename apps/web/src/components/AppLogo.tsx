@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
 
 interface AppLogoProps {
   size?: "xs" | "sm" | "md" | "lg";
@@ -21,6 +22,19 @@ export default function AppLogo({ size = "md", onClick, href }: AppLogoProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated, role, hasPG } = useAuth();
+
+  // Defer auth-state-dependent title to post-hydration so the server and client
+  // render the same initial HTML (prevents the Next.js hydration warning).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  const title = !mounted
+    ? "PG-EG"
+    : role === "user"
+    ? "Find PG"
+    : isAuthenticated
+    ? "Go to Dashboard"
+    : "Go to Home";
 
   function handleClick() {
     if (onClick) {
@@ -65,7 +79,7 @@ export default function AppLogo({ size = "md", onClick, href }: AppLogoProps) {
       type="button"
       onClick={handleClick}
       id="app-logo-btn"
-      title={role === "user" ? "Find PG" : isAuthenticated ? "Go to Dashboard" : "Go to Home"}
+      title={title}
       style={{
         background: "none",
         border: "none",

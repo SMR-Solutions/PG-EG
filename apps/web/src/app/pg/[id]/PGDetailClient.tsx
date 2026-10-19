@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, CURRENT_CONSENT_VERSION } from "@/contexts/AuthContext";
+
 import { useTheme } from "@/contexts/ThemeContext";
 import { usePwaInstall } from "@/hooks/usePwaInstall";
 import dynamic from "next/dynamic";
 import styles from "../../find-pg/page.module.css";
 import pgStyles from "./pg.module.css";
+import { trackEvent } from "@/lib/trackEvent";
 
 const PGPhotoLightbox = dynamic(() => import("@/components/PGPhotoLightbox"), { ssr: false });
 
@@ -32,11 +34,26 @@ interface Props {
 
 export default function PGDetailClient({ pg }: Props) {
   const router = useRouter();
-  const { isAuthenticated, isLoading, owner, toggleSavePg } = useAuth();
+  const { isAuthenticated, isLoading, owner, toggleSavePg, grantConsent } = useAuth();
   const { theme, setTheme } = useTheme();
   const { canInstall, installing, triggerInstall } = usePwaInstall();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
+  const [consentGranting, setConsentGranting] = useState(false);
+  const [showConsentBanner, setShowConsentBanner] = useState(false);
+
+  const isUserRole = owner?.role === "user";
+  const consentUpToDate = isUserRole && owner?.consentVersion === CURRENT_CONSENT_VERSION;
+  // Blocks gated actions for authenticated students with withdrawn/missing consent.
+  // Guests and PG owners are unaffected.
+  const consentRequired = isAuthenticated && isUserRole && !consentUpToDate;
+
+  async function handleGrantConsent() {
+    setConsentGranting(true);
+    const ok = await grantConsent();
+    setConsentGranting(false);
+    if (ok) setShowConsentBanner(false);
+  }
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -59,7 +76,14 @@ export default function PGDetailClient({ pg }: Props) {
   }, []);
 
   const handleShare = useCallback(async () => {
+    // Consent gate — blocks authenticated students with withdrawn consent
+    if (consentRequired) { setShowConsentBanner(true); return; }
+
     const pgUrl = `${window.location.origin}/pg/${pg.id}`;
+
+    // Track share initiation before opening the share drawer.
+    // We record that the user triggered the share UI, not that anyone received it.
+    trackEvent("pg_shared", pg.id);
 
     // Text has NO URL — url field is separate so WhatsApp shows it ONCE as a rich preview card
     const shareText = [
@@ -87,7 +111,8 @@ export default function PGDetailClient({ pg }: Props) {
       navigator.clipboard.writeText(`${shareText}\n\n${pgUrl}`);
       alert("PG details copied to clipboard!");
     }
-  }, [pg]);
+  }, [pg, consentRequired]);
+
 
   const isSaved = owner?.savedPgs?.includes(pg.id);
   const typeClass = pg.type === "ladies" ? styles.pgTypeLadies : pg.type === "gents" ? styles.pgTypeGents : styles.pgTypeColiving;
@@ -99,7 +124,16 @@ export default function PGDetailClient({ pg }: Props) {
         <button
           className={pgStyles.iconBtn}
           title={isSaved ? "Remove from saved" : "Save PG"}
-          onClick={() => { if (toggleSavePg) toggleSavePg(pg.id, !isSaved); }}
+          onClick={async () => {
+            if (toggleSavePg) {
+              const saving = !isSaved;
+              // Consent gate
+              if (consentRequired) { setShowConsentBanner(true); return; }
+              const ok = await toggleSavePg(pg.id, saving);
+              // Track pg_saved only after a confirmed save (not on unsave)
+              if (ok && saving) trackEvent("pg_saved", pg.id);
+            }
+          }}
         >
           {isSaved ? "❤️" : "🤍"}
         </button>
@@ -224,6 +258,45 @@ export default function PGDetailClient({ pg }: Props) {
                 </p>
               )}
 
+              {/* Consent-required banner — shown to authenticated students with withdrawn consent */}
+              {showConsentBanner && consentRequired && (
+                <div
+                  id="consent-required-banner"
+                  style={{
+                    margin: "12px 0",
+                    padding: "12px 16px",
+                    background: "rgba(255,180,0,0.1)",
+                    border: "1px solid rgba(255,180,0,0.3)",
+                    borderRadius: 10,
+                    fontSize: 12,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <p style={{ margin: "0 0 10px", fontWeight: 700 }}>
+                    🔒 Consent required
+                  </p>
+                  <p style={{ margin: "0 0 12px", opacity: 0.85 }}>
+                    You withdrew consent. Save, Share, Enquire and Directions need consent to work.
+                    Public browsing and photo viewing remain available.
+                  </p>
+                  <button
+                    id="btn-grant-consent-detail"
+                    onClick={handleGrantConsent}
+                    disabled={consentGranting}
+                    style={{
+                      width: "100%", padding: "10px",
+                      background: "var(--brand-green)",
+                      border: "none", borderRadius: 8,
+                      color: "#000", fontSize: 13, fontWeight: 700,
+                      cursor: "pointer", fontFamily: "inherit",
+                      opacity: consentGranting ? 0.6 : 1,
+                    }}
+                  >
+                    {consentGranting ? "Opening Google…" : "✅ Grant consent — Continue with Google"}
+                  </button>
+                </div>
+              )}
+
               {/* Buttons — same layout as FindPGs page */}
               <div className={styles.pgCardBtns}>
                 {pg.pgImages && pg.pgImages.length > 0 && (
@@ -239,7 +312,24 @@ export default function PGDetailClient({ pg }: Props) {
                 {pg.managerPhone && (
                   <>
                     <div className={styles.btnDivider} />
-                    <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={`${styles.actionBtn} ${styles.actionBtnEnquire}`} id="btn-enquire">
+                    <a
+                      href={`tel:${pg.managerPhone.replace(/\D/g, "")}`}
+                      className={`${styles.actionBtn} ${styles.actionBtnEnquire}`}
+                      id="btn-enquire"
+                      onClick={(e) => {
+                        if (!isAuthenticated) {
+                          e.preventDefault();
+                          alert("Sign in to enquire about this PG!");
+                          return;
+                        }
+                        if (consentRequired) {
+                          e.preventDefault();
+                          setShowConsentBanner(true);
+                          return;
+                        }
+                        trackEvent("pg_enquire_clicked", pg.id);
+                      }}
+                    >
                       <span className={styles.actionIcon}>☎️</span>
                       <div className={styles.actionText}>
                         <span className={styles.actionTitle}>Enquire</span>
@@ -262,6 +352,19 @@ export default function PGDetailClient({ pg }: Props) {
                       rel="noopener noreferrer"
                       className={`${styles.actionBtn} ${styles.actionBtnDirections}`}
                       id="btn-directions"
+                      onClick={(e) => {
+                        if (!isAuthenticated) {
+                          e.preventDefault();
+                          alert("Sign in to get directions to this PG!");
+                          return;
+                        }
+                        if (consentRequired) {
+                          e.preventDefault();
+                          setShowConsentBanner(true);
+                          return;
+                        }
+                        trackEvent("pg_directions_clicked", pg.id);
+                      }}
                     >
                       <span className={styles.actionIcon}>🗺️</span>
                       <div className={styles.actionText}>

@@ -3,8 +3,15 @@ import jwt from "jsonwebtoken";
 import { eq, asc } from "drizzle-orm";
 import { Router, Request, Response } from "express";
 import { createDb, owners, pgs } from "../db";
+import { requireAuth } from "../middleware/auth";
 
 const router = Router();
+
+// ─── Server-authoritative consent version ────────────────────────
+// Bump this when consent text changes materially.
+// The client sends consentGiven:boolean, NEVER a version number.
+// The server always writes its own CURRENT_CONSENT_VERSION.
+export const CURRENT_CONSENT_VERSION = 1;
 
 const FIREBASE_JWKS = createRemoteJWKSet(
   new URL(
@@ -108,7 +115,11 @@ router.post("/verify", async (req: Request, res: Response) => {
 // ─── POST /api/auth/google (Google Sign-In) ───────────────────────
 router.post("/google", async (req: Request, res: Response) => {
   try {
-    const { idToken, role } = req.body as { idToken: string; role?: string };
+    const { idToken, role, consentGiven } = req.body as {
+      idToken: string;
+      role?: string;
+      consentGiven?: boolean;   // client flag only — server writes its own version
+    };
     if (!idToken) { res.status(400).json({ error: "idToken is required" }); return; }
 
     let payload: Awaited<ReturnType<typeof verifyFirebaseToken>>;
@@ -150,6 +161,19 @@ router.post("/google", async (req: Request, res: Response) => {
       owner = { ...owner, firebaseUid, email };
     }
 
+    // ── Record consent (role=user only, consentGiven must be explicitly true) ──
+    // We NEVER trust a version number from the client.
+    // The server writes CURRENT_CONSENT_VERSION unconditionally when conditions are met.
+    if (owner.role === "user" && consentGiven === true
+        && owner.consentVersion !== CURRENT_CONSENT_VERSION) {
+      await db.update(owners)
+        .set({ consentVersion: CURRENT_CONSENT_VERSION, consentGivenAt: new Date() })
+        .where(eq(owners.id, owner.id));
+      owner = { ...owner, consentVersion: CURRENT_CONSENT_VERSION, consentGivenAt: new Date() };
+    }
+
+    const consentUpToDate = owner.consentVersion === CURRENT_CONSENT_VERSION;
+
     const ownerPGs = await db.select({ id: pgs.id, name: pgs.name, type: pgs.type, paymentQrUrl: pgs.paymentQrUrl, paymentUpiId: pgs.paymentUpiId, paymentPhone: pgs.paymentPhone }).from(pgs)
       .where(eq(pgs.ownerId, owner.id)).orderBy(asc(pgs.createdAt));
     const hasPG = ownerPGs.length > 0;
@@ -157,12 +181,18 @@ router.post("/google", async (req: Request, res: Response) => {
 
     res.json({
       token,
-      owner: { id: owner.id, name: owner.name, phone: owner.phone, email: owner.email, role: owner.role, savedPgs: JSON.parse(owner.savedPgs || "[]") },
+      owner: {
+        id: owner.id, name: owner.name, phone: owner.phone, email: owner.email,
+        role: owner.role, savedPgs: JSON.parse(owner.savedPgs || "[]"),
+        consentVersion: owner.consentVersion ?? null,
+      },
       isNewUser,
       hasPG,
       role: owner.role,
       pgId: ownerPGs[0]?.id || null,
       pgs: ownerPGs,
+      consentVersion: owner.consentVersion ?? null,
+      consentUpToDate,
     });
   } catch (error) {
     console.error("Google auth error:", error);
@@ -186,15 +216,25 @@ router.get("/me", async (req: Request, res: Response) => {
     if (!result[0]) { res.status(404).json({ error: "Owner not found" }); return; }
 
     const owner = result[0];
+    const consentUpToDate = owner.consentVersion === CURRENT_CONSENT_VERSION;
+
     const ownerPGs = await db.select({ id: pgs.id, name: pgs.name, type: pgs.type, paymentQrUrl: pgs.paymentQrUrl, paymentUpiId: pgs.paymentUpiId, paymentPhone: pgs.paymentPhone }).from(pgs)
       .where(eq(pgs.ownerId, owner.id)).orderBy(asc(pgs.createdAt));
 
     res.json({
-      owner: { id: owner.id, name: owner.name, phone: owner.phone, email: owner.email, photoUrl: owner.photoUrl, role: owner.role, createdAt: owner.createdAt, savedPgs: JSON.parse(owner.savedPgs || "[]") },
+      owner: {
+        id: owner.id, name: owner.name, phone: owner.phone, email: owner.email,
+        photoUrl: owner.photoUrl, role: owner.role, createdAt: owner.createdAt,
+        savedPgs: JSON.parse(owner.savedPgs || "[]"),
+        consentVersion: owner.consentVersion ?? null,
+        consentGivenAt: owner.consentGivenAt ?? null,
+      },
       hasPG: ownerPGs.length > 0,
       role: owner.role,
       pgId: ownerPGs[0]?.id || null,
       pgs: ownerPGs,
+      consentVersion: owner.consentVersion ?? null,
+      consentUpToDate,
     });
   } catch {
     res.status(401).json({ error: "Invalid token" });
@@ -241,6 +281,32 @@ router.post("/save-pg", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Save PG error:", err);
     res.status(401).json({ error: "Invalid token or server error" });
+  }
+});
+
+// ─── POST /api/auth/revoke-consent ───────────────────────────────
+// Authenticated. Sets consent_version=NULL for the calling user only.
+// Cannot modify another user's consent.
+router.post("/revoke-consent", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const ownerId = req.owner!.ownerId;
+    const db = createDb(process.env.DATABASE_URL!);
+
+    // Verify the account still exists before writing
+    const existing = await db.select({ id: owners.id, role: owners.role })
+      .from(owners).where(eq(owners.id, ownerId)).limit(1);
+    if (!existing[0]) {
+      res.status(404).json({ error: "Account not found" }); return;
+    }
+
+    await db.update(owners)
+      .set({ consentVersion: null, consentGivenAt: null, updatedAt: new Date() })
+      .where(eq(owners.id, ownerId));  // always scoped to the caller's own ID
+
+    res.json({ success: true, consentVersion: null, consentUpToDate: false });
+  } catch (err) {
+    console.error("Revoke consent error:", err);
+    res.status(500).json({ error: "Failed to revoke consent" });
   }
 });
 

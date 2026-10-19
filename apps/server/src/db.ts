@@ -22,6 +22,10 @@ export const owners = pgTable("owners", {
   photoUrl: text("photo_url"),
   role: text("role").default("owner").notNull(), // 'owner' | 'user' (tenant/student)
   savedPgs: text("saved_pgs").default("[]"),
+  // Consent tracking — nullable; NULL means consent has never been given or was revoked.
+  // Written server-side only; the client supplies consentGiven:boolean, never a version number.
+  consentVersion:  integer("consent_version"),
+  consentGivenAt:  timestamp("consent_given_at", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -146,6 +150,15 @@ export const expenses = pgTable("expenses", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ─── PG Events (view / engagement tracking for Leads) ─────────────────────────
+export const pgEvents = pgTable("pg_events", {
+  id:        uuid("id").defaultRandom().primaryKey(),
+  pgId:      uuid("pg_id").notNull().references(() => pgs.id, { onDelete: "cascade" }),
+  eventType: text("event_type").notNull(),   // 'pg_card_impression' | 'pg_gallery_open'
+  visitorId: text("visitor_id").notNull(),   // random first-party ID (no PII)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // ─── Types ────────────────────────────────
 export type Owner = typeof owners.$inferSelect;
 export type NewOwner = typeof owners.$inferInsert;
@@ -153,7 +166,7 @@ export type PG = typeof pgs.$inferSelect;
 export type NewPG = typeof pgs.$inferInsert;
 
 // ─── DB Client ────────────────────────────
-const schema = { owners, pgs, rooms, beds, tenants, rentPayments, rentPaymentTransactions, tenantHistory, expenses };
+const schema = { owners, pgs, rooms, beds, tenants, rentPayments, rentPaymentTransactions, tenantHistory, expenses, pgEvents };
 
 
 export function createDb(databaseUrl: string) {

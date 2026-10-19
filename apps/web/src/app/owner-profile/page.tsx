@@ -23,6 +23,15 @@ export default function OwnerProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [consentRevoking, setConsentRevoking] = useState(false);
+  const [consentMsg, setConsentMsg]  = useState("");  // success message
+  const [consentErr, setConsentErr]  = useState("");  // error message
+
+  // Consent version constant — matches server and SignInForm
+  const CURRENT_CONSENT_VERSION = 1;
+  const LS_CONSENT_KEY = "pg_eg_consent_v";
+  const isUser = owner?.role === "user";
+  const consentUpToDate = isUser && owner?.consentVersion === CURRENT_CONSENT_VERSION;
 
   const photoRef = useRef<HTMLInputElement>(null);
   const authHeader = (): Record<string, string> =>
@@ -84,6 +93,33 @@ export default function OwnerProfilePage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save");
     } finally { setSaving(false); }
+  }
+
+  async function handleRevokeConsent() {
+    if (!token) return;
+    setConsentMsg("");
+    setConsentErr("");
+    if (!window.confirm(
+      "Withdraw consent? You will need to agree again before using Save, Share, Enquire, and Directions."
+    )) return;
+    setConsentRevoking(true);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/revoke-consent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeader() },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `Server error (${res.status})`);
+      // Clear local consent hint so sign-in shows consent screen again
+      localStorage.removeItem(LS_CONSENT_KEY);
+      // Refresh context so owner.consentVersion updates in the UI
+      await refreshAuth();
+      setConsentMsg("Consent withdrawn. You remain signed in. Consent will be required next time you use Save, Share, Enquire, or Directions.");
+    } catch (err) {
+      setConsentErr(err instanceof Error ? err.message : "Failed to revoke consent");
+    } finally {
+      setConsentRevoking(false);
+    }
   }
 
   if (!owner) return null;
@@ -199,6 +235,43 @@ export default function OwnerProfilePage() {
 
         {error && <p className={styles.errorMsg}>⚠️ {error}</p>}
         {success && <p className={styles.successMsg}>✅ Profile updated!</p>}
+
+        {/* ─── Data & Consent (role=user only) ─── */}
+        {isUser && (
+          <div className={styles.consentSection}>
+            <p className={styles.consentTitle}>🔒 Data &amp; Consent</p>
+            <p className={styles.consentDesc}>
+              PG-EG uses your browsing activity to calculate interest metrics for PG owners.
+              Owners see aggregate counts only — never your personal details from browsing.
+              You agreed to this when you signed in.
+            </p>
+            <span
+              className={`${styles.consentStatus} ${
+                consentUpToDate ? styles.consentStatusActive : styles.consentStatusNone
+              }`}
+            >
+              {consentUpToDate ? "✅ Consent given" : "⏹️ Consent not recorded"}
+            </span>
+
+            {consentMsg && <p className={styles.consentSuccess}>{consentMsg}</p>}
+            {consentErr && <p className={styles.consentError}>{consentErr}</p>}
+
+            {consentUpToDate && (
+              <button
+                id="btn-revoke-consent"
+                className={styles.revokeBtn}
+                onClick={handleRevokeConsent}
+                disabled={consentRevoking}
+                type="button"
+              >
+                {consentRevoking
+                  ? <><span className={styles.spinner} /> Withdrawing…</>
+                  : "🗑️ Withdraw consent"
+                }
+              </button>
+            )}
+          </div>
+        )}
 
         <button className={styles.saveBtn} onClick={handleSave}
           disabled={saving || uploading} id="btn-save-profile">

@@ -13,6 +13,8 @@ import tenantsRouter from "./routes/tenants";
 import rentRouter from "./routes/rent";
 import publicRouter from "./routes/public";
 import expensesRouter from "./routes/expenses";
+import eventsRouter from "./routes/events";
+import leadsRouter from "./routes/leads";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -49,6 +51,8 @@ app.use("/api/tenants", tenantsRouter);
 app.use("/api/rent", rentRouter);
 app.use("/api/public", publicRouter);
 app.use("/api/expenses", expensesRouter);
+app.use("/api/events", eventsRouter);  // public — event tracking (Chunk 2)
+app.use("/api/leads",  leadsRouter);   // owner-authenticated — Leads metrics (Chunk 4)
 
 
 // ─── Start ────────────────────────────────

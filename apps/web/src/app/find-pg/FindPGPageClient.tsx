@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, CURRENT_CONSENT_VERSION } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
+
 import styles from "./page.module.css";
 import dynamic from "next/dynamic";
 import AppLogo from "@/components/AppLogo";
@@ -147,11 +148,79 @@ function getDirectionsUrl(
   return pg.locationLink || "#";
 }
 
+// ─── Event tracking ──────────────────────────────────────────────────────────────
+// Shared utility handles visitor-ID generation and fire-and-forget POSTing.
+import { trackEvent } from "@/lib/trackEvent";
+
+/**
+ * Module-level dedup Set — persists for the lifetime of the JS context (same tab session).
+ * Prevents pg_card_impression from re-firing for the same card after a filter-chip change
+ * causes filteredResults to update and the IntersectionObserver effect to re-run.
+ *
+ * NOTE: pg_gallery_open does NOT use a dedup Set — every explicit user open of the
+ * gallery is a genuine view event.  Click handlers are never re-invoked by React
+ * re-renders, so there is no duplicate risk there.
+ */
+const impressedPgIds = new Set<string>(); // pg_card_impression fired for this pgId
+
 export default function FindPGPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading, owner, signOut, toggleSavePg } = useAuth();
+  const { isAuthenticated, isLoading, owner, signOut, toggleSavePg, token, refreshAuth, grantConsent } = useAuth();
   const { theme, setTheme } = useTheme();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [consentModalOpen, setConsentModalOpen] = useState(false);
+  const [consentRevoking, setConsentRevoking] = useState(false);
+  const [consentGranting, setConsentGranting] = useState(false);
+  const [consentMsg, setConsentMsg] = useState("");
+  const [consentErr, setConsentErr] = useState("");
+
+  const LS_CONSENT_KEY = "pg_eg_consent_v";
+  const isUserRole = owner?.role === "user";
+  const consentUpToDate = isUserRole && owner?.consentVersion === CURRENT_CONSENT_VERSION;
+  // Blocks gated actions for authenticated students who have withdrawn (or never given) consent.
+  // Guests and PG owners are unaffected.
+  const consentRequired = isAuthenticated && isUserRole && !consentUpToDate;
+
+
+  async function handleRevokeConsent() {
+    if (!token) return;
+    setConsentMsg("");
+    setConsentErr("");
+    if (!window.confirm(
+      "Withdraw consent? You will need to agree again before using Save, Share, Enquire, and Directions."
+    )) return;
+    setConsentRevoking(true);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/revoke-consent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `Server error (${res.status})`);
+      // Clear local consent hint so sign-in shows consent screen again
+      localStorage.removeItem(LS_CONSENT_KEY);
+      // Refresh context so owner.consentVersion updates in state and localStorage
+      await refreshAuth();
+      setConsentMsg("Consent withdrawn. You remain signed in. Save, Share, Enquire and Directions are now blocked until you grant consent again.");
+    } catch (err) {
+      setConsentErr(err instanceof Error ? err.message : "Failed to revoke consent");
+    } finally {
+      setConsentRevoking(false);
+    }
+  }
+
+  async function handleGrantConsent() {
+    setConsentGranting(true);
+    setConsentErr("");
+    const ok = await grantConsent();
+    setConsentGranting(false);
+    if (ok) {
+      setConsentMsg("Consent granted — Save, Share, Enquire and Directions are now available.");
+    } else {
+      setConsentErr("Consent was not confirmed. Please try again.");
+    }
+  }
+
 
   // Read session cache ONCE synchronously at first render — safe because this
   // component is ONLY rendered on the client (ssr: false in page.tsx).
@@ -192,6 +261,9 @@ export default function FindPGPage() {
   const openGallery = (pg: PGResult) => {
     window.history.pushState({ gallery: true }, "");
     setViewImagesFor(pg);
+    // Track EVERY genuine gallery open — close + reopen = two separate events.
+    // React re-renders never re-invoke click handlers, so no dedup Set is needed.
+    trackEvent("pg_gallery_open", pg.id);
   };
   const closeGallery = () => {
     if (window.history.state?.gallery) {
@@ -206,8 +278,22 @@ export default function FindPGPage() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
+  // ─── IntersectionObserver for pg_card_impression is declared below filteredResults ───
+
   // Share a PG — attaches first image as File so WhatsApp shows image + text + ONE link
   const handleSharePg = async (pg: PGResult) => {
+    // Guest users are prompted to sign in first
+    if (!isAuthenticated) { alert("Sign in to share PGs!"); return; }
+    // Authenticated students with withdrawn consent are blocked
+    if (consentRequired) {
+      setConsentModalOpen(true);
+      return;
+    }
+
+    // Track share initiation (we record that the user triggered the share UI, not that
+    // anyone received or opened it).
+    trackEvent("pg_shared", pg.id);
+
     const pgUrl = `${window.location.origin}/pg/${pg.id}`;
     // Text has NO URL — url field is separate so WhatsApp appends it ONCE as a rich preview
     const shareText = [
@@ -236,6 +322,7 @@ export default function FindPGPage() {
     }
   };
 
+
   // Derived: filtered results based on typeFilter
   const filteredResults = typeFilter === "all"
     ? results
@@ -245,6 +332,42 @@ export default function FindPGPage() {
         if (typeFilter === "coliving") return pg.type !== "gents" && pg.type !== "ladies";
         return true;
       });
+
+  // ─── pg_card_impression: IntersectionObserver ──────────────────────────────
+  // Re-runs whenever filteredResults changes (new search, filter chip toggle).
+  // Uses data-pg-id attributes on each card div; fires at 50 % visibility threshold.
+  const impressionObserver = useRef<IntersectionObserver | null>(null);
+  useEffect(() => {
+    impressionObserver.current?.disconnect();
+    if (typeof IntersectionObserver === "undefined") return;
+
+    impressionObserver.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const pgId = (entry.target as HTMLElement).dataset.pgId;
+          if (pgId && !impressedPgIds.has(pgId)) {
+            impressedPgIds.add(pgId);
+            trackEvent("pg_card_impression", pgId);
+          }
+          impressionObserver.current?.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.5 }
+    );
+
+    // Give React one tick to paint the cards before observing
+    const timer = setTimeout(() => {
+      document
+        .querySelectorAll<HTMLElement>("[data-pg-id]")
+        .forEach((el) => impressionObserver.current?.observe(el));
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+      impressionObserver.current?.disconnect();
+    };
+  }, [filteredResults]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Cache helpers ────────────────────────────────────────────────────
   function saveCache(payload: Omit<SearchCache, "savedAt">) {
@@ -269,12 +392,9 @@ export default function FindPGPage() {
   }
 
 
-  // Auth guard — redirect to sign-in if not logged in
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace("/sign-in?from=/find-pg&role=user");
-    }
-  }, [isLoading, isAuthenticated, router]);
+  // No auth guard — /find-pg is publicly browsable.
+  // Authenticated users still get their saved-PG state; unauthenticated users
+  // see PG cards but are prompted to sign in when they try to Save a PG.
 
   // ─── Cache restore safety-net ─────────────────────────────────────────
   // The useState(readCacheSync) lazy initializer is the primary mechanism.
@@ -598,8 +718,9 @@ export default function FindPGPage() {
     await fetchNearby(selectedPreset.lat, selectedPreset.lng, selectedPreset.name);
   }
 
-  // Show nothing while checking auth (avoids content flash before redirect)
-  if (isLoading || !isAuthenticated) return null;
+  // Show nothing while auth is still hydrating (avoids flash of wrong state).
+  // Do NOT gate on isAuthenticated — the page is public.
+  if (isLoading) return null;
 
   return (
     <main className={styles.main}>
@@ -618,17 +739,29 @@ export default function FindPGPage() {
             }
           }}
         />
-        {/* Profile avatar — no crown for users */}
-        <button
-          className={styles.topProfileBtn}
-          onClick={() => setProfileOpen(true)}
-          id="btn-open-profile"
-          title={owner?.name || "Profile"}
-        >
-          {owner?.photoUrl
-            ? <img src={owner.photoUrl} alt="Profile" className={styles.topProfileImg} />
-            : (owner?.name || "U")[0].toUpperCase()}
-        </button>
+        {/* Profile avatar (logged-in) or Sign In button (guest) */}
+        {isAuthenticated ? (
+          <button
+            className={styles.topProfileBtn}
+            onClick={() => setProfileOpen(true)}
+            id="btn-open-profile"
+            title={owner?.name || "Profile"}
+          >
+            {owner?.photoUrl
+              ? <img src={owner.photoUrl} alt="Profile" className={styles.topProfileImg} />
+              : (owner?.name || "U")[0].toUpperCase()}
+          </button>
+        ) : (
+          <button
+            className={styles.topProfileBtn}
+            onClick={() => router.push("/sign-in?from=/find-pg&role=user")}
+            id="btn-signin-nav"
+            title="Sign In"
+            style={{ fontSize: "10px", width: "auto", padding: "0 12px", borderRadius: "20px", letterSpacing: "0.03em" }}
+          >
+            Sign In
+          </button>
+        )}
       </div>
 
       {/* ─── Profile Sidebar ─── */}
@@ -699,6 +832,30 @@ export default function FindPGPage() {
                   <div className={styles.sidebarActionDesc}>View PGs you've saved</div>
                 </div>
               </button>
+
+              <div className={styles.sidebarDivider} />
+
+              {/* Consent — role=user only */}
+              {isUserRole && (
+                <button
+                  className={styles.sidebarAction}
+                  id="btn-consent"
+                  onClick={() => {
+                    setConsentMsg("");
+                    setConsentErr("");
+                    setConsentModalOpen(true);
+                    setProfileOpen(false);
+                  }}
+                >
+                  <div className={styles.sidebarActionIcon}>🔒</div>
+                  <div>
+                    <div className={styles.sidebarActionTitle}>Consent</div>
+                    <div className={styles.sidebarActionDesc}>
+                      {consentUpToDate ? "Active — tap to view or withdraw" : "Not given — tap to view"}
+                    </div>
+                  </div>
+                </button>
+              )}
 
               <div className={styles.sidebarDivider} />
 
@@ -1120,7 +1277,7 @@ export default function FindPGPage() {
                   <button className={styles.primaryBtn} onClick={() => setTypeFilter("all")} id="btn-clear-filter">Show All PGs</button>
                 </div>
               ) : filteredResults.map((pg, i) => (
-                <div key={pg.id} className={`${styles.pgCard} animate-fade-up`} style={{ animationDelay: `${i * 0.06}s` }}>
+                <div key={pg.id} data-pg-id={pg.id} className={`${styles.pgCard} animate-fade-up`} style={{ animationDelay: `${i * 0.06}s` }}>
                   <div className={styles.cardHeader}>
                     <span className={styles.distanceWrap}>
                       <span className={styles.pinIcon}>📍</span> {distanceLabel(pg.distanceKm)}
@@ -1139,9 +1296,15 @@ export default function FindPGPage() {
                       <span
                         className={styles.cardHeaderIconBtn}
                         title={owner?.savedPgs?.includes(pg.id) ? "Unsave" : "Save PG"}
-                        onClick={() => {
+                        onClick={async () => {
                           if (!isAuthenticated) { alert("Sign in to save PGs!"); return; }
-                          if (toggleSavePg) toggleSavePg(pg.id, !owner?.savedPgs?.includes(pg.id));
+                          if (consentRequired) { setConsentModalOpen(true); return; }
+                          const saving = !owner?.savedPgs?.includes(pg.id);
+                          if (toggleSavePg) {
+                            const ok = await toggleSavePg(pg.id, saving);
+                            // Track pg_saved only after a confirmed save (not on unsave)
+                            if (ok && saving) trackEvent("pg_saved", pg.id);
+                          }
                         }}
                       >
                         {owner?.savedPgs?.includes(pg.id) ? "❤️" : "🤍"}
@@ -1178,10 +1341,16 @@ export default function FindPGPage() {
                       <div className={styles.cardImageActions}>
                         <div
                           className={styles.favBtn}
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
                             if (!isAuthenticated) { alert("Sign in to save PGs!"); return; }
-                            if (toggleSavePg) toggleSavePg(pg.id, !owner?.savedPgs?.includes(pg.id));
+                            if (consentRequired) { setConsentModalOpen(true); return; }
+                            const saving = !owner?.savedPgs?.includes(pg.id);
+                            if (toggleSavePg) {
+                              const ok = await toggleSavePg(pg.id, saving);
+                              // Track pg_saved only after a confirmed save (not on unsave)
+                              if (ok && saving) trackEvent("pg_saved", pg.id);
+                            }
                           }}
                         >
                           {owner?.savedPgs?.includes(pg.id) ? "❤️" : "🤍"}
@@ -1230,6 +1399,51 @@ export default function FindPGPage() {
                         <p className={styles.pgAddress}>📍 {pg.address}</p>
                       )}
 
+                      {/* Consent-required banner — shown to authenticated students with withdrawn/missing consent */}
+                      {consentRequired && (
+                        <div
+                          id="consent-required-banner"
+                          style={{
+                            margin: "4px 0 8px",
+                            padding: "10px 14px",
+                            background: "rgba(255,180,0,0.1)",
+                            border: "1px solid rgba(255,180,0,0.3)",
+                            borderRadius: 10,
+                            fontSize: 12,
+                            lineHeight: 1.5,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 10,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <span style={{ opacity: 0.9 }}>
+                            🔒 <strong>Consent required</strong> to Save, Share, Enquire and use Directions.
+                          </span>
+                          <button
+                            id="btn-grant-consent-card"
+                            onClick={handleGrantConsent}
+                            disabled={consentGranting}
+                            style={{
+                              padding: "5px 12px",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              background: "var(--brand-green)",
+                              color: "#000",
+                              border: "none",
+                              borderRadius: 7,
+                              cursor: "pointer",
+                              fontFamily: "inherit",
+                              whiteSpace: "nowrap",
+                              opacity: consentGranting ? 0.6 : 1,
+                            }}
+                          >
+                            {consentGranting ? "Opening…" : "Grant consent"}
+                          </button>
+                        </div>
+                      )}
+
                       {/* Buttons */}
                       <div className={styles.pgCardBtns}>
                         <button className={`${styles.actionBtn} ${styles.actionBtnView}`} onClick={() => openGallery(pg)} id={`btn-view-${pg.id}`}>
@@ -1244,7 +1458,24 @@ export default function FindPGPage() {
 
                         {pg.managerPhone && (
                           <>
-                            <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={`${styles.actionBtn} ${styles.actionBtnEnquire}`} id={`btn-enquire-${pg.id}`}>
+                            <a
+                              href={`tel:${pg.managerPhone.replace(/\D/g, "")}`}
+                              className={`${styles.actionBtn} ${styles.actionBtnEnquire}`}
+                              id={`btn-enquire-${pg.id}`}
+                              onClick={(e) => {
+                                if (!isAuthenticated) {
+                                  e.preventDefault();
+                                  alert("Sign in to enquire about this PG!");
+                                  return;
+                                }
+                                if (consentRequired) {
+                                  e.preventDefault();
+                                  setConsentModalOpen(true);
+                                  return;
+                                }
+                                trackEvent("pg_enquire_clicked", pg.id);
+                              }}
+                            >
                               <span className={styles.actionIcon}>☎️</span>
                               <div className={styles.actionText}>
                                 <span className={styles.actionTitle}>Enquire</span>
@@ -1257,7 +1488,26 @@ export default function FindPGPage() {
                         {((pg.latitude && pg.longitude) || pg.locationLink) ? (
                           <>
                             <div className={styles.btnDivider} />
-                            <a href={getDirectionsUrl(pg, searchCoords || userCoords)} target="_blank" rel="noopener noreferrer" className={`${styles.actionBtn} ${styles.actionBtnDirections}`} id={`btn-map-${pg.id}`}>
+                            <a
+                              href={getDirectionsUrl(pg, searchCoords || userCoords)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`${styles.actionBtn} ${styles.actionBtnDirections}`}
+                              id={`btn-map-${pg.id}`}
+                              onClick={(e) => {
+                                if (!isAuthenticated) {
+                                  e.preventDefault();
+                                  alert("Sign in to get directions to this PG!");
+                                  return;
+                                }
+                                if (consentRequired) {
+                                  e.preventDefault();
+                                  setConsentModalOpen(true);
+                                  return;
+                                }
+                                trackEvent("pg_directions_clicked", pg.id);
+                              }}
+                            >
                               <span className={styles.actionIcon}>🗺️</span>
                               <div className={styles.actionText}>
                                 <span className={styles.actionTitle}>Directions</span>
@@ -1322,6 +1572,128 @@ export default function FindPGPage() {
           close={closeGallery}
           images={viewImagesFor.pgImages}
         />
+      )}
+      {consentModalOpen && (
+        <div className={styles.imageModalOverlay} onClick={() => setConsentModalOpen(false)}>
+          <div
+            className={styles.imageModal}
+            style={{ maxWidth: 460, maxHeight: "90dvh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className={styles.imageModalHeader}>
+              <h2 className={styles.imageModalTitle}>🔒 Data &amp; Consent</h2>
+              <button className={styles.imageModalClose} id="btn-consent-modal-close" onClick={() => setConsentModalOpen(false)}>×</button>
+            </div>
+
+            <div className={styles.imageModalBody} style={{ display: "block", padding: "16px 20px 20px" }}>
+              {/* Status badge */}
+              <div style={{ marginBottom: 16 }}>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  fontSize: 12, fontWeight: 700, padding: "4px 10px",
+                  borderRadius: 20,
+                  background: consentUpToDate ? "rgba(45,198,83,0.12)" : "rgba(255,255,255,0.05)",
+                  color: consentUpToDate ? "#2dc653" : "var(--text-muted)",
+                  border: consentUpToDate ? "1px solid rgba(45,198,83,0.25)" : "1px solid var(--border)",
+                }}>
+                  {consentUpToDate ? "✅ Consent active" : "⏹️ Consent not recorded"}
+                </span>
+              </div>
+
+              {/* Policy points */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 18 }}>
+                {[
+                  { icon: "📊", title: "Browsing activity", text: "PG-EG tracks PG views, saves and shares to calculate interest metrics. Owners see aggregate counts only (e.g. \"12 views today\") — never your name, email, or any personal detail from browsing." },
+                  { icon: "👤", title: "Google account", text: "Your name and email are used to identify your PG-EG account. We do not sell this information to anyone." },
+                  { icon: "☎️", title: "Contact details", text: "Signing in or viewing a PG does not automatically share your contact details with PG owners. Sharing contact with a specific owner requires a separate, explicit action." },
+                  { icon: "🔓", title: "Your control", text: "You can withdraw this consent at any time. Public PG browsing remains available without signing in." },
+                ].map(({ icon, title, text }) => (
+                  <div key={title} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{icon}</span>
+                    <span style={{ fontSize: 13, lineHeight: 1.55, color: "var(--text-secondary)" }}>
+                      <strong style={{ color: "var(--text-primary)" }}>{title}</strong> — {text}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Messages */}
+              {consentMsg && (
+                <p style={{
+                  fontSize: 12, color: "#2dc653",
+                  background: "rgba(45,198,83,0.08)", border: "1px solid rgba(45,198,83,0.2)",
+                  borderRadius: 8, padding: "8px 12px", marginBottom: 12,
+                }}>{consentMsg}</p>
+              )}
+              {consentErr && (
+                <p style={{
+                  fontSize: 12, color: "var(--brand-red)",
+                  background: "rgba(230,57,70,0.08)", border: "1px solid rgba(230,57,70,0.2)",
+                  borderRadius: 8, padding: "8px 12px", marginBottom: 12,
+                }}>{consentErr}</p>
+              )}
+
+              {/* Actions */}
+              <div style={{ display: "flex", gap: 10, flexDirection: "column" }}>
+                {/* Grant consent — shown when consent is absent/withdrawn */}
+                {consentRequired && (
+                  <button
+                    id="btn-grant-consent-modal"
+                    disabled={consentGranting}
+                    onClick={handleGrantConsent}
+                    style={{
+                      width: "100%", padding: "11px",
+                      background: "var(--brand-green)",
+                      border: "none",
+                      borderRadius: 10, color: "#000",
+                      fontSize: 13, fontWeight: 700,
+                      cursor: "pointer", fontFamily: "inherit",
+                      opacity: consentGranting ? 0.6 : 1,
+                    }}
+                  >
+                    {consentGranting ? "Opening Google…" : "✅ Grant consent — Continue with Google"}
+                  </button>
+                )}
+                {/* Withdraw consent — shown only when consent is active */}
+                {consentUpToDate && (
+                  <button
+                    id="btn-revoke-consent"
+                    disabled={consentRevoking}
+                    onClick={handleRevokeConsent}
+                    style={{
+                      width: "100%", padding: "11px",
+                      background: "transparent",
+                      border: "1.5px solid rgba(230,57,70,0.3)",
+                      borderRadius: 10, color: "var(--brand-red)",
+                      fontSize: 13, fontWeight: 700,
+                      cursor: "pointer", fontFamily: "inherit",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                      opacity: consentRevoking ? 0.5 : 1,
+                    }}
+                  >
+                    {consentRevoking ? "Withdrawing…" : "🗑️ Withdraw consent"}
+                  </button>
+                )}
+                <button
+                  id="btn-consent-modal-ok"
+                  onClick={() => setConsentModalOpen(false)}
+                  style={{
+                    width: "100%", padding: "11px",
+                    background: "var(--bg-overlay)",
+                    border: "1px solid var(--border-hover)",
+                    borderRadius: 10,
+                    color: "var(--text-primary)",
+                    fontSize: 13, fontWeight: 700,
+                    cursor: "pointer", fontFamily: "inherit",
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );
