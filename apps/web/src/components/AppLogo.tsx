@@ -1,8 +1,8 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState, useEffect } from "react";
 
 interface AppLogoProps {
   size?: "xs" | "sm" | "md" | "lg";
@@ -18,17 +18,31 @@ const WIDTHS = {
   lg: 260,
 };
 
+/**
+ * Returns false on the server and during the hydration pass (React calls
+ * getServerSnapshot), then true after hydration (React calls getSnapshot).
+ * Unlike useState+useEffect, React 18 understands this transition and does
+ * NOT emit a hydration mismatch warning when server and client snapshots differ.
+ */
+function useIsHydrated() {
+  return useSyncExternalStore(
+    () => () => {},  // subscribe: no external store — no-op unsubscribe
+    () => true,      // getSnapshot:       client post-hydration  → hydrated
+    () => false      // getServerSnapshot: server / hydration pass → not hydrated
+  );
+}
+
 export default function AppLogo({ size = "md", onClick, href }: AppLogoProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated, role, hasPG } = useAuth();
 
-  // Defer auth-state-dependent title to post-hydration so the server and client
-  // render the same initial HTML (prevents the Next.js hydration warning).
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  // During the hydration pass React uses getServerSnapshot() → false → "PG-EG"
+  // (matches server HTML). After hydration it switches to getSnapshot() → true
+  // and the title updates to the auth-appropriate value without a warning.
+  const hydrated = useIsHydrated();
 
-  const title = !mounted
+  const title = !hydrated
     ? "PG-EG"
     : role === "user"
     ? "Find PG"

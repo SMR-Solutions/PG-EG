@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * /leads — Leads Metrics Dashboard for PG Owners
+ * /leads -- Leads Metrics Dashboard for PG Owners
  *
- * Shows Monthly and Today''s Leads funnel metrics from GET /api/leads/metrics:
+ * Shows Monthly and Today's Leads funnel metrics from GET /api/leads/metrics:
  *   - Views           : distinct visitors who opened the PG gallery
  *   - Interested Leads: gallery openers who also saved or shared the PG
  *   - Qualified Leads : gallery openers who clicked both Enquire and Directions
@@ -20,7 +20,7 @@ import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-/* ─── Types ──────────────────────────────────────────────────────── */
+/* --- Types ---------------------------------------------------------------- */
 interface PgMetrics {
   pgId: string;
   pgName: string;
@@ -37,15 +37,15 @@ interface LeadsResponse {
   monthly: PgMetrics[];
 }
 
-/* ─── Helpers ────────────────────────────────────────────────────── */
+/* --- Helpers -------------------------------------------------------------- */
 function formatDateDDMMYYYY(isoDate: string): string {
   const [y, m, d] = isoDate.split("-");
   return `${d}/${m}/${y}`;
 }
 
 const MONTH_NAMES = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December",
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
 
 function monthLabel(yyyyMM: string): string {
@@ -53,29 +53,40 @@ function monthLabel(yyyyMM: string): string {
   return `${MONTH_NAMES[parseInt(m, 10) - 1]} ${y}`;
 }
 
-/* ─── Metric summary card ────────────────────────────────────────── */
+/* --- Metric summary card -------------------------------------------------- */
+function getMetricEmoji(accent: "green" | "amber" | "indigo"): string {
+  if (accent === "green")  return "\uD83D\uDC41";  // eye
+  if (accent === "amber")  return "\uD83D\uDC9B";  // yellow heart
+  return "\uD83C\uDFAF";                            // target
+}
+
 function MetricCard({
-  emoji, value, label, accent,
-}: { emoji: string; value: number; label: string; accent: "green" | "amber" | "indigo" }) {
+  label, value, accent,
+}: { label: string; value: number; accent: "green" | "amber" | "indigo" }) {
   return (
     <div className={`${styles.metricCard} ${styles[accent]}`}>
-      <span className={styles.metricEmoji}>{emoji}</span>
+      <span className={styles.metricEmoji}>{getMetricEmoji(accent)}</span>
       <span className={styles.metricNum}>{value}</span>
       <span className={styles.metricLabel}>{label}</span>
     </div>
   );
 }
 
-/* ─── Single PG breakdown card ──────────────────────────────────── */
+/* --- Single PG breakdown card --------------------------------------------- */
 function PgCard({ pg }: { pg: PgMetrics }) {
-  const typeEmoji =
-    pg.pgName.toLowerCase().includes("ladies") ? "🚺" :
-    pg.pgName.toLowerCase().includes("gents")  ? "🚹" : "🏢";
+  const isLadies = pg.pgName.toLowerCase().includes("ladies");
+  const isGents  = pg.pgName.toLowerCase().includes("gents");
 
   return (
     <div className={styles.pgCard}>
       <div className={styles.pgCardHeader}>
-        <span className={styles.pgCardEmoji}>{typeEmoji}</span>
+        <span className={styles.pgCardEmoji}>
+          {isLadies
+            ? <span>&#x1F6BA;</span>
+            : isGents
+              ? <span>&#x1F6B9;</span>
+              : <span>&#x1F3E2;</span>}
+        </span>
         <span className={styles.pgCardName}>{pg.pgName}</span>
       </div>
       <div className={styles.pgMetricsGrid}>
@@ -96,68 +107,63 @@ function PgCard({ pg }: { pg: PgMetrics }) {
   );
 }
 
-/* ─── Monthly section: aggregate metric cards only, no per-PG breakdown ─── */
-function MonthlySection({ pgs, emptyMsg }: { pgs: PgMetrics[]; emptyMsg: string }) {
-  const totalViews      = pgs.reduce((s, p) => s + p.views,           0);
-  const totalInterested = pgs.reduce((s, p) => s + p.interestedLeads, 0);
-  const totalQualified  = pgs.reduce((s, p) => s + p.qualifiedLeads,  0);
-
-  if (pgs.length === 0) {
-    return (
-      <div className={styles.emptyState}>
-        <span className={styles.emptyIcon}>📊</span>
-        <p className={styles.emptyTitle}>{emptyMsg}</p>
-        <p className={styles.emptyDesc}>
-          Leads data appears here once tenants start viewing and engaging with your PG listings.
-        </p>
-      </div>
-    );
-  }
-
+/* --- Empty state ----------------------------------------------------------- */
+function EmptyState({ msg }: { msg: string }) {
   return (
-    <div className={styles.metricsRow}>
-      <MetricCard emoji="👁️"  value={totalViews}      label="Views"      accent="green"  />
-      <MetricCard emoji="💛"  value={totalInterested} label="Interested"  accent="amber"  />
-      <MetricCard emoji="🎯"  value={totalQualified}  label="Qualified"   accent="indigo" />
+    <div className={styles.emptyState}>
+      <span className={styles.emptyIcon}>&#x1F4CA;</span>
+      <p className={styles.emptyTitle}>{msg}</p>
+      <p className={styles.emptyDesc}>
+        Leads data appears here once tenants start viewing and engaging with your PG listings.
+      </p>
     </div>
   );
 }
 
-/* ─── Today section: compact per-PG cards only, no aggregate row ─── */
+/* --- Monthly section: three aggregate metric cards only ------------------- */
+function MonthlySection({ pgs, emptyMsg }: { pgs: PgMetrics[]; emptyMsg: string }) {
+  const items = Array.isArray(pgs) ? pgs : [];
+  if (items.length === 0) return <EmptyState msg={emptyMsg} />;
+
+  const totalViews      = items.reduce((s, p) => s + p.views,           0);
+  const totalInterested = items.reduce((s, p) => s + p.interestedLeads, 0);
+  const totalQualified  = items.reduce((s, p) => s + p.qualifiedLeads,  0);
+
+  return (
+    <div className={styles.metricsRow}>
+      <MetricCard label="Views"      value={totalViews}      accent="green"  />
+      <MetricCard label="Interested" value={totalInterested} accent="amber"  />
+      <MetricCard label="Qualified"  value={totalQualified}  accent="indigo" />
+    </div>
+  );
+}
+
+/* --- Today section: compact per-PG cards only ----------------------------- */
 function TodaySection({ pgs, emptyMsg }: { pgs: PgMetrics[]; emptyMsg: string }) {
-  if (pgs.length === 0) {
-    return (
-      <div className={styles.emptyState}>
-        <span className={styles.emptyIcon}>📊</span>
-        <p className={styles.emptyTitle}>{emptyMsg}</p>
-        <p className={styles.emptyDesc}>
-          Leads data appears here once tenants start viewing and engaging with your PG listings.
-        </p>
-      </div>
-    );
-  }
+  const items = Array.isArray(pgs) ? pgs : [];
+  if (items.length === 0) return <EmptyState msg={emptyMsg} />;
 
   return (
     <div className={styles.pgCardsGrid}>
-      {pgs.map((pg) => (
+      {items.map((pg) => (
         <PgCard key={pg.pgId} pg={pg} />
       ))}
     </div>
   );
 }
 
-/* ─── Main Page ─────────────────────────────────────────────────── */
+/* --- Main Page ------------------------------------------------------------ */
 export default function LeadsPage() {
   const router = useRouter();
   const { token, isAuthenticated, isLoading: authLoading, role } = useAuth();
 
-  // Compute current IST month on client (matches server''s currentIstYearMonth)
+  // Compute current IST month on client (matches server's currentIstYearMonth)
   const nowIst = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
   const currentYear  = nowIst.getUTCFullYear();
   const currentMonth = nowIst.getUTCMonth() + 1; // 1-indexed
 
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
-  const [data, setData]   = useState<LeadsResponse | null>(null);
+  const [data, setData]       = useState<LeadsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
 
@@ -198,10 +204,10 @@ export default function LeadsPage() {
     loadMetrics(selectedMonth);
   }, [loadMetrics, authLoading, isAuthenticated, role, selectedMonth]);
 
-  // ─── Month dropdown options — current year months up to now ───
+  // Month dropdown options: current year, months 1..currentMonth
   const monthOptions = Array.from({ length: currentMonth }, (_, i) => i + 1);
 
-  // ─── Render: loading ───────────────────────────────────────────
+  // --- Render: loading ---
   if (authLoading || loading) {
     return (
       <main className={styles.main}>
@@ -212,13 +218,17 @@ export default function LeadsPage() {
     );
   }
 
-  // ─── Render: error ─────────────────────────────────────────────
+  // --- Render: error ---
   if (error) {
     return (
       <main className={styles.main}>
         <div className={styles.centered}>
           <p className={styles.errorText}>{error}</p>
-          <button className={styles.retryBtn} onClick={() => loadMetrics(selectedMonth)} id="btn-retry-leads">
+          <button
+            className={styles.retryBtn}
+            onClick={() => loadMetrics(selectedMonth)}
+            id="btn-retry-leads"
+          >
             Try Again
           </button>
         </div>
@@ -226,7 +236,7 @@ export default function LeadsPage() {
     );
   }
 
-  // ─── Render: success ───────────────────────────────────────────
+  // --- Render: success ---
   return (
     <main className={styles.main}>
       <div className={styles.orb1} />
@@ -234,7 +244,7 @@ export default function LeadsPage() {
 
       <div className={styles.content}>
 
-        {/* Logo Bar + back button */}
+        {/* Logo bar + back button */}
         <div className={styles.logoBar}>
           <button
             className={styles.backBtn}
@@ -242,19 +252,19 @@ export default function LeadsPage() {
             id="btn-back-to-dashboard"
             aria-label="Back to dashboard"
           >
-            ←
+            &larr;
           </button>
           <AppLogo size="sm" />
         </div>
 
-        {/* Date badge — DD/MM/YYYY, no timezone label */}
+        {/* Date badge -- DD/MM/YYYY */}
         {data && (
           <div className={styles.dateBadge}>
-            📅 {formatDateDDMMYYYY(data.date)}
+            &#x1F4C5; {formatDateDDMMYYYY(data.date)}
           </div>
         )}
 
-        {/* ── Monthly Leads ── */}
+        {/* Monthly Leads */}
         <div className={styles.sectionHeader}>
           <p className={styles.sectionTitle}>Monthly Leads</p>
           <select
@@ -281,12 +291,12 @@ export default function LeadsPage() {
           emptyMsg="No activity this month yet"
         />
 
-        {/* ── Today's Leads ── */}
+        {/* Today's Leads */}
         <div className={styles.sectionDivider} />
         <p className={styles.sectionTitle}>
           Today&apos;s Leads
           {data && (
-            <span className={styles.todayDate}> — {formatDateDDMMYYYY(data.date)}</span>
+            <span className={styles.todayDate}> &mdash; {formatDateDDMMYYYY(data.date)}</span>
           )}
         </p>
         <TodaySection
@@ -299,19 +309,19 @@ export default function LeadsPage() {
           <div className={styles.legendRow}>
             <span className={`${styles.legendDot} ${styles.green}`} />
             <span className={styles.legendText}>
-              <strong>Views</strong> — distinct visitors who opened your PG gallery.
+              <strong>Views</strong> &mdash; distinct visitors who opened your PG gallery.
             </span>
           </div>
           <div className={styles.legendRow}>
             <span className={`${styles.legendDot} ${styles.amber}`} />
             <span className={styles.legendText}>
-              <strong>Interested</strong> — gallery visitors who also saved or shared your PG.
+              <strong>Interested</strong> &mdash; gallery visitors who also saved or shared your PG.
             </span>
           </div>
           <div className={styles.legendRow}>
             <span className={`${styles.legendDot} ${styles.indigo}`} />
             <span className={styles.legendText}>
-              <strong>Qualified</strong> — gallery visitors who clicked both Enquire and Directions for your PG.
+              <strong>Qualified</strong> &mdash; gallery visitors who clicked both Enquire and Directions for your PG.
             </span>
           </div>
         </div>

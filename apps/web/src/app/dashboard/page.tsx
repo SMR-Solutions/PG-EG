@@ -251,8 +251,9 @@ export default function DashboardPage() {
         headers: { ...authHeader() },
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
-      setData(json);
+      if (!res.ok) throw new Error(json.error || "Failed to load dashboard");
+      // Normalize: ensure rooms is always an array regardless of API response shape
+      setData({ ...json, rooms: Array.isArray(json.rooms) ? json.rooms : [] });
       setError("");
     } catch { setError("Failed to load dashboard."); }
     finally { setLoading(false); }
@@ -390,7 +391,7 @@ export default function DashboardPage() {
       await load();
       // Refresh detail view
       if (detailTenant && data) {
-        const updRoom = data.rooms.find((r) => r.id === detailTenant.room.id);
+        const updRoom = (data.rooms ?? []).find((r) => r.id === detailTenant.room.id);
         if (updRoom) {
           const updBed = updRoom.beds.find((b) => b.id === detailTenant.bed.id);
           if (updBed?.tenant) setDetailTenant({ tenant: updBed.tenant, bed: updBed, room: updRoom });
@@ -400,17 +401,18 @@ export default function DashboardPage() {
   }
 
   /* ─── Derived ─── */
-  const totalBeds = data?.rooms.reduce((s, r) => s + r.beds.length, 0) ?? 0;
-  const occupiedBeds = data?.rooms.reduce((s, r) => s + r.beds.filter((b) => b.isOccupied).length, 0) ?? 0;
-  const pendingRentCount = data?.rooms.reduce((s, r) =>
-    s + r.beds.filter((b) => b.tenant?.rent?.status === "pending").length, 0) ?? 0;
+  const rooms = data?.rooms ?? [];
+  const totalBeds = rooms.reduce((s, r) => s + r.beds.length, 0);
+  const occupiedBeds = rooms.reduce((s, r) => s + r.beds.filter((b) => b.isOccupied).length, 0);
+  const pendingRentCount = rooms.reduce((s, r) =>
+    s + r.beds.filter((b) => b.tenant?.rent?.status === "pending").length, 0);
 
-  const visibleRooms = filterType ? (data?.rooms.filter((r) => r.sharingType === filterType) ?? []) : (data?.rooms ?? []);
+  const visibleRooms = filterType ? rooms.filter((r) => r.sharingType === filterType) : rooms;
   const floorNums = data ? Array.from({ length: data.pg.totalFloors }, (_, i) => data.pg.totalFloors - i) : [];
 
   // Only show sharing cards for types that actually have rooms
   const activeShareTypes = data
-    ? data.pg.sharings.sort((a, b) => a - b).filter((t) => sharingStats(data.rooms, t).totalBeds > 0)
+    ? data.pg.sharings.sort((a, b) => a - b).filter((t) => sharingStats(rooms, t).totalBeds > 0)
     : [];
 
   if (authLoading || (isAuthenticated && role === "user") || loading) return (
@@ -1535,7 +1537,7 @@ export default function DashboardPage() {
               )}
               {searchResults.map((t) => {
                 // Find bed+room for this tenant so we can open Details
-                const tenantBed = data?.rooms.flatMap(r => r.beds.map(b => ({ bed: b, room: r }))).find(x => x.bed.tenant?.id === t.id);
+                const tenantBed = (data?.rooms ?? []).flatMap(r => r.beds.map(b => ({ bed: b, room: r }))).find(x => x.bed.tenant?.id === t.id);
                 return (
                 <div
                   key={t.id}
