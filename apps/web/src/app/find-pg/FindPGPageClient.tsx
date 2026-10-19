@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -147,6 +147,21 @@ function getDirectionsUrl(
   return pg.locationLink || "#";
 }
 
+// ─── Event tracking ──────────────────────────────────────────────────────────────
+// Shared utility handles visitor-ID generation and fire-and-forget POSTing.
+import { trackEvent } from "@/lib/trackEvent";
+
+/**
+ * Module-level dedup Set — persists for the lifetime of the JS context (same tab session).
+ * Prevents pg_card_impression from re-firing for the same card after a filter-chip change
+ * causes filteredResults to update and the IntersectionObserver effect to re-run.
+ *
+ * NOTE: pg_gallery_open does NOT use a dedup Set — every explicit user open of the
+ * gallery is a genuine view event.  Click handlers are never re-invoked by React
+ * re-renders, so there is no duplicate risk there.
+ */
+const impressedPgIds = new Set<string>(); // pg_card_impression fired for this pgId
+
 export default function FindPGPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading, owner, signOut, toggleSavePg } = useAuth();
@@ -192,6 +207,9 @@ export default function FindPGPage() {
   const openGallery = (pg: PGResult) => {
     window.history.pushState({ gallery: true }, "");
     setViewImagesFor(pg);
+    // Track EVERY genuine gallery open — close + reopen = two separate events.
+    // React re-renders never re-invoke click handlers, so no dedup Set is needed.
+    trackEvent("pg_gallery_open", pg.id);
   };
   const closeGallery = () => {
     if (window.history.state?.gallery) {
@@ -206,8 +224,17 @@ export default function FindPGPage() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
+  // ─── IntersectionObserver for pg_card_impression is declared below filteredResults ───
+
   // Share a PG — attaches first image as File so WhatsApp shows image + text + ONE link
   const handleSharePg = async (pg: PGResult) => {
+    // Guest users are prompted to sign in first (mirrors the Save button behaviour)
+    if (!isAuthenticated) { alert("Sign in to share PGs!"); return; }
+
+    // Track share initiation (we record that the user triggered the share UI, not that
+    // anyone received or opened it).
+    trackEvent("pg_shared", pg.id);
+
     const pgUrl = `${window.location.origin}/pg/${pg.id}`;
     // Text has NO URL — url field is separate so WhatsApp appends it ONCE as a rich preview
     const shareText = [
@@ -236,6 +263,7 @@ export default function FindPGPage() {
     }
   };
 
+
   // Derived: filtered results based on typeFilter
   const filteredResults = typeFilter === "all"
     ? results
@@ -245,6 +273,42 @@ export default function FindPGPage() {
         if (typeFilter === "coliving") return pg.type !== "gents" && pg.type !== "ladies";
         return true;
       });
+
+  // ─── pg_card_impression: IntersectionObserver ──────────────────────────────
+  // Re-runs whenever filteredResults changes (new search, filter chip toggle).
+  // Uses data-pg-id attributes on each card div; fires at 50 % visibility threshold.
+  const impressionObserver = useRef<IntersectionObserver | null>(null);
+  useEffect(() => {
+    impressionObserver.current?.disconnect();
+    if (typeof IntersectionObserver === "undefined") return;
+
+    impressionObserver.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const pgId = (entry.target as HTMLElement).dataset.pgId;
+          if (pgId && !impressedPgIds.has(pgId)) {
+            impressedPgIds.add(pgId);
+            trackEvent("pg_card_impression", pgId);
+          }
+          impressionObserver.current?.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.5 }
+    );
+
+    // Give React one tick to paint the cards before observing
+    const timer = setTimeout(() => {
+      document
+        .querySelectorAll<HTMLElement>("[data-pg-id]")
+        .forEach((el) => impressionObserver.current?.observe(el));
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+      impressionObserver.current?.disconnect();
+    };
+  }, [filteredResults]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Cache helpers ────────────────────────────────────────────────────
   function saveCache(payload: Omit<SearchCache, "savedAt">) {
@@ -269,12 +333,9 @@ export default function FindPGPage() {
   }
 
 
-  // Auth guard — redirect to sign-in if not logged in
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace("/sign-in?from=/find-pg&role=user");
-    }
-  }, [isLoading, isAuthenticated, router]);
+  // No auth guard — /find-pg is publicly browsable.
+  // Authenticated users still get their saved-PG state; unauthenticated users
+  // see PG cards but are prompted to sign in when they try to Save a PG.
 
   // ─── Cache restore safety-net ─────────────────────────────────────────
   // The useState(readCacheSync) lazy initializer is the primary mechanism.
@@ -598,8 +659,9 @@ export default function FindPGPage() {
     await fetchNearby(selectedPreset.lat, selectedPreset.lng, selectedPreset.name);
   }
 
-  // Show nothing while checking auth (avoids content flash before redirect)
-  if (isLoading || !isAuthenticated) return null;
+  // Show nothing while auth is still hydrating (avoids flash of wrong state).
+  // Do NOT gate on isAuthenticated — the page is public.
+  if (isLoading) return null;
 
   return (
     <main className={styles.main}>
@@ -618,17 +680,29 @@ export default function FindPGPage() {
             }
           }}
         />
-        {/* Profile avatar — no crown for users */}
-        <button
-          className={styles.topProfileBtn}
-          onClick={() => setProfileOpen(true)}
-          id="btn-open-profile"
-          title={owner?.name || "Profile"}
-        >
-          {owner?.photoUrl
-            ? <img src={owner.photoUrl} alt="Profile" className={styles.topProfileImg} />
-            : (owner?.name || "U")[0].toUpperCase()}
-        </button>
+        {/* Profile avatar (logged-in) or Sign In button (guest) */}
+        {isAuthenticated ? (
+          <button
+            className={styles.topProfileBtn}
+            onClick={() => setProfileOpen(true)}
+            id="btn-open-profile"
+            title={owner?.name || "Profile"}
+          >
+            {owner?.photoUrl
+              ? <img src={owner.photoUrl} alt="Profile" className={styles.topProfileImg} />
+              : (owner?.name || "U")[0].toUpperCase()}
+          </button>
+        ) : (
+          <button
+            className={styles.topProfileBtn}
+            onClick={() => router.push("/sign-in?from=/find-pg&role=user")}
+            id="btn-signin-nav"
+            title="Sign In"
+            style={{ fontSize: "10px", width: "auto", padding: "0 12px", borderRadius: "20px", letterSpacing: "0.03em" }}
+          >
+            Sign In
+          </button>
+        )}
       </div>
 
       {/* ─── Profile Sidebar ─── */}
@@ -1120,7 +1194,7 @@ export default function FindPGPage() {
                   <button className={styles.primaryBtn} onClick={() => setTypeFilter("all")} id="btn-clear-filter">Show All PGs</button>
                 </div>
               ) : filteredResults.map((pg, i) => (
-                <div key={pg.id} className={`${styles.pgCard} animate-fade-up`} style={{ animationDelay: `${i * 0.06}s` }}>
+                <div key={pg.id} data-pg-id={pg.id} className={`${styles.pgCard} animate-fade-up`} style={{ animationDelay: `${i * 0.06}s` }}>
                   <div className={styles.cardHeader}>
                     <span className={styles.distanceWrap}>
                       <span className={styles.pinIcon}>📍</span> {distanceLabel(pg.distanceKm)}
@@ -1178,10 +1252,15 @@ export default function FindPGPage() {
                       <div className={styles.cardImageActions}>
                         <div
                           className={styles.favBtn}
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
                             if (!isAuthenticated) { alert("Sign in to save PGs!"); return; }
-                            if (toggleSavePg) toggleSavePg(pg.id, !owner?.savedPgs?.includes(pg.id));
+                            const saving = !owner?.savedPgs?.includes(pg.id);
+                            if (toggleSavePg) {
+                              await toggleSavePg(pg.id, saving);
+                              // Track pg_saved only on a successful save (not on unsave)
+                              if (saving) trackEvent("pg_saved", pg.id);
+                            }
                           }}
                         >
                           {owner?.savedPgs?.includes(pg.id) ? "❤️" : "🤍"}
@@ -1244,7 +1323,19 @@ export default function FindPGPage() {
 
                         {pg.managerPhone && (
                           <>
-                            <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={`${styles.actionBtn} ${styles.actionBtnEnquire}`} id={`btn-enquire-${pg.id}`}>
+                            <a
+                              href={`tel:${pg.managerPhone.replace(/\D/g, "")}`}
+                              className={`${styles.actionBtn} ${styles.actionBtnEnquire}`}
+                              id={`btn-enquire-${pg.id}`}
+                              onClick={(e) => {
+                                if (!isAuthenticated) {
+                                  e.preventDefault();
+                                  alert("Sign in to enquire about this PG!");
+                                  return;
+                                }
+                                trackEvent("pg_enquire_clicked", pg.id);
+                              }}
+                            >
                               <span className={styles.actionIcon}>☎️</span>
                               <div className={styles.actionText}>
                                 <span className={styles.actionTitle}>Enquire</span>
@@ -1257,7 +1348,21 @@ export default function FindPGPage() {
                         {((pg.latitude && pg.longitude) || pg.locationLink) ? (
                           <>
                             <div className={styles.btnDivider} />
-                            <a href={getDirectionsUrl(pg, searchCoords || userCoords)} target="_blank" rel="noopener noreferrer" className={`${styles.actionBtn} ${styles.actionBtnDirections}`} id={`btn-map-${pg.id}`}>
+                            <a
+                              href={getDirectionsUrl(pg, searchCoords || userCoords)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`${styles.actionBtn} ${styles.actionBtnDirections}`}
+                              id={`btn-map-${pg.id}`}
+                              onClick={(e) => {
+                                if (!isAuthenticated) {
+                                  e.preventDefault();
+                                  alert("Sign in to get directions to this PG!");
+                                  return;
+                                }
+                                trackEvent("pg_directions_clicked", pg.id);
+                              }}
+                            >
                               <span className={styles.actionIcon}>🗺️</span>
                               <div className={styles.actionText}>
                                 <span className={styles.actionTitle}>Directions</span>

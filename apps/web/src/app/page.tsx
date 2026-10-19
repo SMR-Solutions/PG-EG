@@ -51,7 +51,7 @@ export default function HomePage() {
           <button
             className={styles.findBtn}
             id="btn-find-pg"
-            onClick={() => router.push("/sign-in?from=/find-pg&role=user")}
+            onClick={() => router.push("/find-pg")}
           >
             <span className={styles.findBtnIcon}>🔍</span>
             <div className={styles.findBtnText}>

@@ -8,6 +8,7 @@ import { usePwaInstall } from "@/hooks/usePwaInstall";
 import dynamic from "next/dynamic";
 import styles from "../../find-pg/page.module.css";
 import pgStyles from "./pg.module.css";
+import { trackEvent } from "@/lib/trackEvent";
 
 const PGPhotoLightbox = dynamic(() => import("@/components/PGPhotoLightbox"), { ssr: false });
 
@@ -61,6 +62,10 @@ export default function PGDetailClient({ pg }: Props) {
   const handleShare = useCallback(async () => {
     const pgUrl = `${window.location.origin}/pg/${pg.id}`;
 
+    // Track share initiation before opening the share drawer.
+    // We record that the user triggered the share UI, not that anyone received it.
+    trackEvent("pg_shared", pg.id);
+
     // Text has NO URL — url field is separate so WhatsApp shows it ONCE as a rich preview card
     const shareText = [
       `🏢 ${pg.name}`,
@@ -99,7 +104,14 @@ export default function PGDetailClient({ pg }: Props) {
         <button
           className={pgStyles.iconBtn}
           title={isSaved ? "Remove from saved" : "Save PG"}
-          onClick={() => { if (toggleSavePg) toggleSavePg(pg.id, !isSaved); }}
+          onClick={async () => {
+            if (toggleSavePg) {
+              const saving = !isSaved;
+              await toggleSavePg(pg.id, saving);
+              // Track pg_saved only after a successful save (not on unsave)
+              if (saving) trackEvent("pg_saved", pg.id);
+            }
+          }}
         >
           {isSaved ? "❤️" : "🤍"}
         </button>
@@ -239,7 +251,19 @@ export default function PGDetailClient({ pg }: Props) {
                 {pg.managerPhone && (
                   <>
                     <div className={styles.btnDivider} />
-                    <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={`${styles.actionBtn} ${styles.actionBtnEnquire}`} id="btn-enquire">
+                    <a
+                      href={`tel:${pg.managerPhone.replace(/\D/g, "")}`}
+                      className={`${styles.actionBtn} ${styles.actionBtnEnquire}`}
+                      id="btn-enquire"
+                      onClick={(e) => {
+                        if (!isAuthenticated) {
+                          e.preventDefault();
+                          alert("Sign in to enquire about this PG!");
+                          return;
+                        }
+                        trackEvent("pg_enquire_clicked", pg.id);
+                      }}
+                    >
                       <span className={styles.actionIcon}>☎️</span>
                       <div className={styles.actionText}>
                         <span className={styles.actionTitle}>Enquire</span>
@@ -262,6 +286,14 @@ export default function PGDetailClient({ pg }: Props) {
                       rel="noopener noreferrer"
                       className={`${styles.actionBtn} ${styles.actionBtnDirections}`}
                       id="btn-directions"
+                      onClick={(e) => {
+                        if (!isAuthenticated) {
+                          e.preventDefault();
+                          alert("Sign in to get directions to this PG!");
+                          return;
+                        }
+                        trackEvent("pg_directions_clicked", pg.id);
+                      }}
                     >
                       <span className={styles.actionIcon}>🗺️</span>
                       <div className={styles.actionText}>

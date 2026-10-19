@@ -17,6 +17,7 @@ interface Owner {
   photoUrl?: string | null;
   role?: string | null; // 'owner' | 'user'
   savedPgs?: string[] | null;
+  consentVersion?: number | null; // null = not given or revoked
 }
 
 interface PGSummary {

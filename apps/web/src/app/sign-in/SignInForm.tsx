@@ -1,5 +1,6 @@
 "use client";
 import AppLogo from "@/components/AppLogo";
+import ConsentSheet from "@/components/ConsentSheet";
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -16,14 +17,24 @@ import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-type Step = "details" | "otp";
+// Must match the server constant in apps/server/src/routes/auth.ts.
+// When the consent text changes materially, bump both values together.
+const CURRENT_CONSENT_VERSION = 1;
+const LS_CONSENT_KEY = "pg_eg_consent_v";
+
+/** Returns true only if localStorage records the current consent version. */
+function hasStoredConsent(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(LS_CONSENT_KEY) === String(CURRENT_CONSENT_VERSION);
+}
+
+type Step = "consent" | "details" | "otp";
 
 export default function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn, isAuthenticated, isLoading } = useAuth();
 
-  const [step, setStep] = useState<Step>("details");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -39,6 +50,21 @@ export default function SignInForm() {
   // role=user → student/job-holder coming from FIND PG
   const isUserRole = searchParams.get("role") === "user";
   const fromPath = searchParams.get("from") || (isUserRole ? "/find-pg" : "/dashboard");
+
+  // Initial step — SSR-safe default (no localStorage access here).
+  // localStorage is read in a useEffect (post-hydration) to avoid the
+  // server/client HTML mismatch that causes Next.js hydration errors.
+  const [step, setStep] = useState<Step>(!isUserRole ? "details" : "consent");
+
+  // consentGiven tracks whether the user explicitly clicked "I Agree" this session.
+  // It is NEVER initialized from localStorage: localStorage only decides which step
+  // to show (consent vs. details). Initializing from localStorage would let a user
+  // set pg_eg_consent_v=1 in DevTools and have the server record consent without
+  // ever reading the policy.
+  // Returning users (who skip to "details" via localStorage) send consentGiven:false;
+  // the server returns consentUpToDate:true from the DB record, so they sign in
+  // normally without seeing the consent screen again.
+  const [consentGiven, setConsentGiven] = useState<boolean>(!isUserRole);
 
   const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -57,10 +83,22 @@ export default function SignInForm() {
     return () => clearTimeout(t);
   }, [countdown]);
 
+  // Post-hydration: skip consent screen for returning users who already have
+  // current consent in localStorage. This runs only on the client, after the
+  // server-rendered HTML has been matched, so it does not cause a hydration error.
+  useEffect(() => {
+    if (isUserRole && hasStoredConsent()) {
+      setStep("details");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   // ─── Google Sign-In ─────────────────────────────────────────────
-  async function handleGoogleSignIn() {
+  // consentOverride: passed directly from the consent step so there is no
+  // dependency on the React state flush completing before the async call.
+  async function handleGoogleSignIn(consentOverride?: boolean) {
+    const effectiveConsent = consentOverride !== undefined ? consentOverride : consentGiven;
     setError("");
     setGoogleLoading(true);
     try {
@@ -71,13 +109,31 @@ export default function SignInForm() {
       const res = await fetch(`${API_URL}/api/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken, role: isUserRole ? "user" : "owner" }),
+        body: JSON.stringify({
+          idToken,
+          role: isUserRole ? "user" : "owner",
+          consentGiven: effectiveConsent, // server ignores for role=owner
+        }),
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Google sign-in failed");
       }
       const data = await res.json();
+
+      // ── Sync localStorage with the server's authoritative consent state ──
+      // localStorage is only a UX hint to skip re-showing the consent screen.
+      // The server's consentUpToDate is what actually matters.
+      if (isUserRole) {
+        if (data.consentUpToDate) {
+          localStorage.setItem(LS_CONSENT_KEY, String(CURRENT_CONSENT_VERSION));
+        } else {
+          // Server says consent is missing or stale — clear the hint so
+          // the consent screen shows again next time.
+          localStorage.removeItem(LS_CONSENT_KEY);
+        }
+      }
+
       signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs, data.role || (isUserRole ? "user" : "owner"));
 
       // User flow (student/job-holder) → always go to fromPath (e.g. /find-pg)
@@ -98,6 +154,18 @@ export default function SignInForm() {
     } finally {
       setGoogleLoading(false);
     }
+  }
+
+  // ─── Consent step handlers ──────────────────────────────────────
+  // "I Agree" — start Google auth immediately; pass true directly to avoid
+  // depending on React state flush timing.
+  function handleConsentAgree() {
+    setConsentGiven(true);
+    handleGoogleSignIn(true);
+  }
+  // "Not now" — navigate back without auth or consent write.
+  function handleConsentDecline() {
+    router.push(fromPath);
   }
 
   // ─── Phone OTP ─────────────────────────────────────────────────
@@ -217,6 +285,19 @@ export default function SignInForm() {
           </p>
         </div>
 
+        {/* ─── CONSENT STEP (role=user only) ───────────────────────────── */}
+        {step === "consent" && (
+          <div className={`${styles.form} animate-fade-up delay-1`}>
+            <ConsentSheet
+              onAgree={handleConsentAgree}
+              onDecline={handleConsentDecline}
+              loading={googleLoading}
+              error={error}
+            />
+          </div>
+        )}
+
+        {/* ─── DETAILS STEP ─────────────────────────────────────────── */}
         {step === "details" ? (
           <div className={`${styles.form} animate-fade-up delay-1`}>
             <div className={styles.titleBlock}>
@@ -235,7 +316,7 @@ export default function SignInForm() {
               <button
                 type="button"
                 className={`${styles.googleBtn} ${showGooglePointer ? styles.googleBtnHighlight : ""}`}
-                onClick={handleGoogleSignIn}
+                onClick={() => handleGoogleSignIn()}
                 disabled={googleLoading || sending}
                 id="btn-google-signin"
               >
@@ -306,7 +387,7 @@ export default function SignInForm() {
               </button>
             </form>
           </div>
-        ) : (
+        ) : step === "otp" ? (
           <div className={`${styles.form} animate-fade-up`}>
             <div className={styles.titleBlock}>
               <h2 className={styles.title}>Enter OTP</h2>
@@ -358,7 +439,7 @@ export default function SignInForm() {
               )}
             </div>
           </div>
-        )}
+        ) : null}
       </div>
     </main>
   );

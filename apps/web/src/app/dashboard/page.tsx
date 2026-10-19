@@ -605,6 +605,18 @@ export default function DashboardPage() {
                   </div>
                 </button>
 
+                <button
+                  className={styles.sidebarAction}
+                  id="btn-leads"
+                  onClick={() => { setProfileOpen(false); router.push("/leads"); }}
+                >
+                  <div className={styles.sidebarActionIcon}>🎯</div>
+                  <div>
+                    <div className={styles.sidebarActionTitle}>Leads</div>
+                    <div className={styles.sidebarActionDesc}>Today&apos;s views &amp; interest signals</div>
+                  </div>
+                </button>
+
                 {allPgs.length > 1 && (
                   <button
                     className={styles.sidebarAction}
