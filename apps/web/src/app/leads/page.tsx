@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 /**
  * /leads — Leads Metrics Dashboard for PG Owners
  *
- * Shows today's (IST) funnel metrics from GET /api/leads/metrics:
+ * Shows Monthly and Today''s Leads funnel metrics from GET /api/leads/metrics:
  *   - Views           : distinct visitors who opened the PG gallery
  *   - Interested Leads: gallery openers who also saved or shared the PG
  *   - Qualified Leads : gallery openers who clicked both Enquire and Directions
@@ -30,12 +30,30 @@ interface PgMetrics {
 }
 
 interface LeadsResponse {
-  date: string;       // "YYYY-MM-DD" in IST
-  timezone: string;   // "Asia/Kolkata"
-  pgs: PgMetrics[];
+  date: string;      // "YYYY-MM-DD" in IST
+  month: string;     // "YYYY-MM" in IST
+  timezone: string;  // "Asia/Kolkata"
+  today: PgMetrics[];
+  monthly: PgMetrics[];
 }
 
-/* ─── Metric card (summary row) ─────────────────────────────────── */
+/* ─── Helpers ────────────────────────────────────────────────────── */
+function formatDateDDMMYYYY(isoDate: string): string {
+  const [y, m, d] = isoDate.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+const MONTH_NAMES = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
+];
+
+function monthLabel(yyyyMM: string): string {
+  const [y, m] = yyyyMM.split("-");
+  return `${MONTH_NAMES[parseInt(m, 10) - 1]} ${y}`;
+}
+
+/* ─── Metric summary card ────────────────────────────────────────── */
 function MetricCard({
   emoji, value, label, accent,
 }: { emoji: string; value: number; label: string; accent: "green" | "amber" | "indigo" }) {
@@ -78,16 +96,72 @@ function PgCard({ pg }: { pg: PgMetrics }) {
   );
 }
 
+/* ─── Monthly section: aggregate metric cards only, no per-PG breakdown ─── */
+function MonthlySection({ pgs, emptyMsg }: { pgs: PgMetrics[]; emptyMsg: string }) {
+  const totalViews      = pgs.reduce((s, p) => s + p.views,           0);
+  const totalInterested = pgs.reduce((s, p) => s + p.interestedLeads, 0);
+  const totalQualified  = pgs.reduce((s, p) => s + p.qualifiedLeads,  0);
+
+  if (pgs.length === 0) {
+    return (
+      <div className={styles.emptyState}>
+        <span className={styles.emptyIcon}>📊</span>
+        <p className={styles.emptyTitle}>{emptyMsg}</p>
+        <p className={styles.emptyDesc}>
+          Leads data appears here once tenants start viewing and engaging with your PG listings.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.metricsRow}>
+      <MetricCard emoji="👁️"  value={totalViews}      label="Views"      accent="green"  />
+      <MetricCard emoji="💛"  value={totalInterested} label="Interested"  accent="amber"  />
+      <MetricCard emoji="🎯"  value={totalQualified}  label="Qualified"   accent="indigo" />
+    </div>
+  );
+}
+
+/* ─── Today section: compact per-PG cards only, no aggregate row ─── */
+function TodaySection({ pgs, emptyMsg }: { pgs: PgMetrics[]; emptyMsg: string }) {
+  if (pgs.length === 0) {
+    return (
+      <div className={styles.emptyState}>
+        <span className={styles.emptyIcon}>📊</span>
+        <p className={styles.emptyTitle}>{emptyMsg}</p>
+        <p className={styles.emptyDesc}>
+          Leads data appears here once tenants start viewing and engaging with your PG listings.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.pgCardsGrid}>
+      {pgs.map((pg) => (
+        <PgCard key={pg.pgId} pg={pg} />
+      ))}
+    </div>
+  );
+}
+
 /* ─── Main Page ─────────────────────────────────────────────────── */
 export default function LeadsPage() {
   const router = useRouter();
   const { token, isAuthenticated, isLoading: authLoading, role } = useAuth();
 
-  const [data, setData]       = useState<LeadsResponse | null>(null);
+  // Compute current IST month on client (matches server''s currentIstYearMonth)
+  const nowIst = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+  const currentYear  = nowIst.getUTCFullYear();
+  const currentMonth = nowIst.getUTCMonth() + 1; // 1-indexed
+
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [data, setData]   = useState<LeadsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
 
-  // Auth guard — mirrors dashboard pattern exactly
+  // Auth guard
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.replace("/sign-in?from=/leads");
@@ -97,21 +171,18 @@ export default function LeadsPage() {
     }
   }, [authLoading, isAuthenticated, role, router]);
 
-  // ── Auth header helper ──
   const authHeader = useCallback(
     (): Record<string, string> =>
       token ? { Authorization: `Bearer ${token}` } : {},
     [token]
   );
 
-  // ── Fetch leads metrics ──
-  const loadMetrics = useCallback(async () => {
+  const loadMetrics = useCallback(async (month: number) => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_URL}/api/leads/metrics`, {
-        headers: { ...authHeader() },
-      });
+      const url = `${API_URL}/api/leads/metrics?year=${currentYear}&month=${month}`;
+      const res = await fetch(url, { headers: { ...authHeader() } });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to load metrics");
       setData(json as LeadsResponse);
@@ -120,22 +191,17 @@ export default function LeadsPage() {
     } finally {
       setLoading(false);
     }
-  }, [authHeader]);
+  }, [authHeader, currentYear]);
 
-  // Wait for auth to resolve before fetching — same guard as dashboard
   useEffect(() => {
-    if (authLoading)          return;
-    if (!isAuthenticated)     return;
-    if (role === "user")      return;
-    loadMetrics();
-  }, [loadMetrics, authLoading, isAuthenticated, role]);
+    if (authLoading || !isAuthenticated || role === "user") return;
+    loadMetrics(selectedMonth);
+  }, [loadMetrics, authLoading, isAuthenticated, role, selectedMonth]);
 
-  // ── Aggregate totals across all PGs ──
-  const totalViews           = data?.pgs.reduce((s, p) => s + p.views,           0) ?? 0;
-  const totalInterested      = data?.pgs.reduce((s, p) => s + p.interestedLeads, 0) ?? 0;
-  const totalQualified       = data?.pgs.reduce((s, p) => s + p.qualifiedLeads,  0) ?? 0;
+  // ─── Month dropdown options — current year months up to now ───
+  const monthOptions = Array.from({ length: currentMonth }, (_, i) => i + 1);
 
-  // ─── Render: loading / auth pending ───────────────────────────
+  // ─── Render: loading ───────────────────────────────────────────
   if (authLoading || loading) {
     return (
       <main className={styles.main}>
@@ -152,7 +218,7 @@ export default function LeadsPage() {
       <main className={styles.main}>
         <div className={styles.centered}>
           <p className={styles.errorText}>{error}</p>
-          <button className={styles.retryBtn} onClick={loadMetrics} id="btn-retry-leads">
+          <button className={styles.retryBtn} onClick={() => loadMetrics(selectedMonth)} id="btn-retry-leads">
             Try Again
           </button>
         </div>
@@ -181,49 +247,59 @@ export default function LeadsPage() {
           <AppLogo size="sm" />
         </div>
 
-        {/* Date + timezone badge */}
+        {/* Date badge — DD/MM/YYYY, no timezone label */}
         {data && (
           <div className={styles.dateBadge}>
-            📅 {data.date}
-            <span className={styles.tzLabel}>IST · {data.timezone}</span>
+            📅 {formatDateDDMMYYYY(data.date)}
           </div>
         )}
 
-        {/* Summary: 3 metric cards (totals across all PGs) */}
-        <p className={styles.sectionTitle}>Today&apos;s Leads — All PGs</p>
-        <div className={styles.metricsRow}>
-          <MetricCard emoji="👁️"  value={totalViews}      label="Views"      accent="green"  />
-          <MetricCard emoji="💛"  value={totalInterested} label="Interested"  accent="amber"  />
-          <MetricCard emoji="🎯"  value={totalQualified}  label="Qualified"   accent="indigo" />
-        </div>
-
-        {/* Per-PG breakdown — only shown when owner has multiple PGs */}
-        {data && data.pgs.length > 0 ? (
-          <>
-            {data.pgs.length > 1 && (
-              <p className={styles.sectionTitle}>Breakdown by PG</p>
-            )}
-            {data.pgs.map((pg) => (
-              <PgCard key={pg.pgId} pg={pg} />
+        {/* ── Monthly Leads ── */}
+        <div className={styles.sectionHeader}>
+          <p className={styles.sectionTitle}>Monthly Leads</p>
+          <select
+            id="select-month"
+            className={styles.monthSelect}
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            aria-label="Select month"
+          >
+            {monthOptions.map((mo) => (
+              <option key={mo} value={mo}>
+                {MONTH_NAMES[mo - 1]}
+              </option>
             ))}
-          </>
-        ) : (
-          <div className={styles.emptyState}>
-            <span className={styles.emptyIcon}>📊</span>
-            <p className={styles.emptyTitle}>No activity today yet</p>
-            <p className={styles.emptyDesc}>
-              Leads data appears here once tenants start viewing and engaging with your PG listings.
-              Share your PG link to attract more visitors!
-            </p>
-          </div>
+          </select>
+        </div>
+        {data && (
+          <p className={styles.periodLabel}>
+            {monthLabel(data.month)}
+          </p>
         )}
+        <MonthlySection
+          pgs={data?.monthly ?? []}
+          emptyMsg="No activity this month yet"
+        />
 
-        {/* Legend — metric definitions */}
+        {/* ── Today's Leads ── */}
+        <div className={styles.sectionDivider} />
+        <p className={styles.sectionTitle}>
+          Today&apos;s Leads
+          {data && (
+            <span className={styles.todayDate}> — {formatDateDDMMYYYY(data.date)}</span>
+          )}
+        </p>
+        <TodaySection
+          pgs={data?.today ?? []}
+          emptyMsg="No activity today yet"
+        />
+
+        {/* Legend */}
         <div className={styles.legend}>
           <div className={styles.legendRow}>
             <span className={`${styles.legendDot} ${styles.green}`} />
             <span className={styles.legendText}>
-              <strong>Views</strong> — distinct visitors who opened your PG gallery today.
+              <strong>Views</strong> — distinct visitors who opened your PG gallery.
             </span>
           </div>
           <div className={styles.legendRow}>

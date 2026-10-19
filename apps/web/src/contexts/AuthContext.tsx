@@ -8,6 +8,9 @@ import React, {
   useCallback,
   ReactNode,
 } from "react";
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+
 
 interface Owner {
   id: string;
@@ -46,7 +49,11 @@ interface AuthContextType extends AuthState {
   signOut: () => void;
   refreshAuth: () => Promise<void>;
   setActivePg: (pgId: string) => void;
-  toggleSavePg: (pgId: string, save: boolean) => Promise<void>;
+  toggleSavePg: (pgId: string, save: boolean) => Promise<boolean>;
+  /** Re-grant consent for an already-authenticated role=user without signing out.
+   *  Opens a Google popup, records consent on the server, and updates client state.
+   *  Returns true on confirmed success, false on cancellation or error. */
+  grantConsent: () => Promise<boolean>;
 }
 
 const TOKEN_KEY = "pg_eg_token";
@@ -54,6 +61,10 @@ const ACTIVE_PG_KEY = "pg_eg_active_pg_id";
 const ROLE_KEY = "pg_eg_role";
 const OWNER_KEY = "pg_eg_owner";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const LS_CONSENT_KEY = "pg_eg_consent_v";
+/** Must match server constant in apps/server/src/routes/auth.ts */
+export const CURRENT_CONSENT_VERSION = 1;
+
 
 /** Safely read cached owner from localStorage (survives refresh). */
 function readCachedOwner(): Owner | null {
@@ -226,6 +237,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading: false,
         isAuthenticated: true,
       });
+      // Persist the fresh owner (including updated consentVersion) so page-reload
+      // restores the authoritative server state rather than a stale snapshot.
+      try { localStorage.setItem(OWNER_KEY, JSON.stringify(data.owner)); } catch { /* noop */ }
     } catch {
       // Network error (server unreachable, timeout, CORS, etc.)
       // Do NOT log the user out for a transient network failure —
@@ -241,8 +255,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshAuth();
   }, [refreshAuth]);
 
-  const toggleSavePg = useCallback(async (pgId: string, save: boolean) => {
-    if (!state.token || !state.owner) return;
+  const toggleSavePg = useCallback(async (pgId: string, save: boolean): Promise<boolean> => {
+    if (!state.token || !state.owner) return false;
     try {
       const res = await fetch(`${API_URL}/api/auth/save-pg`, {
         method: "POST",
@@ -260,14 +274,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...s,
           owner: updatedOwner,
         }));
+        return true;
       }
+      return false;
     } catch (err) {
       console.error("Failed to toggle save PG:", err);
+      return false;
     }
   }, [state.token, state.owner]);
 
+  /** Re-grant consent without sign-out:
+   *  1. Opens a Google popup (already-signed-in users auto-confirm instantly)
+   *  2. Sends the fresh idToken + consentGiven:true to /api/auth/google
+   *  3. On server success, calls signIn() so consentVersion is reflected immediately
+   *  Returns true on confirmed success, false on popup cancel or network error.
+   */
+  const grantConsent = useCallback(async (): Promise<boolean> => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const idToken = await result.user.getIdToken();
+
+      const res = await fetch(`${API_URL}/api/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken, role: "user", consentGiven: true }),
+      });
+      if (!res.ok) return false;
+
+      const data = await res.json();
+      // Record consent hint in localStorage so sign-in page skips the consent screen
+      if (data.consentUpToDate) {
+        localStorage.setItem(LS_CONSENT_KEY, String(CURRENT_CONSENT_VERSION));
+      }
+      // Update full auth state — this immediately unblocks the gated actions
+      signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs, data.role || "user");
+      return true;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      // Popup closed by user — silent, not an error
+      if (msg.includes("popup-closed-by-user") || msg.includes("cancelled-popup-request")) {
+        return false;
+      }
+      console.error("grantConsent error:", err);
+      return false;
+    }
+  }, [signIn]);
+
   return (
-    <AuthContext.Provider value={{ ...state, signIn, signOut, refreshAuth, setActivePg, toggleSavePg }}>
+    <AuthContext.Provider value={{ ...state, signIn, signOut, refreshAuth, setActivePg, toggleSavePg, grantConsent }}>
+
       {children}
     </AuthContext.Provider>
   );

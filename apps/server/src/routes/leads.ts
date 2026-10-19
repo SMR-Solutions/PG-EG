@@ -1,14 +1,19 @@
 /**
  * GET /api/leads/metrics
- * Owner-only endpoint: returns today's Leads funnel metrics for all PGs owned by the caller.
+ * Owner-only endpoint: returns today''s AND monthly Leads funnel metrics
+ * for all PGs owned by the caller.
  *
- * Timezone: Asia/Kolkata (IST, UTC+5:30) — the app's target market.
- * "Today" means IST calendar date; boundaries are computed server-side in UTC.
+ * Timezone: Asia/Kolkata (IST, UTC+5:30) � the app''s target market.
+ * Day/month boundaries are computed server-side in UTC.
+ *
+ * Query params (optional):
+ *   year  � 4-digit year  (must be current IST year; defaults to current year)
+ *   month � 1-12          (defaults to current IST month)
  *
  * Metrics (per PG, distinct-visitor counts):
- *   views           – visitors who opened the PG gallery
- *   interestedLeads – gallery openers who also saved OR shared that PG
- *   qualifiedLeads  – gallery openers who clicked BOTH Enquire AND Directions for that PG
+ *   views           � visitors who opened the PG gallery
+ *   interestedLeads � gallery openers who also saved OR shared that PG
+ *   qualifiedLeads  � gallery openers who clicked BOTH Enquire AND Directions
  *
  * Privacy: visitor_id values are NEVER returned. Only aggregate counts.
  */
@@ -20,63 +25,73 @@ import { requireAuth } from "../middleware/auth";
 
 const router = Router();
 
-// ── IST day boundary helper ───────────────────────────────────────────────────
-// IST = UTC+5:30.  We compute boundaries in JavaScript and pass them as UTC
-// timestamps so the query stays portable and fully parameterised.
+// -- IST helpers ---------------------------------------------------------------
 
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes
 
-interface DayWindow {
-  startUtc: Date;   // IST midnight → UTC
-  endUtc: Date;     // IST midnight + 24 h → UTC
-  dateIst: string;  // "YYYY-MM-DD" in IST (for the response body)
+interface TimeWindow {
+  startUtc: Date;
+  endUtc:   Date;
+  dateIst:  string;
 }
 
-function getIstDayWindow(): DayWindow {
-  const nowUtc = Date.now();
+/** Returns the IST calendar-day window for "today". */
+function getIstDayWindow(): TimeWindow {
+  const nowUtc   = Date.now();
   const nowIstMs = nowUtc + IST_OFFSET_MS;
-
-  // Build IST calendar date from UTC millis
-  const istDate = new Date(nowIstMs);
+  const istDate  = new Date(nowIstMs);
   const y = istDate.getUTCFullYear();
   const m = istDate.getUTCMonth();
   const d = istDate.getUTCDate();
 
-  // IST midnight for today expressed in UTC
   const istMidnightUtc = Date.UTC(y, m, d) - IST_OFFSET_MS;
-  const startUtc = new Date(istMidnightUtc);
-  const endUtc   = new Date(istMidnightUtc + 24 * 60 * 60 * 1000);
-  const dateIst  = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-
-  return { startUtc, endUtc, dateIst };
+  return {
+    startUtc: new Date(istMidnightUtc),
+    endUtc:   new Date(istMidnightUtc + 24 * 60 * 60 * 1000),
+    dateIst:  `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
+  };
 }
 
-// ── Metrics query ──────────────────────────────────────────────────────────────
-// One CTE query covers all of the owner's PGs in a single round-trip.
-// visitor_id columns are used only for COUNT(DISTINCT …) and never returned.
+/** Returns the IST calendar-month window for the given year + month (1-indexed).
+ *  Counts distinct visitors across the whole month � NOT a sum of daily counts. */
+function getIstMonthWindow(year: number, month: number): TimeWindow {
+  const startUtc = new Date(Date.UTC(year, month - 1, 1) - IST_OFFSET_MS);
+  const endUtc   = new Date(Date.UTC(year, month, 1) - IST_OFFSET_MS);
+  return {
+    startUtc,
+    endUtc,
+    dateIst: `${year}-${String(month).padStart(2, "0")}`,
+  };
+}
+
+/** Returns current IST year and month (1-indexed). */
+function currentIstYearMonth(): { year: number; month: number } {
+  const nowIstMs = Date.now() + IST_OFFSET_MS;
+  const d = new Date(nowIstMs);
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 };
+}
+
+// -- Metrics query --------------------------------------------------------------
 
 interface PgMetricsRow {
-  pg_id: string;
-  views: string | number;
+  pg_id:            string;
+  views:            string | number;
   interested_leads: string | number;
   qualified_leads:  string | number;
 }
 
 async function fetchMetricsForPgs(
-  pgIds: string[],
-  window: DayWindow,
-  db: ReturnType<typeof createDb>
+  pgIds:  string[],
+  window: TimeWindow,
+  db:     ReturnType<typeof createDb>
 ): Promise<PgMetricsRow[]> {
   if (pgIds.length === 0) return [];
 
-  // Build a type-safe UUID array literal for ANY(...)
-  // Each id is interpolated as a parameter; drizzle/neon will bind them safely.
-  const pgIdList = pgIds.map((id) => sql`${id}::uuid`);
+  const pgIdList  = pgIds.map((id) => sql`${id}::uuid`);
   const pgIdArray = sql.join(pgIdList, sql`, `);
 
   const result = await db.execute(sql`
     WITH filtered AS (
-      -- Restrict to owner's PGs and today's IST window in a single scan
       SELECT pg_id, visitor_id, event_type
       FROM   pg_events
       WHERE  pg_id = ANY(ARRAY[${pgIdArray}])
@@ -112,17 +127,55 @@ async function fetchMetricsForPgs(
   return result.rows as unknown as PgMetricsRow[];
 }
 
-// ── Route ─────────────────────────────────────────────────────────────────────
+function buildPgMetrics(
+  ownerPgs:    { id: string; name: string }[],
+  metricsRows: PgMetricsRow[]
+) {
+  const map = new Map<string, PgMetricsRow>(metricsRows.map((r) => [r.pg_id, r]));
+  return ownerPgs.map((pg) => {
+    const m = map.get(pg.id);
+    return {
+      pgId:            pg.id,
+      pgName:          pg.name,
+      views:           m ? Number(m.views)            : 0,
+      interestedLeads: m ? Number(m.interested_leads) : 0,
+      qualifiedLeads:  m ? Number(m.qualified_leads)  : 0,
+    };
+  });
+}
 
-// GET /api/leads/metrics
+// -- Route ---------------------------------------------------------------------
+
+// GET /api/leads/metrics[?year=YYYY&month=M]
 // Requires: Authorization: Bearer <jwt>
 router.get("/metrics", requireAuth, async (req: Request, res: Response) => {
   try {
     const ownerId = req.owner!.ownerId;
     const db      = createDb(process.env.DATABASE_URL!);
-    const window  = getIstDayWindow();
 
-    // 1. Fetch all PGs owned by this owner (ownership check built into the query)
+    const ist = currentIstYearMonth();
+    let reqYear  = ist.year;
+    let reqMonth = ist.month;
+
+    if (req.query.year !== undefined || req.query.month !== undefined) {
+      const y  = parseInt(String(req.query.year  ?? ist.year),  10);
+      const mo = parseInt(String(req.query.month ?? ist.month), 10);
+
+      if (isNaN(y) || isNaN(mo) || mo < 1 || mo > 12 || y !== ist.year) {
+        res.status(400).json({ error: "Invalid year or month. Only current-year months (1-12) are supported." });
+        return;
+      }
+      if (y === ist.year && mo > ist.month) {
+        res.status(400).json({ error: "Cannot request metrics for a future month." });
+        return;
+      }
+      reqYear  = y;
+      reqMonth = mo;
+    }
+
+    const todayWindow = getIstDayWindow();
+    const monthWindow = getIstMonthWindow(reqYear, reqMonth);
+
     const ownerPgs = await db
       .select({ id: pgs.id, name: pgs.name })
       .from(pgs)
@@ -130,39 +183,28 @@ router.get("/metrics", requireAuth, async (req: Request, res: Response) => {
 
     if (ownerPgs.length === 0) {
       res.json({
-        date:     window.dateIst,
+        date:     todayWindow.dateIst,
+        month:    monthWindow.dateIst,
         timezone: "Asia/Kolkata",
-        pgs:      [],
+        today:    [],
+        monthly:  [],
       });
       return;
     }
 
     const pgIds = ownerPgs.map((p) => p.id);
 
-    // 2. Fetch metrics for all owner PGs in one query
-    const metricsRows = await fetchMetricsForPgs(pgIds, window, db);
-
-    // Index metrics by pgId for O(1) lookup
-    const metricsMap = new Map<string, PgMetricsRow>(
-      metricsRows.map((row) => [row.pg_id, row])
-    );
-
-    // 3. Build response — every PG appears even if it has zero events today
-    const pgMetrics = ownerPgs.map((pg) => {
-      const m = metricsMap.get(pg.id);
-      return {
-        pgId:            pg.id,
-        pgName:          pg.name,
-        views:           m ? Number(m.views)            : 0,
-        interestedLeads: m ? Number(m.interested_leads) : 0,
-        qualifiedLeads:  m ? Number(m.qualified_leads)  : 0,
-      };
-    });
+    const [todayRows, monthRows] = await Promise.all([
+      fetchMetricsForPgs(pgIds, todayWindow, db),
+      fetchMetricsForPgs(pgIds, monthWindow, db),
+    ]);
 
     res.json({
-      date:     window.dateIst,
+      date:     todayWindow.dateIst,
+      month:    monthWindow.dateIst,
       timezone: "Asia/Kolkata",
-      pgs:      pgMetrics,
+      today:    buildPgMetrics(ownerPgs, todayRows),
+      monthly:  buildPgMetrics(ownerPgs, monthRows),
     });
   } catch (err) {
     console.error("Leads metrics error:", err);
