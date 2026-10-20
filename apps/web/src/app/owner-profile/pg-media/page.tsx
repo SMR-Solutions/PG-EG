@@ -6,7 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-const MAX_ITEMS = 10;
+const MAX_IMAGES = 30;
+const MAX_DOCUMENTS = 10;
 
 interface MediaItem {
   url: string;
@@ -39,6 +40,7 @@ function PgMediaInner() {
     token ? { Authorization: `Bearer ${token}` } : {}, [token]);
 
   const isImages = tab === "images";
+  const maxItems = isImages ? MAX_IMAGES : MAX_DOCUMENTS;
   const endpoint = isImages ? "images" : "documents";
   const label = isImages ? "PG Images" : "Important Documents";
   const icon = isImages ? "🖼️" : "🔒";
@@ -78,8 +80,8 @@ function PgMediaInner() {
   }
 
   async function uploadFile(file: File, nameOverride?: string) {
-    if (items.length >= MAX_ITEMS) {
-      setError(`Only ${MAX_ITEMS} ${isImages ? "images" : "documents"} allowed. Delete one first.`);
+    if (items.length >= maxItems) {
+      setError(`Only ${maxItems} ${isImages ? "images" : "documents"} allowed. Delete one first.`);
       return;
     }
     // Guard: 30MB max (base64 adds ~33%, so 30MB file ≈ 40MB request, within 50MB server limit)
@@ -181,14 +183,14 @@ function PgMediaInner() {
           <h1 className={styles.title}>{icon} {label}</h1>
           <p className={styles.subtitle}>{isImages ? "Upload photos of your PG to showcase to tenants." : "Store important PG documents privately. Only you can access these."}</p>
           <div className={styles.countBadge}>
-            <span style={{ color: items.length >= MAX_ITEMS ? "#e63946" : "#2dc653" }}>{items.length}</span>
-            <span> / {MAX_ITEMS}</span>
+            <span style={{ color: items.length >= maxItems ? "#e63946" : "#2dc653" }}>{items.length}</span>
+            <span> / {maxItems}</span>
           </div>
         </div>
         {/* Upload button */}
         {!loading && (
-          <button className={styles.uploadBtn} onClick={() => fileRef.current?.click()} disabled={uploading || items.length >= MAX_ITEMS} id="btn-upload-media">
-            {uploading ? <><span className={styles.spinner} /> Uploading…</> : items.length >= MAX_ITEMS ? `✋ Max ${MAX_ITEMS} reached` : `+ Upload ${isImages ? "Image" : "Document"}`}
+          <button className={styles.uploadBtn} onClick={() => fileRef.current?.click()} disabled={uploading || items.length >= maxItems} id="btn-upload-media">
+            {uploading ? <><span className={styles.spinner} /> Uploading…</> : items.length >= maxItems ? `✋ Max ${maxItems} reached` : `+ Upload ${isImages ? "Image" : "Document"}`}
           </button>
         )}
         <input ref={fileRef} type="file" accept={accept} style={{ display: "none" }} onChange={handleFileChange} />

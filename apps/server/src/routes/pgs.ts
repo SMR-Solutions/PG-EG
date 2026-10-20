@@ -192,14 +192,14 @@ router.get("/:id/images", requireAuth, async (req: Request, res: Response) => {
   } catch { res.status(500).json({ error: "Failed" }); }
 });
 
-// ─── PATCH /api/pgs/:id/images  (owner only, max 10) ───
+// ─── PATCH /api/pgs/:id/images  (owner only, max 30) ───
 router.patch("/:id/images", requireAuth, async (req: Request, res: Response) => {
   try {
     const pg = await verifyPgOwnership(req.params.id, req.owner!.ownerId, res);
     if (!pg) return;
     const { images } = req.body as { images: { url: string; fileId: string; caption?: string }[] };
-    if (!Array.isArray(images) || images.length > 10) {
-      res.status(400).json({ error: "Max 10 images allowed" }); return;
+    if (!Array.isArray(images) || images.length > 30) {
+      res.status(400).json({ error: "Max 30 images allowed" }); return;
     }
     const db = createDb(process.env.DATABASE_URL!);
     const [updated] = await db.update(pgs)
