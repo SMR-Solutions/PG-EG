@@ -176,39 +176,6 @@
   z-index: 2;
 }
 
-.videoMetaRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.metaPill {
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: var(--bg-overlay, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
-  color: var(--text-secondary, #94a3b8);
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.metaPillLive {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.35);
-  color: #ef4444;
-}
-
-.metaPillAddress {
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .infoBanner {
   background: rgba(239, 68, 68, 0.06);
   border: 1px solid rgba(239, 68, 68, 0.2);
@@ -313,11 +280,6 @@
 }
 :global([data-theme="light"]) .infoDesc {
   color: #374151;
-}
-:global([data-theme="light"]) .metaPill {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: #334155;
 }
 :global([data-theme="light"]) .emptyTitle {
   color: #000000;

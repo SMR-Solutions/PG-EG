@@ -240,11 +240,11 @@ export default function PGDetailClient({ pg }: Props) {
                   className={pgStyles.livePgBannerBtn}
                   onClick={() => setLiveModalOpen(true)}
                   id="btn-live-pg-detail"
-                  title="Watch 5–10s Live Location Video"
+                  title="Watch Live Location Video — Exterior & Street"
                 >
                   <span className={pgStyles.livePulseDot} />
                   <span className={pgStyles.livePgBannerTitle}>Live PG</span>
-                  <span className={pgStyles.livePgBannerBadge}>5–10s Exterior &amp; Street</span>
+                  <span className={pgStyles.livePgBannerBadge}>Exterior &amp; Street</span>
                   <span className={pgStyles.livePgPlayIcon}>▶</span>
                 </button>
               </div>

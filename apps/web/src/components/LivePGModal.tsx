@@ -92,20 +92,6 @@ export default function LivePGModal({
               </div>
             </div>
 
-            <div className={styles.videoMetaRow}>
-              <span className={`${styles.metaPill} ${styles.metaPillLive}`}>
-                ⏱️ {duration ? `${duration}s duration` : "5–10s location video"}
-              </span>
-              <span className={styles.metaPill}>
-                💎 Original Uncompressed HD
-              </span>
-              {address && (
-                <span className={`${styles.metaPill} ${styles.metaPillAddress}`} title={address}>
-                  📍 {address.split(",")[0]}
-                </span>
-              )}
-            </div>
-
             <div className={styles.infoBanner}>
               <p className={styles.infoTitle}>
                 <span>🏢</span> Verified Live Exterior &amp; Street
