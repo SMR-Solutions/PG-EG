@@ -286,8 +286,11 @@ export default function FindPGPage() {
 
   // Share a PG — attaches first image as File so WhatsApp shows image + text + ONE link
   const handleSharePg = async (pg: PGResult) => {
-    // Guest users are prompted to sign in first
-    if (!isAuthenticated) { alert("Sign in to share PGs!"); return; }
+    // Guest users are routed to sign in first
+    if (!isAuthenticated) {
+      router.push("/sign-in?from=/find-pg&role=user");
+      return;
+    }
     // Authenticated students with withdrawn consent are blocked
     if (consentRequired) {
       setConsentModalOpen(true);
@@ -1315,7 +1318,10 @@ export default function FindPGPage() {
                         className={styles.cardHeaderIconBtn}
                         title={owner?.savedPgs?.includes(pg.id) ? "Unsave" : "Save PG"}
                         onClick={async () => {
-                          if (!isAuthenticated) { alert("Sign in to save PGs!"); return; }
+                          if (!isAuthenticated) {
+                            router.push("/sign-in?from=/find-pg&role=user");
+                            return;
+                          }
                           if (consentRequired) { setConsentModalOpen(true); return; }
                           const saving = !owner?.savedPgs?.includes(pg.id);
                           if (toggleSavePg) {
@@ -1361,7 +1367,10 @@ export default function FindPGPage() {
                           className={styles.favBtn}
                           onClick={async (e) => {
                             e.stopPropagation();
-                            if (!isAuthenticated) { alert("Sign in to save PGs!"); return; }
+                            if (!isAuthenticated) {
+                              router.push("/sign-in?from=/find-pg&role=user");
+                              return;
+                            }
                             if (consentRequired) { setConsentModalOpen(true); return; }
                             const saving = !owner?.savedPgs?.includes(pg.id);
                             if (toggleSavePg) {
@@ -1483,7 +1492,7 @@ export default function FindPGPage() {
                               onClick={(e) => {
                                 if (!isAuthenticated) {
                                   e.preventDefault();
-                                  alert("Sign in to enquire about this PG!");
+                                  router.push("/sign-in?from=/find-pg&role=user");
                                   return;
                                 }
                                 if (consentRequired) {
@@ -1515,7 +1524,7 @@ export default function FindPGPage() {
                               onClick={(e) => {
                                 if (!isAuthenticated) {
                                   e.preventDefault();
-                                  alert("Sign in to get directions to this PG!");
+                                  router.push("/sign-in?from=/find-pg&role=user");
                                   return;
                                 }
                                 if (consentRequired) {

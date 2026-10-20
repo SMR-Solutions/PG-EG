@@ -46,6 +46,7 @@ export default function PGDetailClient({ pg }: Props) {
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [consentGranting, setConsentGranting] = useState(false);
   const [showConsentBanner, setShowConsentBanner] = useState(false);
+  const [copiedToast, setCopiedToast] = useState(false);
 
   const isUserRole = owner?.role === "user";
   const consentUpToDate = isUserRole && owner?.consentVersion === CURRENT_CONSENT_VERSION;
@@ -80,14 +81,18 @@ export default function PGDetailClient({ pg }: Props) {
     return () => window.removeEventListener("popstate", fn);
   }, []);
 
-  const handleShare = useCallback(async () => {
+  const handleShare = useCallback(async (e?: React.MouseEvent) => {
+    e?.stopPropagation?.();
+    if (!isAuthenticated) {
+      router.push(`/sign-in?from=/pg/${pg.id}&role=user`);
+      return;
+    }
     // Consent gate — blocks authenticated students with withdrawn consent
     if (consentRequired) { setShowConsentBanner(true); return; }
 
     const pgUrl = `${window.location.origin}/pg/${pg.id}`;
 
     // Track share initiation before opening the share drawer.
-    // We record that the user triggered the share UI, not that anyone received it.
     trackEvent("pg_shared", pg.id);
 
     // Text has NO URL — url field is separate so WhatsApp shows it ONCE as a rich preview card
@@ -114,10 +119,10 @@ export default function PGDetailClient({ pg }: Props) {
       navigator.share({ title: pg.name, text: shareText, url: pgUrl, ...filesPayload }).catch(() => {});
     } else {
       navigator.clipboard.writeText(`${shareText}\n\n${pgUrl}`);
-      alert("PG details copied to clipboard!");
+      setCopiedToast(true);
+      setTimeout(() => setCopiedToast(false), 2500);
     }
-  }, [pg, consentRequired]);
-
+  }, [pg, consentRequired, isAuthenticated, router]);
 
   const isSaved = owner?.savedPgs?.includes(pg.id);
   const typeClass = pg.type === "ladies" ? styles.pgTypeLadies : pg.type === "gents" ? styles.pgTypeGents : styles.pgTypeColiving;
@@ -125,26 +130,46 @@ export default function PGDetailClient({ pg }: Props) {
 
   const SaveShareButtons = ({ inline = false }: { inline?: boolean }) => (
     <div className={inline ? pgStyles.headerActions : pgStyles.imageActions}>
-      {isAuthenticated && (
-        <button
-          className={pgStyles.iconBtn}
-          title={isSaved ? "Remove from saved" : "Save PG"}
-          onClick={async () => {
-            if (toggleSavePg) {
-              const saving = !isSaved;
-              // Consent gate
-              if (consentRequired) { setShowConsentBanner(true); return; }
-              const ok = await toggleSavePg(pg.id, saving);
-              // Track pg_saved only after a confirmed save (not on unsave)
-              if (ok && saving) trackEvent("pg_saved", pg.id);
-            }
-          }}
-        >
-          {isSaved ? "❤️" : "🤍"}
-        </button>
-      )}
-      <button className={pgStyles.iconBtn} title="Share this PG" onClick={handleShare}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <button
+        type="button"
+        className={pgStyles.iconBtn}
+        title={isSaved ? "Remove from saved" : "Save PG"}
+        aria-label={isSaved ? "Remove from saved" : "Save PG"}
+        onClick={async (e) => {
+          e.stopPropagation();
+          if (!isAuthenticated) {
+            router.push(`/sign-in?from=/pg/${pg.id}&role=user`);
+            return;
+          }
+          if (consentRequired) {
+            setShowConsentBanner(true);
+            return;
+          }
+          if (toggleSavePg) {
+            const saving = !isSaved;
+            const ok = await toggleSavePg(pg.id, saving);
+            if (ok && saving) trackEvent("pg_saved", pg.id);
+          }
+        }}
+      >
+        {isSaved ? (
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" strokeWidth="1.5">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+        ) : (
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+        )}
+      </button>
+      <button
+        type="button"
+        className={pgStyles.iconBtn}
+        title="Share this PG"
+        aria-label="Share this PG"
+        onClick={handleShare}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
           <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
         </svg>
@@ -343,7 +368,7 @@ export default function PGDetailClient({ pg }: Props) {
                       onClick={(e) => {
                         if (!isAuthenticated) {
                           e.preventDefault();
-                          alert("Sign in to enquire about this PG!");
+                          router.push(`/sign-in?from=/pg/${pg.id}&role=user`);
                           return;
                         }
                         if (consentRequired) {
@@ -379,7 +404,7 @@ export default function PGDetailClient({ pg }: Props) {
                       onClick={(e) => {
                         if (!isAuthenticated) {
                           e.preventDefault();
-                          alert("Sign in to get directions to this PG!");
+                          router.push(`/sign-in?from=/pg/${pg.id}&role=user`);
                           return;
                         }
                         if (consentRequired) {
@@ -445,6 +470,13 @@ export default function PGDetailClient({ pg }: Props) {
         address={pg.address}
         duration={pg.liveVideo?.duration}
       />
+
+      {/* Floating Copied Toast */}
+      {copiedToast && (
+        <div className={pgStyles.toastFloating}>
+          📋 Link copied to clipboard!
+        </div>
+      )}
     </main>
   );
 }
