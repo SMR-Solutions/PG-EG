@@ -10,6 +10,7 @@ import dynamic from "next/dynamic";
 import styles from "../../find-pg/page.module.css";
 import pgStyles from "./pg.module.css";
 import { trackEvent } from "@/lib/trackEvent";
+import AppLogo from "@/components/AppLogo";
 
 const PGPhotoLightbox = dynamic(() => import("@/components/PGPhotoLightbox"), { ssr: false });
 const LivePGModal = dynamic(() => import("@/components/LivePGModal"), { ssr: false });
@@ -156,9 +157,12 @@ export default function PGDetailClient({ pg }: Props) {
       <div className={styles.orb1} />
       <div className={styles.orb2} />
 
-      {/* ── Navbar: back ← | theme toggle ── */}
+      {/* ── Navbar: back ← | PG-EG App Logo (Top Centre) | theme toggle ── */}
       <div className={pgStyles.navbar}>
         <button className={pgStyles.navBtn} onClick={() => router.push("/find-pg")} title="Find PGs">←</button>
+        <div className={pgStyles.navLogoWrap}>
+          <AppLogo size="sm" href="/find-pg" />
+        </div>
         <button className={pgStyles.navBtn} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
           {theme === "dark" ? "☀️" : "🌙"}
         </button>

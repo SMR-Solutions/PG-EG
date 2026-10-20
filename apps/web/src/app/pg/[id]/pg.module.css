@@ -9,6 +9,22 @@
   z-index: 50;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.navLogoWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 400px) {
+  .navLogoWrap :global(#app-logo-btn img) {
+    max-width: 115px;
+  }
 }
 
 .navBtn {
