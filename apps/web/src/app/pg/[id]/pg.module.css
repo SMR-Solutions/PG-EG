@@ -35,9 +35,17 @@
   color: #111;
 }
 
+/* ── Page Root ── */
+.main {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
 /* ── Sign-in Banner ── */
 .signinBanner {
-  margin: 12px 12px 16px;
+  margin: 12px 16px 16px;
   padding: 14px 16px;
   background: linear-gradient(135deg, rgba(255, 180, 0, 0.12), rgba(255, 100, 0, 0.08));
   border: 1px solid rgba(255, 180, 0, 0.25);
@@ -45,6 +53,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-sizing: border-box;
 }
 
 /* Text block */
@@ -141,9 +150,44 @@
 
 /* ── Card wrapper ── */
 .cardWrap {
+  width: 100%;
   max-width: 900px;
   margin: 16px auto 40px;
   padding: 0 16px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* ── Card & Content Containers ── */
+.pgCard {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.cardLayout {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.cardImageArea {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.cardContentArea {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.pgTypeRow {
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 /* ── Card header row — address + inline buttons ── */
@@ -155,14 +199,14 @@
   padding: 0 0 4px;
 }
 
-/* ── Icon buttons (save/share) ── */
+/* ── Icon buttons (save/share) — boxy ── */
 .iconBtn {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 34px;
   height: 34px;
-  border-radius: 50%;
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.08);
   color: inherit;
@@ -172,7 +216,7 @@
   flex-shrink: 0;
 }
 .iconBtn:hover {
-  transform: scale(1.1);
+  transform: scale(1.06);
   background: rgba(255, 255, 255, 0.15);
 }
 
@@ -204,12 +248,103 @@
   border-color: rgba(255, 255, 255, 0.18);
   color: #fff;
   backdrop-filter: blur(4px);
+  border-radius: 8px;
 }
 .imageActions .iconBtn:hover {
   background: rgba(0, 0, 0, 0.7);
 }
 
-/* ── Responsive: flip visibility at ≥768px ── */
+/* ── Small Screens (Mobile: ≤480px) ── */
+@media (max-width: 480px) {
+  .cardWrap {
+    padding: 0 16px;
+  }
+  .cardLayout {
+    padding: 10px 12px 14px 12px;
+  }
+  .pgCardBtns {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    padding-top: 10px;
+    margin-top: 4px;
+  }
+  .actionBtn {
+    flex: 1 1 calc(50% - 4px);
+    height: 52px;
+    padding: 0 8px;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .actionBtn:last-child {
+    flex: 1 1 100%;
+  }
+  .actionIcon {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+    margin-right: 6px;
+    flex-shrink: 0;
+    border-radius: 8px;
+  }
+  .actionText {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .actionTitle {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .actionSub {
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* ── Medium Screens (Tablets: 768px - 879px) ── */
+@media (min-width: 768px) and (max-width: 879px) {
+  .cardImageArea {
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .pgCardBtns {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .actionBtn {
+    flex: 1 1 calc(50% - 4px);
+    padding: 0 10px;
+    height: 54px;
+    min-width: 0;
+  }
+  .actionBtn:last-child {
+    flex: 1 1 100%;
+  }
+  .actionIcon {
+    width: 34px;
+    height: 34px;
+    font-size: 18px;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+  .actionTitle {
+    font-size: 13.5px;
+  }
+  .actionSub {
+    font-size: 11px;
+  }
+}
+
+/* ── Desktop: flip save/share visibility at ≥768px ── */
 @media (min-width: 768px) {
   .headerActions {
     display: flex; /* show in header on desktop */

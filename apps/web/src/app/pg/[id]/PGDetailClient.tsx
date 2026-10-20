@@ -148,7 +148,7 @@ export default function PGDetailClient({ pg }: Props) {
   );
 
   return (
-    <main className={styles.main} data-theme={theme}>
+    <main className={`${styles.main} ${pgStyles.main}`} data-theme={theme}>
       <div className={styles.orb1} />
       <div className={styles.orb2} />
 
@@ -189,7 +189,7 @@ export default function PGDetailClient({ pg }: Props) {
 
       {/* PG Card */}
       <div className={pgStyles.cardWrap}>
-        <div className={styles.pgCard}>
+        <div className={`${styles.pgCard} ${pgStyles.pgCard}`}>
 
           {/* Card Header — desktop: shows address + inline save/share */}
           <div className={pgStyles.cardHeaderRow}>
@@ -204,9 +204,9 @@ export default function PGDetailClient({ pg }: Props) {
             <SaveShareButtons inline />
           </div>
 
-          <div className={styles.cardLayout}>
+          <div className={`${styles.cardLayout} ${pgStyles.cardLayout}`}>
             {/* Image */}
-            <div className={styles.cardImageArea} onClick={openGallery} style={{ cursor: pg.pgImages?.length ? "pointer" : "default" }}>
+            <div className={`${styles.cardImageArea} ${pgStyles.cardImageArea}`} onClick={openGallery} style={{ cursor: pg.pgImages?.length ? "pointer" : "default" }}>
               {pg.pgImages && pg.pgImages.length > 0 ? (
                 <img
                   src={pg.pgImages[0]?.url || pg.pgImages[0]}
@@ -228,10 +228,10 @@ export default function PGDetailClient({ pg }: Props) {
             </div>
 
             {/* Content */}
-            <div className={styles.cardContentArea}>
+            <div className={`${styles.cardContentArea} ${pgStyles.cardContentArea}`}>
               <h1 className={styles.pgName} style={{ fontSize: "clamp(18px, 4vw, 24px)" }}>{pg.name}</h1>
 
-              <div className={styles.pgTypeRow}>
+              <div className={`${styles.pgTypeRow} ${pgStyles.pgTypeRow}`}>
                 <span className={typeClass}>{typeLabel}</span>
                 {pg.baseRent && (
                   <span className={styles.pgBaseRent}>
@@ -298,13 +298,13 @@ export default function PGDetailClient({ pg }: Props) {
               )}
 
               {/* Buttons — same layout as FindPGs page */}
-              <div className={styles.pgCardBtns}>
+              <div className={`${styles.pgCardBtns} ${pgStyles.pgCardBtns}`}>
                 {pg.pgImages && pg.pgImages.length > 0 && (
-                  <button className={`${styles.actionBtn} ${styles.actionBtnView}`} onClick={openGallery} id="btn-view-photos">
-                    <span className={styles.actionIcon}>🏢</span>
-                    <div className={styles.actionText}>
-                      <span className={styles.actionTitle}>View PG</span>
-                      <span className={styles.actionSub}>Photos & details</span>
+                  <button className={`${styles.actionBtn} ${styles.actionBtnView} ${pgStyles.actionBtn}`} onClick={openGallery} id="btn-view-photos">
+                    <span className={`${styles.actionIcon} ${pgStyles.actionIcon}`}>🏢</span>
+                    <div className={`${styles.actionText} ${pgStyles.actionText}`}>
+                      <span className={`${styles.actionTitle} ${pgStyles.actionTitle}`}>View PG</span>
+                      <span className={`${styles.actionSub} ${pgStyles.actionSub}`}>Photos & details</span>
                     </div>
                   </button>
                 )}
@@ -314,7 +314,7 @@ export default function PGDetailClient({ pg }: Props) {
                     <div className={styles.btnDivider} />
                     <a
                       href={`tel:${pg.managerPhone.replace(/\D/g, "")}`}
-                      className={`${styles.actionBtn} ${styles.actionBtnEnquire}`}
+                      className={`${styles.actionBtn} ${styles.actionBtnEnquire} ${pgStyles.actionBtn}`}
                       id="btn-enquire"
                       onClick={(e) => {
                         if (!isAuthenticated) {
@@ -330,10 +330,10 @@ export default function PGDetailClient({ pg }: Props) {
                         trackEvent("pg_enquire_clicked", pg.id);
                       }}
                     >
-                      <span className={styles.actionIcon}>☎️</span>
-                      <div className={styles.actionText}>
-                        <span className={styles.actionTitle}>Enquire</span>
-                        <span className={styles.actionSub}>Contact owner</span>
+                      <span className={`${styles.actionIcon} ${pgStyles.actionIcon}`}>☎️</span>
+                      <div className={`${styles.actionText} ${pgStyles.actionText}`}>
+                        <span className={`${styles.actionTitle} ${pgStyles.actionTitle}`}>Enquire</span>
+                        <span className={`${styles.actionSub} ${pgStyles.actionSub}`}>Contact owner</span>
                       </div>
                     </a>
                   </>
@@ -350,7 +350,7 @@ export default function PGDetailClient({ pg }: Props) {
                       }
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`${styles.actionBtn} ${styles.actionBtnDirections}`}
+                      className={`${styles.actionBtn} ${styles.actionBtnDirections} ${pgStyles.actionBtn}`}
                       id="btn-directions"
                       onClick={(e) => {
                         if (!isAuthenticated) {
@@ -366,10 +366,10 @@ export default function PGDetailClient({ pg }: Props) {
                         trackEvent("pg_directions_clicked", pg.id);
                       }}
                     >
-                      <span className={styles.actionIcon}>🗺️</span>
-                      <div className={styles.actionText}>
-                        <span className={styles.actionTitle}>Directions</span>
-                        <span className={styles.actionSub}>Reach easily</span>
+                      <span className={`${styles.actionIcon} ${pgStyles.actionIcon}`}>🗺️</span>
+                      <div className={`${styles.actionText} ${pgStyles.actionText}`}>
+                        <span className={`${styles.actionTitle} ${pgStyles.actionTitle}`}>Directions</span>
+                        <span className={`${styles.actionSub} ${pgStyles.actionSub}`}>Reach easily</span>
                       </div>
                     </a>
                   </>
