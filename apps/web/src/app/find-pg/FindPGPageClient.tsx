@@ -10,6 +10,7 @@ import dynamic from "next/dynamic";
 import AppLogo from "@/components/AppLogo";
 
 const PGPhotoLightbox = dynamic(() => import("@/components/PGPhotoLightbox"), { ssr: false });
+const LivePGModal = dynamic(() => import("@/components/LivePGModal"), { ssr: false });
 const PGMap = lazy(() => import("@/components/PGMap"));
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -42,6 +43,8 @@ interface PGResult {
   longitude: number | null;
   baseRent?: number | null;
   pgImages?: any[];
+  liveVideoUrl?: string | null;
+  liveVideo?: { url: string; fileId?: string; duration?: number } | null;
 }
 
 type Step = "search" | "results";
@@ -256,6 +259,7 @@ export default function FindPGPage() {
   // Type filter for results
   const [typeFilter, setTypeFilter] = useState<"all" | "gents" | "ladies" | "coliving">("all");
   const [viewImagesFor, setViewImagesFor] = useState<PGResult | null>(null);
+  const [activeLivePg, setActiveLivePg] = useState<PGResult | null>(null);
 
   // Gallery History state management
   const openGallery = (pg: PGResult) => {
@@ -1286,6 +1290,20 @@ export default function FindPGPage() {
                     <span className={styles.travelWrap}>
                       {walkOrRide(pg.distanceKm)}
                     </span>
+                    {/* 🔴 Live PG button beside travel distance — zero restrictions */}
+                    <button
+                      type="button"
+                      className={styles.livePgHeaderBtn}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveLivePg(pg);
+                      }}
+                      id={`btn-live-pg-${pg.id}`}
+                      title="Watch 5–10s live location video of building & neighbourhood"
+                    >
+                      <span className={styles.livePulseDotSmall} />
+                      <span>Live PG</span>
+                    </button>
                     {pg.address && (
                       <span className={styles.headerAddressDesk}>
                         <span className={styles.navIcon}>↗</span> {pg.address.split(",")[0]} <span className={styles.caret}>›</span>
@@ -1573,6 +1591,17 @@ export default function FindPGPage() {
           images={viewImagesFor.pgImages}
         />
       )}
+
+      {/* ── Live PG Video Modal — Zero restrictions, open to everyone ── */}
+      <LivePGModal
+        isOpen={!!activeLivePg}
+        onClose={() => setActiveLivePg(null)}
+        pgName={activeLivePg?.name || "PG"}
+        videoUrl={activeLivePg?.liveVideoUrl}
+        address={activeLivePg?.address}
+        duration={activeLivePg?.liveVideo?.duration}
+      />
+
       {consentModalOpen && (
         <div className={styles.imageModalOverlay} onClick={() => setConsentModalOpen(false)}>
           <div

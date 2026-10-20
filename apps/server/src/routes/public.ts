@@ -358,7 +358,8 @@ router.post("/pgs/bulk", async (req: Request, res: Response) => {
     res.json({ pgs: pgResults.map(p => ({
       ...p,
       pgImages: JSON.parse(p.pgImages || "[]"),
-      sharings: JSON.parse(p.sharings || "[]")
+      sharings: JSON.parse(p.sharings || "[]"),
+      liveVideo: p.liveVideo ? JSON.parse(p.liveVideo) : null,
     }))});
   } catch (err) {
     console.error("Bulk PGs fetch error:", err);

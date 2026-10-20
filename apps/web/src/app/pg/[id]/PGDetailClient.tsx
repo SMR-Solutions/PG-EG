@@ -12,6 +12,7 @@ import pgStyles from "./pg.module.css";
 import { trackEvent } from "@/lib/trackEvent";
 
 const PGPhotoLightbox = dynamic(() => import("@/components/PGPhotoLightbox"), { ssr: false });
+const LivePGModal = dynamic(() => import("@/components/LivePGModal"), { ssr: false });
 
 interface PGData {
   id: string;
@@ -26,6 +27,8 @@ interface PGData {
   baseRent?: number | null;
   pgImages?: any[];
   description?: string | null;
+  liveVideoUrl?: string | null;
+  liveVideo?: { url: string; fileId?: string; duration?: number } | null;
 }
 
 interface Props {
@@ -38,6 +41,7 @@ export default function PGDetailClient({ pg }: Props) {
   const { theme, setTheme } = useTheme();
   const { canInstall, installing, triggerInstall } = usePwaInstall();
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [liveModalOpen, setLiveModalOpen] = useState(false);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [consentGranting, setConsentGranting] = useState(false);
   const [showConsentBanner, setShowConsentBanner] = useState(false);
@@ -229,6 +233,22 @@ export default function PGDetailClient({ pg }: Props) {
 
             {/* Content */}
             <div className={`${styles.cardContentArea} ${pgStyles.cardContentArea}`}>
+              {/* Eye-catching 🔴 Live PG button directly above PG Name */}
+              <div className={pgStyles.livePgTopRow}>
+                <button
+                  type="button"
+                  className={pgStyles.livePgBannerBtn}
+                  onClick={() => setLiveModalOpen(true)}
+                  id="btn-live-pg-detail"
+                  title="Watch 5–10s Live Location Video"
+                >
+                  <span className={pgStyles.livePulseDot} />
+                  <span className={pgStyles.livePgBannerTitle}>Live PG</span>
+                  <span className={pgStyles.livePgBannerBadge}>5–10s Exterior &amp; Street</span>
+                  <span className={pgStyles.livePgPlayIcon}>▶</span>
+                </button>
+              </div>
+
               <h1 className={styles.pgName} style={{ fontSize: "clamp(18px, 4vw, 24px)" }}>{pg.name}</h1>
 
               <div className={`${styles.pgTypeRow} ${pgStyles.pgTypeRow}`}>
@@ -411,6 +431,16 @@ export default function PGDetailClient({ pg }: Props) {
           images={pg.pgImages}
         />
       )}
+
+      {/* Live PG Video Modal — Zero restrictions, open to all viewers */}
+      <LivePGModal
+        isOpen={liveModalOpen}
+        onClose={() => setLiveModalOpen(false)}
+        pgName={pg.name}
+        videoUrl={pg.liveVideoUrl}
+        address={pg.address}
+        duration={pg.liveVideo?.duration}
+      />
     </main>
   );
 }
