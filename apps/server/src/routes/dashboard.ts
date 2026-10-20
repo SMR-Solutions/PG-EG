@@ -114,10 +114,20 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
       return { ...room, beds: roomBeds };
     });
 
+    const safeJson = (val: any, fallback: any) => {
+      if (!val) return fallback;
+      try {
+        return typeof val === "string" ? JSON.parse(val) : val;
+      } catch {
+        return fallback;
+      }
+    };
+
     res.json({
       pg: {
         ...pg,
-        sharings: JSON.parse(pg.sharings),
+        sharings: safeJson(pg.sharings, [1]),
+        pgImages: safeJson(pg.pgImages, []),
         managerName: pg.managerName || null,
         managerPhone: pg.managerPhone || null,
         owner: ownerResult[0] || null,

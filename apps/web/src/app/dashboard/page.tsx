@@ -10,6 +10,7 @@ import AppLogo from "@/components/AppLogo";
 import Building3DView from "@/components/Building3DView";
 // R3F version — dynamically imported so Three.js is never loaded unless the user picks it
 const Building3DViewR3F = dynamic(() => import("@/components/Building3DViewR3F"), { ssr: false });
+import { trackEvent } from "@/lib/trackEvent";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -32,7 +33,13 @@ interface Bed { id: string; bedNumber: number; isOccupied: boolean; tenant: Tena
 interface Room { id: string; roomNumber: string; floor: number; sharingType: number; beds: Bed[]; }
 interface PGData {
   id: string; name: string; type: string; totalFloors: number;
-  sharings: number[]; owner: { name: string; phone: string } | null;
+  sharings: number[];
+  address?: string;
+  baseRent?: number | null;
+  coverImageUrl?: string | null;
+  pgImages?: any[] | string | null;
+  locationLink?: string | null;
+  owner: { name: string; phone: string } | null;
   managerName: string | null; managerPhone: string | null;
 }
 interface DashboardData { pg: PGData; rooms: Room[]; currentMonth: string; }
@@ -230,6 +237,106 @@ export default function DashboardPage() {
   // Profile sidebar state
   const [profileOpen, setProfileOpen] = useState(false);
   const [changingPg, setChangingPg] = useState(false);
+
+  // Share PG state & handlers
+  const [sharingPg, setSharingPg] = useState(false);
+  const [shareToast, setShareToast] = useState<string | null>(null);
+
+  const handleSharePg = useCallback(async () => {
+    if (!data?.pg) return;
+    const currentPg = data.pg;
+    setSharingPg(true);
+
+    try {
+      const pgUrl = `${window.location.origin}/pg/${currentPg.id}`;
+      trackEvent("pg_shared", currentPg.id);
+
+      const typeLabel =
+        currentPg.type === "ladies" ? "👩‍🦰 Ladies PG" :
+        currentPg.type === "gents" ? "👨‍🦱 Gents PG" :
+        "🤝 Co-Living";
+
+      let rentAmount = currentPg.baseRent;
+      if (!rentAmount && data.rooms?.length) {
+        const rents = data.rooms
+          .flatMap((r) => r.beds.map((b) => b.tenant?.rent?.amount))
+          .filter((a): a is number => !!a && a > 0);
+        if (rents.length) rentAmount = Math.min(...rents);
+      }
+
+      const shareText = [
+        `🏢 ${currentPg.name}`,
+        typeLabel,
+        rentAmount ? `💰 Rent from ₹${rentAmount.toLocaleString("en-IN")}` : null,
+        currentPg.address ? `📍 ${currentPg.address}` : null,
+      ].filter(Boolean).join("\n");
+
+      // Attempt to attach first PG image as a File
+      const rawImages = typeof currentPg.pgImages === "string"
+        ? (() => { try { return JSON.parse(currentPg.pgImages); } catch { return []; } })()
+        : currentPg.pgImages;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const firstImg = (rawImages as any)?.[0]?.url || (rawImages as any)?.[0] || currentPg.coverImageUrl;
+
+      let filesPayload: { files?: File[] } = {};
+      if (firstImg) {
+        try {
+          const imgRes = await fetch(firstImg);
+          const blob = await imgRes.blob();
+          const file = new File(
+            [blob],
+            `${currentPg.name.replace(/[^a-zA-Z0-9]/g, "_") || "pg"}.jpg`,
+            { type: blob.type || "image/jpeg" }
+          );
+          if (navigator.canShare?.({ files: [file] })) {
+            filesPayload = { files: [file] };
+          }
+        } catch {
+          // ignore fetch error
+        }
+      }
+
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: currentPg.name,
+            text: shareText,
+            url: pgUrl,
+            ...filesPayload,
+          });
+          setShareToast("Shared successfully!");
+        } catch (err: any) {
+          if (err.name !== "AbortError") {
+            await navigator.clipboard.writeText(`${shareText}\n\n${pgUrl}`);
+            setShareToast("PG Details & Link copied to clipboard!");
+          }
+        }
+      } else {
+        await navigator.clipboard.writeText(`${shareText}\n\n${pgUrl}`);
+        setShareToast("PG Details & Link copied to clipboard!");
+        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${shareText}\n\n${pgUrl}`)}`;
+        window.open(waUrl, "_blank");
+      }
+    } catch (e) {
+      console.error("Share error:", e);
+    } finally {
+      setSharingPg(false);
+      setTimeout(() => setShareToast(null), 3500);
+    }
+  }, [data]);
+
+  const handleCopyPgLink = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!data?.pg) return;
+    const pgUrl = `${window.location.origin}/pg/${data.pg.id}`;
+    try {
+      await navigator.clipboard.writeText(pgUrl);
+      setShareToast("PG link copied to clipboard!");
+    } catch {
+      setShareToast("Failed to copy link");
+    }
+    setTimeout(() => setShareToast(null), 3000);
+  };
 
   // Swipe-right-to-close sidebar
   const onSidebarTouchStart = (e: React.TouchEvent) => { sidebarSwipeX.current = e.touches[0].clientX; };
@@ -1007,6 +1114,48 @@ export default function DashboardPage() {
             </div>
           )}
         </section>
+
+        {/* ─── Share PG Location & Card (for Tenants / Inquiries) ─── */}
+        {pg && (
+          <div className={styles.sharePgSection}>
+            <button
+              className={styles.sharePgBtn}
+              onClick={handleSharePg}
+              disabled={sharingPg}
+              id="btn-owner-share-pg"
+              aria-label="Share PG Card and Location"
+            >
+              <div className={styles.sharePgIconCircle}>
+                {sharingPg ? (
+                  <span className={styles.sharePgSpinner} />
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M14 9V5L21 12L14 19V14.9C9 14.9 5.5 16.5 3 20C4 15 7 10 14 9Z" />
+                  </svg>
+                )}
+              </div>
+              <div className={styles.sharePgInfo}>
+                <div className={styles.sharePgTitle}>
+                  Share PG Location &amp; Card
+                  <span className={styles.sharePgTag}>WhatsApp / Chat</span>
+                </div>
+                <div className={styles.sharePgSub}>
+                  Send photo, rent &amp; map link to callers &amp; inquiring tenants
+                </div>
+              </div>
+              <div className={styles.sharePgActions}>
+                <span
+                  className={styles.sharePgCopyBtn}
+                  onClick={handleCopyPgLink}
+                  title="Copy link to clipboard"
+                >
+                  🔗
+                </span>
+                <span className={styles.sharePgArrow}>↗</span>
+              </div>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ─── Room Bottom Sheet ─── */}
@@ -1645,6 +1794,14 @@ export default function DashboardPage() {
         <button className={styles.searchFab} onClick={() => setSearchOpen(true)} id="btn-search-fab">
           🔍
         </button>
+      )}
+
+      {/* ─── Share Toast Notification ─── */}
+      {shareToast && (
+        <div className={styles.sharePgToast}>
+          <span>✅</span>
+          <span>{shareToast}</span>
+        </div>
       )}
     </main>
   );

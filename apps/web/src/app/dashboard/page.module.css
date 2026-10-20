@@ -1964,3 +1964,242 @@
 :global([data-theme="light"]) .historyDeposit {
   color: #111827;
 }
+
+/* ─── Share PG Section (Below 3D Building) ─── */
+.sharePgSection {
+  margin: 16px 0 28px;
+  width: 100%;
+}
+
+.sharePgBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 4px solid var(--brand-green, #22c55e);
+  border-radius: var(--radius-xl, 18px);
+  color: #ffffff;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.sharePgBtn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(34, 197, 94, 0.4);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), 0 0 20px rgba(34, 197, 94, 0.15);
+}
+
+.sharePgBtn:active {
+  transform: translateY(0);
+}
+
+/* Light mode */
+:global([data-theme="light"]) .sharePgBtn {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-left: 4px solid #16a34a;
+  color: #0f172a;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06), inset 0 1px 0 #ffffff;
+}
+
+:global([data-theme="light"]) .sharePgBtn:hover {
+  border-color: rgba(22, 163, 74, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 0 16px rgba(22, 163, 74, 0.1);
+}
+
+/* Icon Circle with Screenshot-3 curved arrow */
+.sharePgIconCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.22) 0%, rgba(34, 197, 94, 0.08) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #4ade80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+:global([data-theme="light"]) .sharePgIconCircle {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.06) 100%);
+  border-color: rgba(22, 163, 74, 0.3);
+  color: #16a34a;
+}
+
+.sharePgBtn:hover .sharePgIconCircle {
+  transform: scale(1.08) rotate(4deg);
+}
+
+.sharePgInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sharePgTitle {
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  line-height: 1.3;
+}
+
+.sharePgTag {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  letter-spacing: 0.2px;
+}
+
+:global([data-theme="light"]) .sharePgTag {
+  background: rgba(22, 163, 74, 0.1);
+  color: #15803d;
+  border-color: rgba(22, 163, 74, 0.25);
+}
+
+.sharePgSub {
+  font-size: 12px;
+  color: var(--text-secondary, #94a3b8);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:global([data-theme="light"]) .sharePgSub {
+  color: #64748b;
+}
+
+.sharePgActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sharePgCopyBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  color: inherit;
+}
+
+.sharePgCopyBtn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: scale(1.08);
+}
+
+:global([data-theme="light"]) .sharePgCopyBtn {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+:global([data-theme="light"]) .sharePgCopyBtn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.sharePgArrow {
+  font-size: 18px;
+  color: #4ade80;
+  font-weight: 700;
+  transition: transform 0.2s ease;
+}
+
+:global([data-theme="light"]) .sharePgArrow {
+  color: #16a34a;
+}
+
+.sharePgBtn:hover .sharePgArrow {
+  transform: translate(3px, -3px);
+}
+
+/* Spinner */
+.sharePgSpinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #22c55e;
+  border-radius: 50%;
+  animation: shareSpin 0.7s linear infinite;
+}
+
+@keyframes shareSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Toast */
+.sharePgToast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  background: rgba(15, 23, 42, 0.95);
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  font-size: 13.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+  animation: toastFade 0.25s ease-out;
+}
+
+:global([data-theme="light"]) .sharePgToast {
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes toastFade {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (max-width: 480px) {
+  .sharePgBtn {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+  .sharePgIconCircle {
+    width: 38px;
+    height: 38px;
+  }
+  .sharePgTitle {
+    font-size: 14px;
+  }
+  .sharePgSub {
+    font-size: 11px;
+  }
+}
