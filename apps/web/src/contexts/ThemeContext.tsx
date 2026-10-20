@@ -11,19 +11,21 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: "dark",
+  theme: "light",
   setTheme: () => {},
   toggleTheme: () => {},
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("dark");
+  const [theme, setThemeState] = useState<Theme>("light");
 
   // On mount: read from localStorage (already applied by inline script in layout)
   useEffect(() => {
     const saved = localStorage.getItem("pg-eg-theme") as Theme | null;
     if (saved === "light" || saved === "dark") {
       setThemeState(saved);
+    } else {
+      setThemeState("light");
     }
   }, []);
 

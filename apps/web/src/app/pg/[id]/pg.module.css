@@ -326,9 +326,6 @@
     min-width: 0;
     box-sizing: border-box;
   }
-  .actionBtn:last-child {
-    flex: 1 1 100%;
-  }
   .actionIcon {
     width: 32px;
     height: 32px;
@@ -355,26 +352,38 @@
   }
 }
 
-/* ── Medium Screens (Tablets: 768px - 879px) ── */
-@media (min-width: 768px) and (max-width: 879px) {
-  .cardImageArea {
-    width: 220px;
-    flex-shrink: 0;
-  }
+/* ── Medium & Small Screens (≤879px): Center Directions button across full width ── */
+@media (max-width: 879px) {
   .pgCardBtns {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     gap: 8px;
   }
+  .actionBtn:last-child,
+  .actionBtnDirections {
+    flex: 1 1 100% !important;
+    justify-content: center !important;
+  }
+  .actionBtn:last-child .actionText,
+  .actionBtnDirections .actionText {
+    flex: 0 0 auto !important;
+    text-align: center !important;
+    align-items: center !important;
+  }
+}
+
+/* ── Medium Screens (Tablets: 768px - 879px) ── */
+@media (min-width: 768px) and (max-width: 879px) {
+  .cardImageArea {
+    width: 220px;
+    flex-shrink: 0;
+  }
   .actionBtn {
     flex: 1 1 calc(50% - 4px);
     padding: 0 10px;
     height: 54px;
     min-width: 0;
-  }
-  .actionBtn:last-child {
-    flex: 1 1 100%;
   }
   .actionIcon {
     width: 34px;
@@ -389,6 +398,48 @@
   .actionSub {
     font-size: 11px;
   }
+}
+
+/* ─── Sequential "Come Out & Go In" Button Affordance Animation ─── */
+@keyframes buttonComeOutGoIn {
+  0% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  6% {
+    transform: translateY(-6px) scale(1.04);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35), 0 0 16px rgba(45, 198, 83, 0.35);
+  }
+  12% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.actionBtn1 {
+  animation: buttonComeOutGoIn 4.4s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite;
+  animation-delay: 0.5s;
+}
+
+.actionBtn2 {
+  animation: buttonComeOutGoIn 4.4s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite;
+  animation-delay: 1.1s;
+}
+
+.actionBtn3 {
+  animation: buttonComeOutGoIn 4.4s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite;
+  animation-delay: 1.7s;
+}
+
+.actionBtn1:hover,
+.actionBtn2:hover,
+.actionBtn3:hover {
+  animation-play-state: paused;
+  transform: translateY(-3px) scale(1.02);
 }
 
 /* ── Desktop: flip save/share visibility at ≥768px ── */

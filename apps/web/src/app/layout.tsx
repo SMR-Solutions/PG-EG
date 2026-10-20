@@ -66,7 +66,7 @@ export default function RootLayout({
         <Script id="theme-init" strategy="beforeInteractive">{`
           (function(){
             var t = localStorage.getItem('pg-eg-theme');
-            document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+            document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
             if (typeof console !== 'undefined' && console.warn) {
               var _origWarn = console.warn;
               console.warn = function() {

@@ -1584,11 +1584,18 @@
 
 .actionBtn:last-child {
   flex: 1 1 100%;
-  justify-content: flex-start;
+  justify-content: center;
+}
+
+.actionBtn:last-child .actionText {
+  flex: 0 0 auto;
+  text-align: center;
+  align-items: center;
 }
 
 .actionBtn:hover {
   transform: translateY(-2px);
+  animation-play-state: paused;
 }
 
 .actionBtn:active {

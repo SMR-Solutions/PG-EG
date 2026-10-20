@@ -349,7 +349,7 @@ export default function PGDetailClient({ pg }: Props) {
               {/* Buttons — same layout as FindPGs page */}
               <div className={`${styles.pgCardBtns} ${pgStyles.pgCardBtns}`}>
                 {pg.pgImages && pg.pgImages.length > 0 && (
-                  <button className={`${styles.actionBtn} ${styles.actionBtnView} ${pgStyles.actionBtn}`} onClick={openGallery} id="btn-view-photos">
+                  <button className={`${styles.actionBtn} ${styles.actionBtnView} ${pgStyles.actionBtn} ${pgStyles.actionBtn1}`} onClick={openGallery} id="btn-view-photos">
                     <span className={`${styles.actionIcon} ${pgStyles.actionIcon}`}>🏢</span>
                     <div className={`${styles.actionText} ${pgStyles.actionText}`}>
                       <span className={`${styles.actionTitle} ${pgStyles.actionTitle}`}>View PG</span>
@@ -363,7 +363,7 @@ export default function PGDetailClient({ pg }: Props) {
                     <div className={styles.btnDivider} />
                     <a
                       href={`tel:${pg.managerPhone.replace(/\D/g, "")}`}
-                      className={`${styles.actionBtn} ${styles.actionBtnEnquire} ${pgStyles.actionBtn}`}
+                      className={`${styles.actionBtn} ${styles.actionBtnEnquire} ${pgStyles.actionBtn} ${pgStyles.actionBtn2}`}
                       id="btn-enquire"
                       onClick={(e) => {
                         if (!isAuthenticated) {
@@ -399,7 +399,7 @@ export default function PGDetailClient({ pg }: Props) {
                       }
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`${styles.actionBtn} ${styles.actionBtnDirections} ${pgStyles.actionBtn}`}
+                      className={`${styles.actionBtn} ${styles.actionBtnDirections} ${pgStyles.actionBtn} ${pgStyles.actionBtnDirections} ${pgStyles.actionBtn3}`}
                       id="btn-directions"
                       onClick={(e) => {
                         if (!isAuthenticated) {
