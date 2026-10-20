@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ConsentSheet.tsx
  *
  * Rendered as the "consent" step inside SignInForm when role=user.
@@ -45,19 +45,19 @@ export default function ConsentSheet({
       <div className={styles.policyList} role="list">
 
         <div className={styles.policyItem} role="listitem">
+          <span className={styles.policyIcon}>👤</span>
+          <span className={styles.policyText}>
+            <strong>Google account</strong> — Your name and email are used to identify your
+            PG-EG account. We do not sell this information to anyone.
+          </span>
+        </div>
+
+        <div className={styles.policyItem} role="listitem">
           <span className={styles.policyIcon}>📊</span>
           <span className={styles.policyText}>
             <strong>Browsing activity</strong> — PG-EG tracks which PGs you view, save, and share.
             PG owners see <strong>aggregate counts only</strong> (e.g. &ldquo;12 views today&rdquo;) —
             never your name, email, or any personal detail from browsing.
-          </span>
-        </div>
-
-        <div className={styles.policyItem} role="listitem">
-          <span className={styles.policyIcon}>👤</span>
-          <span className={styles.policyText}>
-            <strong>Google account</strong> — Your name and email are used to identify your
-            PG-EG account. We do not sell this information to anyone.
           </span>
         </div>
 
