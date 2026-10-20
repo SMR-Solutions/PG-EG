@@ -19,6 +19,8 @@ function formatPg(pg: typeof pgs.$inferSelect) {
     paymentQrUrl: pg.paymentQrUrl || null,
     paymentUpiId: pg.paymentUpiId || null,
     paymentPhone: pg.paymentPhone || null,
+    liveVideoUrl: pg.liveVideoUrl || null,
+    liveVideo: pg.liveVideo ? JSON.parse(pg.liveVideo) : null,
     createdAt: pg.createdAt, updatedAt: pg.updatedAt,
   };
 }
@@ -170,6 +172,8 @@ router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
     const anyReq = req.body as Record<string, unknown>;
     if (anyReq.pgImages !== undefined) updates.pgImages = JSON.stringify(anyReq.pgImages);
     if (anyReq.pgDocuments !== undefined) updates.pgDocuments = JSON.stringify(anyReq.pgDocuments);
+    if (anyReq.liveVideoUrl !== undefined) updates.liveVideoUrl = (anyReq.liveVideoUrl as string) || null;
+    if (anyReq.liveVideo !== undefined) updates.liveVideo = anyReq.liveVideo ? JSON.stringify(anyReq.liveVideo) : null;
 
     const [updated] = await db.update(pgs).set(updates).where(eq(pgs.id, req.params.id)).returning();
     res.json({ pg: formatPg(updated) });
@@ -253,6 +257,39 @@ router.patch("/:id/payment", requireAuth, async (req: Request, res: Response) =>
     if (paymentPhone !== undefined) updates.paymentPhone = paymentPhone?.trim() || null;
     const [updated] = await db.update(pgs).set(updates).where(eq(pgs.id, req.params.id)).returning();
     res.json({ paymentQrUrl: updated.paymentQrUrl || null, paymentUpiId: updated.paymentUpiId || null, paymentPhone: updated.paymentPhone || null });
+  } catch { res.status(500).json({ error: "Failed" }); }
+});
+
+// ─── GET /api/pgs/:id/live-video  (owner only) ───
+router.get("/:id/live-video", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const pg = await verifyPgOwnership(req.params.id, req.owner!.ownerId, res);
+    if (!pg) return;
+    res.json({
+      liveVideoUrl: pg.liveVideoUrl || null,
+      liveVideo: pg.liveVideo ? JSON.parse(pg.liveVideo) : null,
+    });
+  } catch { res.status(500).json({ error: "Failed" }); }
+});
+
+// ─── PATCH /api/pgs/:id/live-video  (owner only) ───
+router.patch("/:id/live-video", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const pg = await verifyPgOwnership(req.params.id, req.owner!.ownerId, res);
+    if (!pg) return;
+    const { liveVideoUrl, liveVideo } = req.body as {
+      liveVideoUrl?: string | null;
+      liveVideo?: { url: string; fileId: string; duration?: number } | null;
+    };
+    const db = createDb(process.env.DATABASE_URL!);
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (liveVideoUrl !== undefined) updates.liveVideoUrl = liveVideoUrl || null;
+    if (liveVideo !== undefined) updates.liveVideo = liveVideo ? JSON.stringify(liveVideo) : null;
+    const [updated] = await db.update(pgs).set(updates).where(eq(pgs.id, req.params.id)).returning();
+    res.json({
+      liveVideoUrl: updated.liveVideoUrl || null,
+      liveVideo: updated.liveVideo ? JSON.parse(updated.liveVideo) : null,
+    });
   } catch { res.status(500).json({ error: "Failed" }); }
 });
 

@@ -55,6 +55,8 @@ export const pgs = pgTable("pgs", {
   paymentQrUrl: text("payment_qr_url"),            // ImageKit URL of UPI QR code image
   paymentUpiId: text("payment_upi_id"),            // UPI ID e.g. name@upi
   paymentPhone: text("payment_phone"),             // Phone number for rent collection (e.g. GPay number)
+  liveVideoUrl: text("live_video_url"),            // ImageKit URL for 5-10s live location video
+  liveVideo: text("live_video"),                   // JSON: { url, fileId, duration, createdAt }
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

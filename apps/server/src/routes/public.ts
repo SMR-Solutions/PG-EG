@@ -40,6 +40,7 @@ router.get("/pgs/nearby", async (req: Request, res: Response) => {
         baseRent: pgs.baseRent,
         coverImageUrl: pgs.coverImageUrl,
         pgImages: pgs.pgImages,
+        liveVideoUrl: pgs.liveVideoUrl,
         latitude: pgs.latitude,
         longitude: pgs.longitude,
       })
@@ -71,6 +72,7 @@ router.get("/pgs/nearby", async (req: Request, res: Response) => {
           pgImages: (() => {
             try { return JSON.parse(pg.pgImages || "[]"); } catch { return []; }
           })(),
+          liveVideoUrl: pg.liveVideoUrl || null,
           latitude: pg.latitude,
           longitude: pg.longitude,
           distanceKm: Math.round(distKm * 10) / 10, // 1 decimal place
@@ -376,6 +378,7 @@ router.get("/pgs/:id", async (req: Request, res: Response) => {
       ...pg,
       pgImages: JSON.parse(pg.pgImages || "[]"),
       sharings: JSON.parse(pg.sharings || "[]"),
+      liveVideo: pg.liveVideo ? JSON.parse(pg.liveVideo) : null,
     });
   } catch (err) {
     console.error("Single PG fetch error:", err);
