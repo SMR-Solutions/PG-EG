@@ -26,10 +26,43 @@ export function extractCoordsFromUrl(url: string): { lat: number; lng: number } 
   return null;
 }
 
+const ALLOWED_MAP_HOSTS = new Set([
+  "maps.google.com",
+  "www.google.com",
+  "google.com",
+  "maps.app.goo.gl",
+  "goo.gl",
+]);
+
+function isAllowedMapUrl(urlString: string): boolean {
+  try {
+    const parsed = new URL(urlString);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    const host = parsed.hostname.toLowerCase();
+    // Block loopback / local / internal metadata addresses
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host === "169.254.169.254" ||
+      host.endsWith(".local") ||
+      host.endsWith(".internal")
+    ) {
+      return false;
+    }
+    if (ALLOWED_MAP_HOSTS.has(host)) return true;
+    if (host.endsWith(".google.com") || host.endsWith(".google.co.in")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Resolve any Google Maps link (short or long) and return coordinates.
  * Follows up to 5 redirect hops — maps.app.goo.gl typically takes 2-3 hops
  * before reaching a full URL containing coordinates.
+ * Protected against SSRF: only connects to official Google Maps domains.
  */
 export async function resolveMapsLink(url: string): Promise<{ lat: number; lng: number } | null> {
   if (!url || !url.trim()) return null;
@@ -39,9 +72,14 @@ export async function resolveMapsLink(url: string): Promise<{ lat: number; lng: 
   const direct = extractCoordsFromUrl(current);
   if (direct) return direct;
 
+  // Validate initial URL host before making any outbound HTTP connection
+  if (!isAllowedMapUrl(current)) return null;
+
   // Follow redirect chain (up to 5 hops)
   for (let hop = 0; hop < 5; hop++) {
     try {
+      if (!isAllowedMapUrl(current)) break;
+
       const res = await fetch(current, {
         method: "GET",
         redirect: "manual",           // Don't auto-follow — we do it manually
@@ -67,6 +105,8 @@ export async function resolveMapsLink(url: string): Promise<{ lat: number; lng: 
         } catch {
           current = location;
         }
+
+        if (!isAllowedMapUrl(current)) break;
 
         // Try extracting from this new URL immediately
         const fromRedirect = extractCoordsFromUrl(current);

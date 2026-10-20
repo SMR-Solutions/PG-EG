@@ -345,6 +345,39 @@ router.get("/geocode", async (req: Request, res: Response) => {
   }
 });
 
+// Helper: format and sanitize public PG listings (never leaks pgDocuments or private payment credentials)
+function formatPublicPg(pg: typeof pgs.$inferSelect) {
+  return {
+    id: pg.id,
+    name: pg.name,
+    type: pg.type,
+    totalFloors: pg.totalFloors,
+    address: pg.address,
+    locationLink: pg.locationLink,
+    city: pg.city,
+    totalBeds: pg.totalBeds,
+    sharings: (() => {
+      try { return JSON.parse(pg.sharings || "[]"); } catch { return []; }
+    })(),
+    description: pg.description,
+    coverImageUrl: pg.coverImageUrl,
+    rules: pg.rules,
+    latitude: pg.latitude,
+    longitude: pg.longitude,
+    managerName: pg.managerName,
+    managerPhone: pg.managerPhone,
+    baseRent: pg.baseRent,
+    pgImages: (() => {
+      try { return JSON.parse(pg.pgImages || "[]"); } catch { return []; }
+    })(),
+    liveVideoUrl: pg.liveVideoUrl,
+    liveVideo: (() => {
+      try { return pg.liveVideo ? JSON.parse(pg.liveVideo) : null; } catch { return null; }
+    })(),
+    createdAt: pg.createdAt,
+  };
+}
+
 // ─── POST /api/public/pgs/bulk ─────────────────────────────
 router.post("/pgs/bulk", async (req: Request, res: Response) => {
   try {
@@ -355,12 +388,7 @@ router.post("/pgs/bulk", async (req: Request, res: Response) => {
     }
     const db = createDb(process.env.DATABASE_URL!);
     const pgResults = await db.select().from(pgs).where(inArray(pgs.id, pgIds));
-    res.json({ pgs: pgResults.map(p => ({
-      ...p,
-      pgImages: JSON.parse(p.pgImages || "[]"),
-      sharings: JSON.parse(p.sharings || "[]"),
-      liveVideo: p.liveVideo ? JSON.parse(p.liveVideo) : null,
-    }))});
+    res.json({ pgs: pgResults.map(formatPublicPg) });
   } catch (err) {
     console.error("Bulk PGs fetch error:", err);
     res.status(500).json({ error: "Failed to fetch PGs" });
@@ -375,12 +403,7 @@ router.get("/pgs/:id", async (req: Request, res: Response) => {
     const results = await db.select().from(pgs).where(eq(pgs.id, id)).limit(1);
     const pg = results[0];
     if (!pg) { res.status(404).json({ error: "PG not found" }); return; }
-    res.json({
-      ...pg,
-      pgImages: JSON.parse(pg.pgImages || "[]"),
-      sharings: JSON.parse(pg.sharings || "[]"),
-      liveVideo: pg.liveVideo ? JSON.parse(pg.liveVideo) : null,
-    });
+    res.json(formatPublicPg(pg));
   } catch (err) {
     console.error("Single PG fetch error:", err);
     res.status(500).json({ error: "Failed to fetch PG" });

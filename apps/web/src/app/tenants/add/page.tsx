@@ -108,7 +108,10 @@ function CheckInForm() {
     try {
       const res = await fetch(`${API_URL}/api/upload`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ base64: b64, fileName: `${type}_${Date.now()}.jpg`, folder }),
       });
       const data = await res.json();
