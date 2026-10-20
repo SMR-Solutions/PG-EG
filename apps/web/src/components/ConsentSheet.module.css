@@ -95,11 +95,11 @@
 /* ─── Consent confirmation row ─── */
 .confirmRow {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   background: rgba(45, 198, 83, 0.05);
-  border: 1px solid rgba(45, 198, 83, 0.18);
+  border: 1px solid rgba(45, 198, 83, 0.22);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: var(--transition);
@@ -107,14 +107,28 @@
 }
 .confirmRow:hover {
   background: rgba(45, 198, 83, 0.09);
+  border-color: rgba(45, 198, 83, 0.35);
+}
+.confirmRowChecked {
+  background: rgba(45, 198, 83, 0.12);
+  border-color: rgba(45, 198, 83, 0.45);
+}
+:global([data-theme="light"]) .confirmRow {
+  background: #f0fdf4;
+  border-color: rgba(45, 198, 83, 0.3);
+}
+:global([data-theme="light"]) .confirmRow:hover {
+  background: #dcfce7;
+}
+:global([data-theme="light"]) .confirmLabel {
+  color: #0f172a;
 }
 .confirmCheckbox {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(45, 198, 83, 0.5);
+  border: 2px solid rgba(45, 198, 83, 0.6);
   border-radius: 5px;
   flex-shrink: 0;
-  margin-top: 1px;
   background: transparent;
   display: flex;
   align-items: center;
@@ -135,16 +149,17 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
-/* ─── Action button (I Agree + Google) ─── */
+/* ─── Action button (Continue with Google) ─── */
 .agreeBtn {
   width: 100%;
-  padding: 15px 20px;
+  padding: 12px 20px;
+  height: 46px;
   background: var(--brand-green);
   color: #000;
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 700;
   border-radius: var(--radius-md);
   border: none;
@@ -155,16 +170,18 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
+  box-shadow: 0 4px 14px rgba(45, 198, 83, 0.25);
 }
 .agreeBtn:hover:not(:disabled) {
   background: #25b348;
   transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(45, 198, 83, 0.35);
+  box-shadow: 0 6px 20px rgba(45, 198, 83, 0.35);
 }
 .agreeBtn:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 .googleIconSm {

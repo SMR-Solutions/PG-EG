@@ -12,10 +12,11 @@
  * - Contact sharing with owners is explicitly NOT covered by this consent.
  */
 
+import { useState } from "react";
 import styles from "./ConsentSheet.module.css";
 
 interface ConsentSheetProps {
-  /** Called when the user checks confirmation AND clicks agree.
+  /** Called when the user checks confirmation AND clicks continue.
    *  Parent must start Google sign-in inside this callback. */
   onAgree: () => void;
   /** Navigate back / decline without signing in */
@@ -30,6 +31,8 @@ export default function ConsentSheet({
   loading,
   error,
 }: ConsentSheetProps) {
+  const [agreed, setAgreed] = useState(false);
+
   return (
     <div className={styles.sheet}>
 
@@ -79,15 +82,40 @@ export default function ConsentSheet({
 
       </div>
 
+      {/* Confirmation Checkbox */}
+      <div
+        className={`${styles.confirmRow} ${agreed ? styles.confirmRowChecked : ""}`}
+        onClick={() => setAgreed(!agreed)}
+        role="checkbox"
+        aria-checked={agreed}
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === " " || e.key === "Enter") {
+            e.preventDefault();
+            setAgreed(!agreed);
+          }
+        }}
+      >
+        <div className={`${styles.confirmCheckbox} ${agreed ? styles.checked : ""}`}>
+          {agreed && <span className={styles.checkmark}>✓</span>}
+        </div>
+        <span className={styles.confirmLabel}>
+          I Agree — I have read all points
+        </span>
+      </div>
+
       {/* Error */}
       {error && <p className={styles.error}>{error}</p>}
 
-      {/* Agree + Google (single action) */}
+      {/* Continue with Google (single action, enabled once checked) */}
       <button
         id="btn-consent-agree"
         className={styles.agreeBtn}
-        onClick={onAgree}
-        disabled={loading}
+        onClick={() => {
+          if (!agreed) return;
+          onAgree();
+        }}
+        disabled={loading || !agreed}
         type="button"
       >
         {loading ? (
@@ -108,7 +136,7 @@ export default function ConsentSheet({
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-            I Agree — Continue with Google
+            Continue with Google
           </>
         )}
       </button>

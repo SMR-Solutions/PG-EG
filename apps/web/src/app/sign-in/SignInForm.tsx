@@ -277,12 +277,17 @@ export default function SignInForm() {
       <div id="recaptcha-container" />
 
       <div className={styles.content}>
-        {/* Logo */}
+        {/* Header: Left text, Right AppLogo */}
         <div className={`${styles.header} animate-fade-up`}>
-          <AppLogo />
-          <p className={styles.logoTagline}>
-            {isUserRole ? "Find PGs near your college." : "PG Management, simplified."}
-          </p>
+          <div className={styles.headerText}>
+            <span className={styles.headerTitle}>
+              {isUserRole ? "For Students & Working Professionals" : "For PG Owners & Managers"}
+            </span>
+            <span className={styles.headerSub}>
+              {isUserRole ? "Find PGs near you" : "PG Management, simplified"}
+            </span>
+          </div>
+          <AppLogo size="sm" />
         </div>
 
         {/* ─── CONSENT STEP (role=user only) ───────────────────────────── */}
