@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { eq, and } from "drizzle-orm";
-import { createDb, rooms, beds, pgs } from "../db";
+import { createDb, rooms, beds, pgs, tenants } from "../db";
 import { requireAuth, verifyPgOwnership } from "../middleware/auth";
 
 const router = Router();
@@ -97,6 +97,95 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// ─── POST /api/rooms/beds — add one bed to a room ───────────────────
+// IMPORTANT: Must be registered BEFORE /:id routes so Express doesn't
+// match the literal word "beds" as a room ID.
+router.post("/beds", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { roomId } = req.body as { roomId: string };
+    if (!roomId) { res.status(400).json({ error: "roomId required" }); return; }
+
+    const db = createDb(process.env.DATABASE_URL!);
+    const roomResult = await db.select().from(rooms).where(eq(rooms.id, roomId)).limit(1);
+    if (!roomResult[0]) { res.status(404).json({ error: "Room not found" }); return; }
+    const room = roomResult[0];
+    const pg = await verifyPgOwnership(room.pgId, req.owner!.ownerId, res);
+    if (!pg) return;
+
+    // Find next bed number
+    const existingBeds = await db.select({ bedNumber: beds.bedNumber }).from(beds).where(eq(beds.roomId, roomId));
+    const maxBedNum = existingBeds.reduce((max, b) => Math.max(max, b.bedNumber), 0);
+    const newBedNumber = maxBedNum + 1;
+
+    const [bed] = await db.insert(beds).values({ roomId, bedNumber: newBedNumber, isOccupied: false }).returning();
+
+    // Update room sharingType to actual bed count
+    const newSharingType = existingBeds.length + 1;
+    await db.update(rooms).set({ sharingType: newSharingType }).where(eq(rooms.id, roomId));
+
+    // Recalculate PG totalBeds
+    const allRooms = await db.select({ sharingType: rooms.sharingType }).from(rooms).where(eq(rooms.pgId, room.pgId));
+    const totalBeds = allRooms.reduce((sum, r) => sum + r.sharingType, 0) + 1; // +1 for the just-updated room
+    await db.update(pgs).set({ totalBeds: totalBeds - room.sharingType + newSharingType, updatedAt: new Date() }).where(eq(pgs.id, room.pgId));
+
+    res.status(201).json({ bed: { id: bed.id, bedNumber: bed.bedNumber, isOccupied: false } });
+  } catch (error) {
+    console.error("Add bed error:", error);
+    res.status(500).json({ error: "Failed to add bed" });
+  }
+});
+
+// ─── DELETE /api/rooms/beds/:id — remove one bed ───────────────────
+// IMPORTANT: Must be registered BEFORE DELETE /:id so Express doesn't
+// match DELETE /api/rooms/beds/<uuid> against the room wildcard route.
+router.delete("/beds/:id", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const db = createDb(process.env.DATABASE_URL!);
+
+    const bedResult = await db.select().from(beds).where(eq(beds.id, req.params.id)).limit(1);
+    if (!bedResult[0]) { res.status(404).json({ error: "Bed not found" }); return; }
+    const bed = bedResult[0];
+
+    if (bed.isOccupied) {
+      res.status(409).json({ error: "Cannot remove an occupied bed. Check out the tenant first." });
+      return;
+    }
+    // Verify ownership before deletion
+    const roomForOwnership = await db.select({ pgId: rooms.pgId }).from(rooms).where(eq(rooms.id, bed.roomId)).limit(1);
+    if (!roomForOwnership[0]) { res.status(404).json({ error: "Room not found" }); return; }
+    const pg = await verifyPgOwnership(roomForOwnership[0].pgId, req.owner!.ownerId, res);
+    if (!pg) return;
+
+    // Null out bedId on past/checked-out tenant records that reference this bed.
+    // Active tenants are already blocked above (isOccupied). Historical records
+    // (status = 'checked_out' or similar) still hold the FK reference and must
+    // be unlinked before deletion to avoid a FK constraint violation.
+    await db.update(tenants)
+      .set({ bedId: null })
+      .where(eq(tenants.bedId, req.params.id));
+
+    await db.delete(beds).where(eq(beds.id, req.params.id));
+
+    // Update room sharingType to remaining bed count
+    const remainingBeds = await db.select({ id: beds.id }).from(beds).where(eq(beds.roomId, bed.roomId));
+    const newSharingType = remainingBeds.length;
+    await db.update(rooms).set({ sharingType: newSharingType }).where(eq(rooms.id, bed.roomId));
+
+    // Recalculate PG totalBeds
+    const room = await db.select({ pgId: rooms.pgId }).from(rooms).where(eq(rooms.id, bed.roomId)).limit(1);
+    if (room[0]) {
+      const allRooms = await db.select({ sharingType: rooms.sharingType }).from(rooms).where(eq(rooms.pgId, room[0].pgId));
+      const totalBeds = allRooms.reduce((sum, r) => sum + r.sharingType, 0);
+      await db.update(pgs).set({ totalBeds, updatedAt: new Date() }).where(eq(pgs.id, room[0].pgId));
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Delete bed error:", error);
+    res.status(500).json({ error: "Failed to delete bed" });
+  }
+});
+
 // ─── PATCH /api/rooms/:id — rename room ───────────
 router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
   try {
@@ -157,83 +246,6 @@ router.delete("/:id", requireAuth, async (req: Request, res: Response) => {
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: "Failed to delete room" });
-  }
-});
-
-// ─── POST /api/beds — add one bed to a room ─
- router.post("/beds", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const { roomId } = req.body as { roomId: string };
-    if (!roomId) { res.status(400).json({ error: "roomId required" }); return; }
-
-    const db = createDb(process.env.DATABASE_URL!);
-    const roomResult = await db.select().from(rooms).where(eq(rooms.id, roomId)).limit(1);
-    if (!roomResult[0]) { res.status(404).json({ error: "Room not found" }); return; }
-    const room = roomResult[0];
-    const pg = await verifyPgOwnership(room.pgId, req.owner!.ownerId, res);
-    if (!pg) return;
-
-    // Find next bed number
-    const existingBeds = await db.select({ bedNumber: beds.bedNumber }).from(beds).where(eq(beds.roomId, roomId));
-    const maxBedNum = existingBeds.reduce((max, b) => Math.max(max, b.bedNumber), 0);
-    const newBedNumber = maxBedNum + 1;
-
-    const [bed] = await db.insert(beds).values({ roomId, bedNumber: newBedNumber, isOccupied: false }).returning();
-
-    // Update room sharingType to actual bed count
-    const newSharingType = existingBeds.length + 1;
-    await db.update(rooms).set({ sharingType: newSharingType }).where(eq(rooms.id, roomId));
-
-    // Recalculate PG totalBeds
-    const allRooms = await db.select({ sharingType: rooms.sharingType }).from(rooms).where(eq(rooms.pgId, room.pgId));
-    const totalBeds = allRooms.reduce((sum, r) => sum + r.sharingType, 0) + 1; // +1 for the just-updated room
-    await db.update(pgs).set({ totalBeds: totalBeds - room.sharingType + newSharingType, updatedAt: new Date() }).where(eq(pgs.id, room.pgId));
-
-    res.status(201).json({ bed: { id: bed.id, bedNumber: bed.bedNumber, isOccupied: false } });
-  } catch (error) {
-    console.error("Add bed error:", error);
-    res.status(500).json({ error: "Failed to add bed" });
-  }
-});
-
-// ─── DELETE /api/beds/:id — remove one bed ─
-router.delete("/beds/:id", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const db = createDb(process.env.DATABASE_URL!);
-
-    const bedResult = await db.select().from(beds).where(eq(beds.id, req.params.id)).limit(1);
-    if (!bedResult[0]) { res.status(404).json({ error: "Bed not found" }); return; }
-    const bed = bedResult[0];
-
-    if (bed.isOccupied) {
-      res.status(409).json({ error: "Cannot remove an occupied bed. Check out the tenant first." });
-      return;
-    }
-    // Verify ownership before deletion
-    const roomForOwnership = await db.select({ pgId: rooms.pgId }).from(rooms).where(eq(rooms.id, bed.roomId)).limit(1);
-    if (!roomForOwnership[0]) { res.status(404).json({ error: "Room not found" }); return; }
-    const pg = await verifyPgOwnership(roomForOwnership[0].pgId, req.owner!.ownerId, res);
-    if (!pg) return;
-
-    await db.delete(beds).where(eq(beds.id, req.params.id));
-
-    // Update room sharingType to remaining bed count
-    const remainingBeds = await db.select({ id: beds.id }).from(beds).where(eq(beds.roomId, bed.roomId));
-    const newSharingType = remainingBeds.length;
-    await db.update(rooms).set({ sharingType: newSharingType }).where(eq(rooms.id, bed.roomId));
-
-    // Recalculate PG totalBeds
-    const room = await db.select({ pgId: rooms.pgId }).from(rooms).where(eq(rooms.id, bed.roomId)).limit(1);
-    if (room[0]) {
-      const allRooms = await db.select({ sharingType: rooms.sharingType }).from(rooms).where(eq(rooms.pgId, room[0].pgId));
-      const totalBeds = allRooms.reduce((sum, r) => sum + r.sharingType, 0);
-      await db.update(pgs).set({ totalBeds, updatedAt: new Date() }).where(eq(pgs.id, room[0].pgId));
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error("Delete bed error:", error);
-    res.status(500).json({ error: "Failed to delete bed" });
   }
 });
 
