@@ -104,8 +104,8 @@ export default function OwnerProfilePage() {
     }
     setPendingFile(null);
 
-    // Validate size: up to 65MB uncompressed original video
-    const MAX_MB = 65;
+    // Validate size: up to 50MB uncompressed original video
+    const MAX_MB = 50;
     if (file.size > MAX_MB * 1024 * 1024) {
       setVideoError(`Video file is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Please keep it under ${MAX_MB}MB.`);
       return;

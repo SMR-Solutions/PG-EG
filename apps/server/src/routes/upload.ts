@@ -14,7 +14,7 @@ function getImageKit() {
   });
 }
 
-const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "mp4", "webm", "pdf"]);
+const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "mp4", "webm", "mov", "pdf"]);
 const ALLOWED_MIME_PREFIXES = [
   "image/jpeg",
   "image/png",
@@ -25,8 +25,8 @@ const ALLOWED_MIME_PREFIXES = [
   "application/pdf",
 ];
 
-// Max file size: ~15MB binary (~21MB base64 string)
-const MAX_BASE64_LENGTH = 22 * 1024 * 1024;
+// Max file size: ~50MB binary (~70MB base64 string)
+const MAX_BASE64_LENGTH = 70 * 1024 * 1024;
 
 // POST /api/upload
 // Authenticated route — requires valid Bearer token
@@ -45,7 +45,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
     }
 
     if (typeof base64 !== "string" || base64.length > MAX_BASE64_LENGTH) {
-      res.status(413).json({ error: "File payload exceeds maximum allowed size (15MB)" });
+      res.status(413).json({ error: "File payload exceeds maximum allowed size (50MB)" });
       return;
     }
 
