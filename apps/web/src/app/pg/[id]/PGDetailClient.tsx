@@ -83,13 +83,6 @@ export default function PGDetailClient({ pg }: Props) {
 
   const handleShare = useCallback(async (e?: React.MouseEvent) => {
     e?.stopPropagation?.();
-    if (!isAuthenticated) {
-      router.push(`/sign-in?from=/pg/${pg.id}&role=user`);
-      return;
-    }
-    // Consent gate — blocks authenticated students with withdrawn consent
-    if (consentRequired) { setShowConsentBanner(true); return; }
-
     const pgUrl = `${window.location.origin}/pg/${pg.id}`;
 
     // Track share initiation before opening the share drawer.
@@ -122,7 +115,7 @@ export default function PGDetailClient({ pg }: Props) {
       setCopiedToast(true);
       setTimeout(() => setCopiedToast(false), 2500);
     }
-  }, [pg, consentRequired, isAuthenticated, router]);
+  }, [pg]);
 
   const isSaved = owner?.savedPgs?.includes(pg.id);
   const typeClass = pg.type === "ladies" ? styles.pgTypeLadies : pg.type === "gents" ? styles.pgTypeGents : styles.pgTypeColiving;
@@ -325,8 +318,8 @@ export default function PGDetailClient({ pg }: Props) {
                     🔒 Consent required
                   </p>
                   <p style={{ margin: "0 0 12px", opacity: 0.85 }}>
-                    You withdrew consent. Save, Share, Enquire and Directions need consent to work.
-                    Public browsing and photo viewing remain available.
+                    You withdrew consent. Sign in and consent are needed to Save PGs.
+                    Public browsing, Directions, Enquire and Sharing remain available.
                   </p>
                   <button
                     id="btn-grant-consent-detail"
@@ -365,17 +358,7 @@ export default function PGDetailClient({ pg }: Props) {
                       href={`tel:${pg.managerPhone.replace(/\D/g, "")}`}
                       className={`${styles.actionBtn} ${styles.actionBtnEnquire} ${pgStyles.actionBtn} ${pgStyles.actionBtn2}`}
                       id="btn-enquire"
-                      onClick={(e) => {
-                        if (!isAuthenticated) {
-                          e.preventDefault();
-                          router.push(`/sign-in?from=/pg/${pg.id}&role=user`);
-                          return;
-                        }
-                        if (consentRequired) {
-                          e.preventDefault();
-                          setShowConsentBanner(true);
-                          return;
-                        }
+                      onClick={() => {
                         trackEvent("pg_enquire_clicked", pg.id);
                       }}
                     >
@@ -401,17 +384,7 @@ export default function PGDetailClient({ pg }: Props) {
                       rel="noopener noreferrer"
                       className={`${styles.actionBtn} ${styles.actionBtnDirections} ${pgStyles.actionBtn} ${pgStyles.actionBtnDirections} ${pgStyles.actionBtn3}`}
                       id="btn-directions"
-                      onClick={(e) => {
-                        if (!isAuthenticated) {
-                          e.preventDefault();
-                          router.push(`/sign-in?from=/pg/${pg.id}&role=user`);
-                          return;
-                        }
-                        if (consentRequired) {
-                          e.preventDefault();
-                          setShowConsentBanner(true);
-                          return;
-                        }
+                      onClick={() => {
                         trackEvent("pg_directions_clicked", pg.id);
                       }}
                     >

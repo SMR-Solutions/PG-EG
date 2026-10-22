@@ -286,17 +286,6 @@ export default function FindPGPage() {
 
   // Share a PG — attaches first image as File so WhatsApp shows image + text + ONE link
   const handleSharePg = async (pg: PGResult) => {
-    // Guest users are routed to sign in first
-    if (!isAuthenticated) {
-      router.push("/sign-in?from=/find-pg&role=user");
-      return;
-    }
-    // Authenticated students with withdrawn consent are blocked
-    if (consentRequired) {
-      setConsentModalOpen(true);
-      return;
-    }
-
     // Track share initiation (we record that the user triggered the share UI, not that
     // anyone received or opened it).
     trackEvent("pg_shared", pg.id);
@@ -1446,7 +1435,7 @@ export default function FindPGPage() {
                           }}
                         >
                           <span style={{ opacity: 0.9 }}>
-                            🔒 <strong>Consent required</strong> to Save, Share, Enquire and use Directions.
+                            🔒 <strong>Consent required</strong> to Save PGs.
                           </span>
                           <button
                             id="btn-grant-consent-card"
@@ -1489,17 +1478,7 @@ export default function FindPGPage() {
                               href={`tel:${pg.managerPhone.replace(/\D/g, "")}`}
                               className={`${styles.actionBtn} ${styles.actionBtnEnquire}`}
                               id={`btn-enquire-${pg.id}`}
-                              onClick={(e) => {
-                                if (!isAuthenticated) {
-                                  e.preventDefault();
-                                  router.push("/sign-in?from=/find-pg&role=user");
-                                  return;
-                                }
-                                if (consentRequired) {
-                                  e.preventDefault();
-                                  setConsentModalOpen(true);
-                                  return;
-                                }
+                              onClick={() => {
                                 trackEvent("pg_enquire_clicked", pg.id);
                               }}
                             >
@@ -1521,17 +1500,7 @@ export default function FindPGPage() {
                               rel="noopener noreferrer"
                               className={`${styles.actionBtn} ${styles.actionBtnDirections}`}
                               id={`btn-map-${pg.id}`}
-                              onClick={(e) => {
-                                if (!isAuthenticated) {
-                                  e.preventDefault();
-                                  router.push("/sign-in?from=/find-pg&role=user");
-                                  return;
-                                }
-                                if (consentRequired) {
-                                  e.preventDefault();
-                                  setConsentModalOpen(true);
-                                  return;
-                                }
+                              onClick={() => {
                                 trackEvent("pg_directions_clicked", pg.id);
                               }}
                             >

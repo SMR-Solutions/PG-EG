@@ -7,6 +7,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import dynamic from "next/dynamic";
 import styles from "../find-pg/page.module.css";
 
+import { trackEvent } from "@/lib/trackEvent";
 const PGPhotoLightbox = dynamic(() => import("@/components/PGPhotoLightbox"), { ssr: false });
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -52,6 +53,7 @@ export default function SavedPGsClient() {
   }, [owner?.savedPgs?.join(","), isLoading]);
 
   const openGallery = (pg: any) => {
+    trackEvent("pg_gallery_open", pg.id);
     window.history.pushState({ gallery: true }, "");
     setViewImagesFor(pg);
   };
@@ -67,6 +69,7 @@ export default function SavedPGsClient() {
 
   const handleShare = useCallback(async (pg: any, e?: { stopPropagation: () => void }) => {
     if (e?.stopPropagation) e.stopPropagation();
+    trackEvent("pg_shared", pg.id);
     const pgUrl = `${window.location.origin}/pg/${pg.id}`;
     // Text has NO URL — WhatsApp auto-renders the URL as a rich link preview card (with OG image)
     const shareText = [
@@ -296,7 +299,7 @@ export default function SavedPGsClient() {
 
                       {pg.managerPhone && (
                         <>
-                          <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={`${styles.actionBtn} ${styles.actionBtnEnquire}`} id={`btn-enquire-${pg.id}`}>
+                          <a href={`tel:${pg.managerPhone.replace(/\D/g, "")}`} className={`${styles.actionBtn} ${styles.actionBtnEnquire}`} id={`btn-enquire-${pg.id}`} onClick={() => trackEvent("pg_enquire_clicked", pg.id)}>
                             <span className={styles.actionIcon}>☎️</span>
                             <div className={styles.actionText}>
                               <span className={styles.actionTitle}>Enquire</span>
@@ -319,6 +322,7 @@ export default function SavedPGsClient() {
                             rel="noopener noreferrer"
                             className={`${styles.actionBtn} ${styles.actionBtnDirections}`}
                             id={`btn-dir-${pg.id}`}
+                            onClick={() => trackEvent("pg_directions_clicked", pg.id)}
                           >
                             <span className={styles.actionIcon}>🗺️</span>
                             <div className={styles.actionText}>
