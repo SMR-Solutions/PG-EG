@@ -14,6 +14,7 @@ import AppLogo from "@/components/AppLogo";
 
 const PGPhotoLightbox = dynamic(() => import("@/components/PGPhotoLightbox"), { ssr: false });
 const LivePGModal = dynamic(() => import("@/components/LivePGModal"), { ssr: false });
+const ShareModal = dynamic(() => import("@/components/ShareModal"), { ssr: false });
 
 interface PGData {
   id: string;
@@ -43,6 +44,7 @@ export default function PGDetailClient({ pg }: Props) {
   const { canInstall, installing, triggerInstall } = usePwaInstall();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [liveModalOpen, setLiveModalOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [consentGranting, setConsentGranting] = useState(false);
   const [showConsentBanner, setShowConsentBanner] = useState(false);
@@ -81,41 +83,11 @@ export default function PGDetailClient({ pg }: Props) {
     return () => window.removeEventListener("popstate", fn);
   }, []);
 
-  const handleShare = useCallback(async (e?: React.MouseEvent) => {
+  const handleShare = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation?.();
-    const pgUrl = `${window.location.origin}/pg/${pg.id}`;
-
-    // Track share initiation before opening the share drawer.
     trackEvent("pg_shared", pg.id);
-
-    // Text has NO URL — url field is separate so WhatsApp shows it ONCE as a rich preview card
-    const shareText = [
-      `🏢 ${pg.name}`,
-      pg.type === "ladies" ? "👩‍🦰 Ladies PG" : pg.type === "gents" ? "👨‍🦱 Gents PG" : "🤝 Co-Living",
-      pg.baseRent ? `💰 Rent from ₹${pg.baseRent.toLocaleString("en-IN")}` : null,
-      pg.address ? `📍 ${pg.address}` : null,
-    ].filter(Boolean).join("\n");
-
-    if (navigator.share) {
-      // Attempt to attach first image as a File (shows image in share drawer on mobile)
-      const firstImg = pg.pgImages?.[0]?.url || pg.pgImages?.[0];
-      let filesPayload: { files?: File[] } = {};
-      if (firstImg) {
-        try {
-          const imgRes = await fetch(firstImg);
-          const blob = await imgRes.blob();
-          const file = new File([blob], `${pg.name}.jpg`, { type: blob.type });
-          if (navigator.canShare?.({ files: [file] })) filesPayload = { files: [file] };
-        } catch { /* image fetch failed, skip */ }
-      }
-      // url is separate from text — WhatsApp appends it once as a rich link preview
-      navigator.share({ title: pg.name, text: shareText, url: pgUrl, ...filesPayload }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(`${shareText}\n\n${pgUrl}`);
-      setCopiedToast(true);
-      setTimeout(() => setCopiedToast(false), 2500);
-    }
-  }, [pg]);
+    setShareModalOpen(true);
+  }, [pg.id]);
 
   const isSaved = owner?.savedPgs?.includes(pg.id);
   const typeClass = pg.type === "ladies" ? styles.pgTypeLadies : pg.type === "gents" ? styles.pgTypeGents : styles.pgTypeColiving;
@@ -215,7 +187,7 @@ export default function PGDetailClient({ pg }: Props) {
 
       {/* PG Card */}
       <div className={pgStyles.cardWrap}>
-        <div className={`${styles.pgCard} ${pgStyles.pgCard}`}>
+        <div className={pgStyles.pgCard}>
 
           {/* Card Header — desktop: shows address + inline save/share */}
           <div className={pgStyles.cardHeaderRow}>
@@ -283,19 +255,19 @@ export default function PGDetailClient({ pg }: Props) {
               </div>
 
               {pg.sharings && pg.sharings.length > 0 && (
-                <div className={styles.pgSharings}>
+                <div className={`${styles.pgSharings} ${pgStyles.pgSharings}`}>
                   {pg.sharings.sort((a, b) => a - b).map((s) => (
-                    <span key={s} className={styles.sharingChip}>{s}-Sharing</span>
+                    <span key={s} className={`${styles.sharingChip} ${pgStyles.sharingChip}`}>{s}-Sharing</span>
                   ))}
                 </div>
               )}
 
               {pg.address && (
-                <p className={styles.pgAddress}>📍 {pg.address}</p>
+                <p className={`${styles.pgAddress} ${pgStyles.pgAddress}`}>📍 {pg.address}</p>
               )}
 
               {pg.description && (
-                <p style={{ fontSize: "13px", opacity: 0.7, marginTop: "8px", lineHeight: 1.5 }}>
+                <p className={pgStyles.pgDescription}>
                   {pg.description}
                 </p>
               )}
@@ -309,7 +281,7 @@ export default function PGDetailClient({ pg }: Props) {
                     padding: "12px 16px",
                     background: "rgba(255,180,0,0.1)",
                     border: "1px solid rgba(255,180,0,0.3)",
-                    borderRadius: 10,
+                    borderRadius: 0,
                     fontSize: 12,
                     lineHeight: 1.5,
                   }}
@@ -328,7 +300,7 @@ export default function PGDetailClient({ pg }: Props) {
                     style={{
                       width: "100%", padding: "10px",
                       background: "var(--brand-green)",
-                      border: "none", borderRadius: 8,
+                      border: "none", borderRadius: 0,
                       color: "#000", fontSize: 13, fontWeight: 700,
                       cursor: "pointer", fontFamily: "inherit",
                       opacity: consentGranting ? 0.6 : 1,
@@ -403,9 +375,9 @@ export default function PGDetailClient({ pg }: Props) {
                   <button
                     className={styles.primaryBtn}
                     onClick={() => router.push(`/sign-in?from=/pg/${pg.id}&role=user`)}
-                    style={{ width: "100%", padding: "12px" }}
+                    style={{ width: "100%", padding: "12px", borderRadius: 0 }}
                   >🔍 Find More PGs Near Me</button>
-                  <p style={{ fontSize: "12px", textAlign: "center", opacity: 0.5, marginTop: "8px" }}>
+                  <p className={pgStyles.signinFreeNote}>
                     Sign-in For Free
                   </p>
                 </div>
@@ -416,7 +388,7 @@ export default function PGDetailClient({ pg }: Props) {
                   <button
                     className={styles.primaryBtn}
                     onClick={() => router.push("/find-pg")}
-                    style={{ width: "100%", padding: "12px" }}
+                    style={{ width: "100%", padding: "12px", borderRadius: 0 }}
                   >🔍 Explore More PGs Near Me</button>
                 </div>
               )}
@@ -442,6 +414,13 @@ export default function PGDetailClient({ pg }: Props) {
         videoUrl={pg.liveVideoUrl}
         address={pg.address}
         duration={pg.liveVideo?.duration}
+      />
+
+      {/* Share Modal — WhatsApp, Telegram, Instagram first */}
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        pg={pg}
       />
 
       {/* Floating Copied Toast */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -18,31 +18,19 @@ const WIDTHS = {
   lg: 260,
 };
 
-/**
- * Returns false on the server and during the hydration pass (React calls
- * getServerSnapshot), then true after hydration (React calls getSnapshot).
- * Unlike useState+useEffect, React 18 understands this transition and does
- * NOT emit a hydration mismatch warning when server and client snapshots differ.
- */
-function useIsHydrated() {
-  return useSyncExternalStore(
-    () => () => {},  // subscribe: no external store — no-op unsubscribe
-    () => true,      // getSnapshot:       client post-hydration  → hydrated
-    () => false      // getServerSnapshot: server / hydration pass → not hydrated
-  );
-}
-
 export default function AppLogo({ size = "md", onClick, href }: AppLogoProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated, role, hasPG } = useAuth();
+  const [mounted, setMounted] = useState(false);
 
-  // During the hydration pass React uses getServerSnapshot() → false → "PG-EG"
-  // (matches server HTML). After hydration it switches to getSnapshot() → true
-  // and the title updates to the auth-appropriate value without a warning.
-  const hydrated = useIsHydrated();
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  const title = !hydrated
+  // On SSR and during initial client hydration pass, mounted is false → "PG-EG"
+  // (identical markup). After mount, updates to role/auth-specific title.
+  const title = !mounted
     ? "PG-EG"
     : role === "user"
     ? "Find PG"
@@ -94,6 +82,7 @@ export default function AppLogo({ size = "md", onClick, href }: AppLogoProps) {
       onClick={handleClick}
       id="app-logo-btn"
       title={title}
+      suppressHydrationWarning
       style={{
         background: "none",
         border: "none",

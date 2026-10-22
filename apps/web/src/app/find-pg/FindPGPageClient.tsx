@@ -11,6 +11,7 @@ import AppLogo from "@/components/AppLogo";
 
 const PGPhotoLightbox = dynamic(() => import("@/components/PGPhotoLightbox"), { ssr: false });
 const LivePGModal = dynamic(() => import("@/components/LivePGModal"), { ssr: false });
+const ShareModal = dynamic(() => import("@/components/ShareModal"), { ssr: false });
 const PGMap = lazy(() => import("@/components/PGMap"));
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -259,6 +260,7 @@ export default function FindPGPage() {
   // Type filter for results
   const [typeFilter, setTypeFilter] = useState<"all" | "gents" | "ladies" | "coliving">("all");
   const [viewImagesFor, setViewImagesFor] = useState<PGResult | null>(null);
+  const [sharingPg, setSharingPg] = useState<PGResult | null>(null);
   const [activeLivePg, setActiveLivePg] = useState<PGResult | null>(null);
 
   // Gallery History state management
@@ -284,38 +286,10 @@ export default function FindPGPage() {
 
   // ─── IntersectionObserver for pg_card_impression is declared below filteredResults ───
 
-  // Share a PG — attaches first image as File so WhatsApp shows image + text + ONE link
-  const handleSharePg = async (pg: PGResult) => {
-    // Track share initiation (we record that the user triggered the share UI, not that
-    // anyone received or opened it).
+  // Share a PG — opens custom ShareModal with WhatsApp, Telegram, Instagram first
+  const handleSharePg = (pg: PGResult) => {
     trackEvent("pg_shared", pg.id);
-
-    const pgUrl = `${window.location.origin}/pg/${pg.id}`;
-    // Text has NO URL — url field is separate so WhatsApp appends it ONCE as a rich preview
-    const shareText = [
-      `🏢 ${pg.name}`,
-      pg.type === "ladies" ? "👩‍🦰 Ladies PG" : pg.type === "gents" ? "👨‍🦱 Gents PG" : "🤝 Co-Living",
-      pg.baseRent ? `💰 Rent from ₹${pg.baseRent.toLocaleString("en-IN")}` : null,
-      pg.address ? `📍 ${pg.address}` : null,
-    ].filter(Boolean).join("\n");
-
-    if (navigator.share) {
-      // Attempt to attach first PG image as a File — WhatsApp will show the image
-      const firstImg = pg.pgImages?.[0]?.url || pg.pgImages?.[0];
-      let filesPayload: { files?: File[] } = {};
-      if (firstImg) {
-        try {
-          const imgRes = await fetch(firstImg);
-          const blob = await imgRes.blob();
-          const file = new File([blob], `${pg.name.replace(/[^a-zA-Z0-9]/g, "_") || "pg"}.jpg`, { type: blob.type || "image/jpeg" });
-          if (navigator.canShare?.({ files: [file] })) filesPayload = { files: [file] };
-        } catch { /* image fetch failed, skip */ }
-      }
-      navigator.share({ title: pg.name, text: shareText, url: pgUrl, ...filesPayload }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(`${shareText}\n\n${pgUrl}`);
-      alert("PG details copied!");
-    }
+    setSharingPg(pg);
   };
 
 
@@ -713,10 +687,6 @@ export default function FindPGPage() {
     if (!selectedPreset) { setError("Please select a college or place."); return; }
     await fetchNearby(selectedPreset.lat, selectedPreset.lng, selectedPreset.name);
   }
-
-  // Show nothing while auth is still hydrating (avoids flash of wrong state).
-  // Do NOT gate on isAuthenticated — the page is public.
-  if (isLoading) return null;
 
   return (
     <main className={styles.main}>
@@ -1701,6 +1671,15 @@ export default function FindPGPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Share Modal — WhatsApp, Telegram, Instagram first */}
+      {sharingPg && (
+        <ShareModal
+          isOpen={!!sharingPg}
+          onClose={() => setSharingPg(null)}
+          pg={sharingPg}
+        />
       )}
     </main>
   );

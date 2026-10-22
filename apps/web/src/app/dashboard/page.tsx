@@ -10,6 +10,7 @@ import AppLogo from "@/components/AppLogo";
 import Building3DView from "@/components/Building3DView";
 // R3F version — dynamically imported so Three.js is never loaded unless the user picks it
 const Building3DViewR3F = dynamic(() => import("@/components/Building3DViewR3F"), { ssr: false });
+const ShareModal = dynamic(() => import("@/components/ShareModal"), { ssr: false });
 import { trackEvent } from "@/lib/trackEvent";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -239,91 +240,15 @@ export default function DashboardPage() {
   const [changingPg, setChangingPg] = useState(false);
 
   // Share PG state & handlers
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [sharingPg, setSharingPg] = useState(false);
   const [shareToast, setShareToast] = useState<string | null>(null);
 
-  const handleSharePg = useCallback(async () => {
+  const handleSharePg = useCallback(() => {
     if (!data?.pg) return;
-    const currentPg = data.pg;
-    setSharingPg(true);
-
-    try {
-      const pgUrl = `${window.location.origin}/pg/${currentPg.id}`;
-      trackEvent("pg_shared", currentPg.id);
-
-      const typeLabel =
-        currentPg.type === "ladies" ? "👩‍🦰 Ladies PG" :
-        currentPg.type === "gents" ? "👨‍🦱 Gents PG" :
-        "🤝 Co-Living";
-
-      let rentAmount = currentPg.baseRent;
-      if (!rentAmount && data.rooms?.length) {
-        const rents = data.rooms
-          .flatMap((r) => r.beds.map((b) => b.tenant?.rent?.amount))
-          .filter((a): a is number => !!a && a > 0);
-        if (rents.length) rentAmount = Math.min(...rents);
-      }
-
-      const shareText = [
-        `🏢 ${currentPg.name}`,
-        typeLabel,
-        rentAmount ? `💰 Rent from ₹${rentAmount.toLocaleString("en-IN")}` : null,
-        currentPg.address ? `📍 ${currentPg.address}` : null,
-      ].filter(Boolean).join("\n");
-
-      // Attempt to attach first PG image as a File
-      const rawImages = typeof currentPg.pgImages === "string"
-        ? (() => { try { return JSON.parse(currentPg.pgImages); } catch { return []; } })()
-        : currentPg.pgImages;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const firstImg = (rawImages as any)?.[0]?.url || (rawImages as any)?.[0] || currentPg.coverImageUrl;
-
-      let filesPayload: { files?: File[] } = {};
-      if (firstImg) {
-        try {
-          const imgRes = await fetch(firstImg);
-          const blob = await imgRes.blob();
-          const file = new File(
-            [blob],
-            `${currentPg.name.replace(/[^a-zA-Z0-9]/g, "_") || "pg"}.jpg`,
-            { type: blob.type || "image/jpeg" }
-          );
-          if (navigator.canShare?.({ files: [file] })) {
-            filesPayload = { files: [file] };
-          }
-        } catch {
-          // ignore fetch error
-        }
-      }
-
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: currentPg.name,
-            text: shareText,
-            url: pgUrl,
-            ...filesPayload,
-          });
-          setShareToast("Shared successfully!");
-        } catch (err: any) {
-          if (err.name !== "AbortError") {
-            await navigator.clipboard.writeText(`${shareText}\n\n${pgUrl}`);
-            setShareToast("PG Details & Link copied to clipboard!");
-          }
-        }
-      } else {
-        await navigator.clipboard.writeText(`${shareText}\n\n${pgUrl}`);
-        setShareToast("PG Details & Link copied to clipboard!");
-        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${shareText}\n\n${pgUrl}`)}`;
-        window.open(waUrl, "_blank");
-      }
-    } catch (e) {
-      console.error("Share error:", e);
-    } finally {
-      setSharingPg(false);
-      setTimeout(() => setShareToast(null), 3500);
-    }
-  }, [data]);
+    trackEvent("pg_shared", data.pg.id);
+    setShareModalOpen(true);
+  }, [data?.pg]);
 
   const handleCopyPgLink = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1794,6 +1719,18 @@ export default function DashboardPage() {
         <button className={styles.searchFab} onClick={() => setSearchOpen(true)} id="btn-search-fab">
           🔍
         </button>
+      )}
+
+      {/* ─── Share Modal (WhatsApp, Telegram, Instagram first) ─── */}
+      {data?.pg && (
+        <ShareModal
+          isOpen={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          pg={{
+            ...data.pg,
+            rooms: data.rooms,
+          }}
+        />
       )}
 
       {/* ─── Share Toast Notification ─── */}

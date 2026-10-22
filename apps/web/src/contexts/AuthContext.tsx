@@ -77,48 +77,16 @@ function readCachedOwner(): Owner | null {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 function getInitialAuthState(): AuthState {
-  if (typeof window === "undefined") {
-    return {
-      owner: null,
-      token: null,
-      pgId: null,
-      activePgId: null,
-      allPgs: [],
-      hasPG: false,
-      role: null,
-      isLoading: true,
-      isAuthenticated: false,
-    };
-  }
-  const token = localStorage.getItem(TOKEN_KEY);
-  if (!token) {
-    return {
-      owner: null,
-      token: null,
-      pgId: null,
-      activePgId: null,
-      allPgs: [],
-      hasPG: false,
-      role: null,
-      isLoading: false,
-      isAuthenticated: false,
-    };
-  }
-  const cachedOwner = readCachedOwner();
-  const cachedRole = localStorage.getItem(ROLE_KEY) || "user";
-  const pgId = localStorage.getItem("pg_eg_pg_id") || null;
-  const activePgId = localStorage.getItem(ACTIVE_PG_KEY) || pgId;
-
   return {
-    owner: cachedOwner,
-    token,
-    pgId,
-    activePgId,
-    allPgs: pgId ? [{ id: pgId, name: "My PG" }] : [],
-    hasPG: !!pgId,
-    role: cachedRole,
-    isLoading: !cachedOwner,
-    isAuthenticated: !!cachedOwner,
+    owner: null,
+    token: null,
+    pgId: null,
+    activePgId: null,
+    allPgs: [],
+    hasPG: false,
+    role: null,
+    isLoading: true,
+    isAuthenticated: false,
   };
 }
 

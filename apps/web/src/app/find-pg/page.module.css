@@ -1086,6 +1086,24 @@
   word-break: break-word;
 }
 
+:global([data-theme="light"]) .pgName {
+  color: #0f172a !important;
+}
+:global([data-theme="light"]) .pgAddress {
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+:global([data-theme="light"]) .sharingChip {
+  color: #0f172a !important;
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  font-weight: 800 !important;
+}
+:global([data-theme="light"]) .pgType {
+  color: #334155 !important;
+  font-weight: 700 !important;
+}
+
 .locationBtn {
   background: #22C55E;
   color: #fff;

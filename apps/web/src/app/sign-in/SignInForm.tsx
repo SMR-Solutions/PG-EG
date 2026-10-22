@@ -268,8 +268,6 @@ export default function SignInForm() {
     setError("");
   }
 
-  if (isLoading) return null;
-
   return (
     <main className={styles.main}>
       <div className={styles.orb1} />

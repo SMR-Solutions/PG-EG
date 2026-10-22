@@ -9,6 +9,7 @@ import styles from "../find-pg/page.module.css";
 
 import { trackEvent } from "@/lib/trackEvent";
 const PGPhotoLightbox = dynamic(() => import("@/components/PGPhotoLightbox"), { ssr: false });
+const ShareModal = dynamic(() => import("@/components/ShareModal"), { ssr: false });
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -20,6 +21,7 @@ export default function SavedPGsClient() {
   const [pgs, setPgs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewImagesFor, setViewImagesFor] = useState<any | null>(null);
+  const [sharingPg, setSharingPg] = useState<any | null>(null);
   const [showClearModal, setShowClearModal] = useState(false);
 
   // Only show PGs that are still in owner's savedPgs (removes instantly on unsave)
@@ -67,33 +69,10 @@ export default function SavedPGsClient() {
     return () => window.removeEventListener("popstate", fn);
   }, []);
 
-  const handleShare = useCallback(async (pg: any, e?: { stopPropagation: () => void }) => {
+  const handleShare = useCallback((pg: any, e?: { stopPropagation: () => void }) => {
     if (e?.stopPropagation) e.stopPropagation();
     trackEvent("pg_shared", pg.id);
-    const pgUrl = `${window.location.origin}/pg/${pg.id}`;
-    // Text has NO URL — WhatsApp auto-renders the URL as a rich link preview card (with OG image)
-    const shareText = [
-      `🏢 ${pg.name}`,
-      pg.type === "ladies" ? "👩‍🦰 Ladies PG" : pg.type === "gents" ? "👨‍🦱 Gents PG" : "🤝 Co-Living",
-      pg.baseRent ? `💰 Rent from ₹${pg.baseRent.toLocaleString("en-IN")}` : null,
-      pg.address ? `📍 ${pg.address}` : null,
-    ].filter(Boolean).join("\n");
-    if (navigator.share) {
-      const firstImg = pg.pgImages?.[0]?.url || pg.pgImages?.[0];
-      let filesPayload: { files?: File[] } = {};
-      if (firstImg) {
-        try {
-          const imgRes = await fetch(firstImg);
-          const blob = await imgRes.blob();
-          const file = new File([blob], `${pg.name.replace(/[^a-zA-Z0-9]/g, "_") || "pg"}.jpg`, { type: blob.type || "image/jpeg" });
-          if (navigator.canShare?.({ files: [file] })) filesPayload = { files: [file] };
-        } catch { /* image fetch failed, skip */ }
-      }
-      navigator.share({ title: pg.name, text: shareText, url: pgUrl, ...filesPayload }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(`${shareText}\n\n${pgUrl}`);
-      alert("PG details copied to clipboard!");
-    }
+    setSharingPg(pg);
   }, []);
 
   if (isLoading || !isAuthenticated) return null;
@@ -432,6 +411,15 @@ export default function SavedPGsClient() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Share Modal — WhatsApp, Telegram, Instagram first */}
+      {sharingPg && (
+        <ShareModal
+          isOpen={!!sharingPg}
+          onClose={() => setSharingPg(null)}
+          pg={sharingPg}
+        />
       )}
     </main>
   );

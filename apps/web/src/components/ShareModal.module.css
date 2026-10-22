@@ -1,0 +1,287 @@
+/* ── Share Modal Overlay & Backdrop ── */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+  box-sizing: border-box;
+  animation: fadeIn 0.18s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Modal Card (Boxy, Sharp, Premium) ── */
+.modalCard {
+  background: #0f172a;
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0 !important;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+:global([data-theme="light"]) .modalCard {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* ── Header ── */
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+}
+
+:global([data-theme="light"]) .modalHeader {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.modalTitle {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: inherit;
+}
+
+.closeBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0 !important;
+  color: inherit;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.closeBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+:global([data-theme="light"]) .closeBtn {
+  border-color: rgba(0, 0, 0, 0.15);
+  color: #0f172a;
+}
+:global([data-theme="light"]) .closeBtn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* ── Body ── */
+.modalBody {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+/* ── Primary Apps Row (WhatsApp, Telegram, Instagram) ── */
+.appsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.appItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 !important;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  font-family: inherit;
+  color: inherit;
+  text-decoration: none;
+}
+
+.appItem:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+:global([data-theme="light"]) .appItem {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+:global([data-theme="light"]) .appItem:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.appIconWrap {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0 !important;
+}
+
+.appLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: inherit;
+  letter-spacing: -0.01em;
+}
+
+/* WhatsApp Specific */
+.whatsappBg {
+  background: #25D366;
+  color: #ffffff;
+}
+
+/* Telegram Specific */
+.telegramBg {
+  background: #229ED9;
+  color: #ffffff;
+}
+
+/* Instagram Specific */
+.instagramBg {
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  color: #ffffff;
+}
+
+/* ── Copy Link Section ── */
+.copySection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #94a3b8);
+}
+
+:global([data-theme="light"]) .sectionLabel {
+  color: #475569;
+}
+
+.copyInputRow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+:global([data-theme="light"]) .copyInputRow {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.copyInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  color: inherit;
+  font-family: inherit;
+  outline: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.copyBtn {
+  background: var(--brand-green, #2dc653);
+  color: #000000;
+  border: none;
+  border-radius: 0 !important;
+  padding: 10px 16px;
+  font-size: 12.5px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+.copyBtn:hover {
+  opacity: 0.9;
+}
+
+.copyBtnCopied {
+  background: #10b981 !important;
+  color: #ffffff !important;
+}
+
+/* ── More Options (Native Share Fallback) ── */
+.moreOptionsBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px;
+  width: 100%;
+  border-radius: 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.moreOptionsBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+:global([data-theme="light"]) .moreOptionsBtn {
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+:global([data-theme="light"]) .moreOptionsBtn:hover {
+  background: #f1f5f9;
+}
+
+/* Inline Toast Alert in Modal */
+.copiedToastInline {
+  font-size: 12px;
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  padding: 8px 12px;
+  text-align: center;
+  font-weight: 600;
+}
