@@ -33,7 +33,7 @@ type Step = "consent" | "details" | "otp";
 export default function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signIn, isAuthenticated, isLoading } = useAuth();
+  const { signIn, isAuthenticated, isLoading, role } = useAuth();
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -72,9 +72,13 @@ export default function SignInForm() {
   // Redirect if already authenticated
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
+      if (role === "admin") {
+        router.replace("/admin");
+        return;
+      }
       router.replace(fromPath);
     }
-  }, [isAuthenticated, isLoading, router, fromPath]);
+  }, [isAuthenticated, isLoading, router, fromPath, role]);
 
   // Countdown timer for resend OTP
   useEffect(() => {
@@ -136,8 +140,9 @@ export default function SignInForm() {
 
       signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs, data.role || (isUserRole ? "user" : "owner"));
 
-      // User flow (student/job-holder) → always go to fromPath (e.g. /find-pg)
-      if (isUserRole || data.role === "user") {
+      if (data.role === "admin" || data.owner?.role === "admin") {
+        router.replace("/admin");
+      } else if (isUserRole || data.role === "user") {
         router.replace(fromPath);
       } else if (!data.hasPG) {
         router.replace("/add-pg");
@@ -232,8 +237,9 @@ export default function SignInForm() {
       const data = await res.json();
       signIn(data.token, data.owner, data.hasPG, data.pgId, data.pgs, data.role || (isUserRole ? "user" : "owner"));
 
-      // User flow (student/job-holder) → always go to fromPath (e.g. /find-pg)
-      if (isUserRole || data.role === "user") {
+      if (data.role === "admin" || data.owner?.role === "admin") {
+        router.replace("/admin");
+      } else if (isUserRole || data.role === "user") {
         router.replace(fromPath);
       } else if (!data.hasPG) {
         router.replace(fromPath !== "/dashboard" ? fromPath : "/add-pg");

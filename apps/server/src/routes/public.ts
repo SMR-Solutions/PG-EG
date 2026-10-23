@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { isNotNull, inArray, eq } from "drizzle-orm";
+import { isNotNull, inArray, eq, and } from "drizzle-orm";
 import { createDb, pgs } from "../db";
 import { resolveMapsLink, haversineKm } from "../utils/maps";
 
@@ -43,9 +43,10 @@ router.get("/pgs/nearby", async (req: Request, res: Response) => {
         liveVideoUrl: pgs.liveVideoUrl,
         latitude: pgs.latitude,
         longitude: pgs.longitude,
+        isActive: pgs.isActive,
       })
       .from(pgs)
-      .where(isNotNull(pgs.latitude));
+      .where(and(isNotNull(pgs.latitude), eq(pgs.isActive, true)));
 
     // Calculate distances in JS with Haversine
     const results = allPgs
@@ -374,6 +375,7 @@ function formatPublicPg(pg: typeof pgs.$inferSelect) {
     liveVideo: (() => {
       try { return pg.liveVideo ? JSON.parse(pg.liveVideo) : null; } catch { return null; }
     })(),
+    isActive: pg.isActive,
     createdAt: pg.createdAt,
   };
 }
@@ -387,7 +389,7 @@ router.post("/pgs/bulk", async (req: Request, res: Response) => {
       return;
     }
     const db = createDb(process.env.DATABASE_URL!);
-    const pgResults = await db.select().from(pgs).where(inArray(pgs.id, pgIds));
+    const pgResults = await db.select().from(pgs).where(and(inArray(pgs.id, pgIds), eq(pgs.isActive, true)));
     res.json({ pgs: pgResults.map(formatPublicPg) });
   } catch (err) {
     console.error("Bulk PGs fetch error:", err);

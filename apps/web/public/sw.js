@@ -1,4 +1,4 @@
-const CACHE_NAME = "pg-eg-v4";
+const CACHE_NAME = "pg-eg-v5";
 const STATIC_ASSETS = [
   "/",
   "/offline",
@@ -36,6 +36,9 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // Skip localhost / development completely so dev HMR and updates are instant
+  if (url.hostname === "localhost" || url.hostname === "127.0.0.1") return;
 
   // Skip non-GET and chrome-extension requests
   if (request.method !== "GET" || url.protocol === "chrome-extension:") return;

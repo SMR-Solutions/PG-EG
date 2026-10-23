@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config(); // ← MUST be first, before any imports that read process.env
+dotenv.config(); // ← Load environment variables (ADMIN_EMAIL, DATABASE_URL, etc.)
 
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
@@ -18,6 +18,7 @@ import publicRouter from "./routes/public";
 import expensesRouter from "./routes/expenses";
 import eventsRouter from "./routes/events";
 import leadsRouter from "./routes/leads";
+import adminRouter from "./routes/admin";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -159,6 +160,7 @@ app.use("/api/public", publicLimiter, publicRouter);
 app.use("/api/expenses", expensesRouter);
 app.use("/api/events", eventsLimiter, eventsRouter);
 app.use("/api/leads", leadsRouter);
+app.use("/api/admin", adminRouter);
 
 // ─── 404 Handler for Unknown API Endpoints ──────────────────────
 app.all("/api/*", (_req: Request, res: Response) => {

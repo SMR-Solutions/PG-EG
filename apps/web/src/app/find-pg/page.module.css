@@ -835,6 +835,10 @@
   color: var(--text-muted);
   margin: 0;
 }
+:global([data-theme="light"]) .expandRadiusHint {
+  color: #000000 !important;
+  font-weight: 600 !important;
+}
 
 .expandRadiusBtn {
   background: transparent;
@@ -1087,11 +1091,11 @@
 }
 
 :global([data-theme="light"]) .pgName {
-  color: #0f172a !important;
+  color: #ffffff !important;
 }
 :global([data-theme="light"]) .pgAddress {
-  color: #0f172a !important;
-  font-weight: 600 !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
 }
 :global([data-theme="light"]) .sharingChip {
   color: #0f172a !important;

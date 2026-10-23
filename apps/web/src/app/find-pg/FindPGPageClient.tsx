@@ -293,10 +293,11 @@ export default function FindPGPage() {
   };
 
 
-  // Derived: filtered results based on typeFilter
+  // Derived: filtered results based on typeFilter and active status
+  const activeResults = results.filter((pg) => (pg as any).isActive !== false);
   const filteredResults = typeFilter === "all"
-    ? results
-    : results.filter((pg) => {
+    ? activeResults
+    : activeResults.filter((pg) => {
         if (typeFilter === "gents") return pg.type === "gents";
         if (typeFilter === "ladies") return pg.type === "ladies";
         if (typeFilter === "coliving") return pg.type !== "gents" && pg.type !== "ladies";

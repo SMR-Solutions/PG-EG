@@ -42,6 +42,7 @@ interface PGData {
   locationLink?: string | null;
   owner: { name: string; phone: string } | null;
   managerName: string | null; managerPhone: string | null;
+  isActive?: boolean;
 }
 interface DashboardData { pg: PGData; rooms: Room[]; currentMonth: string; }
 
@@ -458,11 +459,70 @@ export default function DashboardPage() {
   );
 
   const { pg } = data;
+  const isPgInactive = pg.isActive === false;
 
   return (
     <main className={styles.main}>
       <div className={styles.orb1} /><div className={styles.orb2} />
-      <div className={styles.content}>
+
+      {/* ── Inactive PG "OFF" Frosted Overlay ── */}
+      {isPgInactive && (
+        <div className={styles.offOverlay}>
+          <div className={styles.offCard}>
+            <div className={styles.offStatusPill}>
+              <span className={styles.offDot} />
+              LISTING STATUS: OFF
+            </div>
+            <h1 className={styles.offTitle}>
+              Your listing / Website is <span className={styles.offHighlight}>&quot; OFF &quot;</span>
+            </h1>
+            <p className={styles.offSub}>
+              please Contact{" "}
+              <a href="tel:6281975993" className={styles.offPhoneHighlight}>
+                {"{ 6281975993 }"}
+              </a>{" "}
+              , for more information
+            </p>
+            <div className={styles.offActionRow}>
+              <a href="tel:6281975993" className={styles.offCallBtn}>
+                📞 Call 6281975993
+              </a>
+              <a
+                href="https://wa.me/916281975993?text=Hello%20PG-EG%20Admin,%20my%20PG%20listing%20is%20OFF"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.offWhatsappBtn}
+              >
+                💬 WhatsApp Support
+              </a>
+            </div>
+
+            <div className={styles.offFooterActions}>
+              {allPgs && allPgs.length > 1 && (
+                <button
+                  type="button"
+                  className={styles.offSwitchBtn}
+                  onClick={() => router.push("/select-pg")}
+                >
+                  🔄 Switch Property ({allPgs.length} Listed)
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles.offSignOutBtn}
+                onClick={() => {
+                  signOut();
+                  window.location.href = "/sign-in";
+                }}
+              >
+                🚪 Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className={`${styles.content} ${isPgInactive ? styles.contentDisabled : ""}`}>
 
         {/* ─── PG-EG Logo Bar ─── */}
         <div className={styles.logoBar}>
@@ -1715,7 +1775,7 @@ export default function DashboardPage() {
       )}
 
       {/* ─── Search FAB (large screens only — small screens use sidebar) ─── */}
-      {!isSmallScreen && !searchOpen && !checkoutModal && !roomHistoryRoom && (
+      {!isSmallScreen && !searchOpen && !checkoutModal && !roomHistoryRoom && !isPgInactive && (
         <button className={styles.searchFab} onClick={() => setSearchOpen(true)} id="btn-search-fab">
           🔍
         </button>

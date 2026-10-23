@@ -92,7 +92,7 @@ router.post("/verify", async (req: Request, res: Response) => {
       await db.update(owners).set({ firebaseUid, updatedAt: new Date() }).where(eq(owners.id, owner.id));
     }
 
-    const ownerPGs = await db.select({ id: pgs.id, name: pgs.name, type: pgs.type, paymentQrUrl: pgs.paymentQrUrl, paymentUpiId: pgs.paymentUpiId, paymentPhone: pgs.paymentPhone }).from(pgs)
+    const ownerPGs = await db.select({ id: pgs.id, name: pgs.name, type: pgs.type, paymentQrUrl: pgs.paymentQrUrl, paymentUpiId: pgs.paymentUpiId, paymentPhone: pgs.paymentPhone, isActive: pgs.isActive }).from(pgs)
       .where(eq(pgs.ownerId, owner.id)).orderBy(asc(pgs.createdAt));
     const hasPG = ownerPGs.length > 0;
     const token = makeJwt(owner.id, owner.phone, owner.role);
@@ -161,6 +161,19 @@ router.post("/google", async (req: Request, res: Response) => {
       owner = { ...owner, firebaseUid, email };
     }
 
+    // ── Check if email matches configured Admin Email(s) ──
+    const adminEmails = (process.env.ADMIN_EMAIL || "")
+      .toLowerCase()
+      .split(",")
+      .map((e) => e.trim())
+      .filter(Boolean);
+
+    const isAdmin = !!(owner.email && adminEmails.includes(owner.email.toLowerCase()));
+    if (isAdmin && owner.role !== "admin") {
+      await db.update(owners).set({ role: "admin", updatedAt: new Date() }).where(eq(owners.id, owner.id));
+      owner = { ...owner, role: "admin" };
+    }
+
     // ── Record consent (role=user only, consentGiven must be explicitly true) ──
     // We NEVER trust a version number from the client.
     // The server writes CURRENT_CONSENT_VERSION unconditionally when conditions are met.
@@ -174,7 +187,7 @@ router.post("/google", async (req: Request, res: Response) => {
 
     const consentUpToDate = owner.consentVersion === CURRENT_CONSENT_VERSION;
 
-    const ownerPGs = await db.select({ id: pgs.id, name: pgs.name, type: pgs.type, paymentQrUrl: pgs.paymentQrUrl, paymentUpiId: pgs.paymentUpiId, paymentPhone: pgs.paymentPhone }).from(pgs)
+    const ownerPGs = await db.select({ id: pgs.id, name: pgs.name, type: pgs.type, paymentQrUrl: pgs.paymentQrUrl, paymentUpiId: pgs.paymentUpiId, paymentPhone: pgs.paymentPhone, isActive: pgs.isActive }).from(pgs)
       .where(eq(pgs.ownerId, owner.id)).orderBy(asc(pgs.createdAt));
     const hasPG = ownerPGs.length > 0;
     const token = makeJwt(owner.id, owner.phone, owner.role);
@@ -215,7 +228,20 @@ router.get("/me", async (req: Request, res: Response) => {
     const result = await db.select().from(owners).where(eq(owners.id, decoded.ownerId)).limit(1);
     if (!result[0]) { res.status(404).json({ error: "Owner not found" }); return; }
 
-    const owner = result[0];
+    let owner = result[0];
+
+    const adminEmails = (process.env.ADMIN_EMAIL || "")
+      .toLowerCase()
+      .split(",")
+      .map((e) => e.trim())
+      .filter(Boolean);
+
+    const isAdmin = !!(owner.email && adminEmails.includes(owner.email.toLowerCase()));
+    if (isAdmin && owner.role !== "admin") {
+      await db.update(owners).set({ role: "admin", updatedAt: new Date() }).where(eq(owners.id, owner.id));
+      owner = { ...owner, role: "admin" };
+    }
+
     const consentUpToDate = owner.consentVersion === CURRENT_CONSENT_VERSION;
 
     const ownerPGs = await db.select({ id: pgs.id, name: pgs.name, type: pgs.type, paymentQrUrl: pgs.paymentQrUrl, paymentUpiId: pgs.paymentUpiId, paymentPhone: pgs.paymentPhone }).from(pgs)

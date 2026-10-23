@@ -3,17 +3,17 @@
  * Owner-only endpoint: returns today''s AND monthly Leads funnel metrics
  * for all PGs owned by the caller.
  *
- * Timezone: Asia/Kolkata (IST, UTC+5:30) — the app''s target market.
+ * Timezone: Asia/Kolkata (IST, UTC+5:30) - the app''s target market.
  * Day/month boundaries are computed server-side in UTC.
  *
  * Query params (optional):
- *   year  – 4-digit year  (must be current IST year; defaults to current year)
- *   month – 1-12          (defaults to current IST month)
+ *   year  - 4-digit year  (must be current IST year; defaults to current year)
+ *   month - 1-12          (defaults to current IST month)
  *
  * Metrics (per PG, distinct-visitor counts):
- *   views           – visitors who opened the PG gallery
- *   interestedLeads – gallery openers who also saved OR shared that PG
- *   qualifiedLeads  – gallery openers who clicked BOTH Enquire AND Directions
+ *   views           - visitors who opened the PG gallery
+ *   interestedLeads - gallery openers who also saved OR shared that PG
+ *   qualifiedLeads  - gallery openers who clicked BOTH Enquire AND Directions
  *
  * Privacy: visitor_id values are NEVER returned. Only aggregate counts.
  */
@@ -53,7 +53,7 @@ function getIstDayWindow(): TimeWindow {
 }
 
 /** Returns the IST calendar-month window for the given year + month (1-indexed).
- *  Counts distinct visitors across the whole month — NOT a sum of daily counts. */
+ *  Counts distinct visitors across the whole month - NOT a sum of daily counts. */
 function getIstMonthWindow(year: number, month: number): TimeWindow {
   const startUtc = new Date(Date.UTC(year, month - 1, 1) - IST_OFFSET_MS);
   const endUtc   = new Date(Date.UTC(year, month, 1) - IST_OFFSET_MS);
@@ -98,6 +98,9 @@ async function fetchMetricsForPgs(
         AND  created_at >= ${window.startUtc}
         AND  created_at <  ${window.endUtc}
     ),
+    visitors AS (
+      SELECT DISTINCT pg_id, visitor_id FROM filtered
+    ),
     gallery AS (
       SELECT DISTINCT pg_id, visitor_id FROM filtered WHERE event_type = 'pg_gallery_open'
     ),
@@ -111,17 +114,18 @@ async function fetchMetricsForPgs(
       SELECT DISTINCT pg_id, visitor_id FROM filtered WHERE event_type = 'pg_directions_clicked'
     )
     SELECT
-      g.pg_id,
+      v.pg_id,
       COUNT(DISTINCT g.visitor_id)                                                   AS views,
       COUNT(DISTINCT i.visitor_id)                                                   AS interested_leads,
       COUNT(DISTINCT CASE WHEN e.visitor_id IS NOT NULL
                           AND d.visitor_id IS NOT NULL
-                     THEN g.visitor_id END)                                          AS qualified_leads
-    FROM      gallery    g
-    LEFT JOIN interest   i ON g.pg_id = i.pg_id AND g.visitor_id = i.visitor_id
-    LEFT JOIN enquire    e ON g.pg_id = e.pg_id AND g.visitor_id = e.visitor_id
-    LEFT JOIN directions d ON g.pg_id = d.pg_id AND g.visitor_id = d.visitor_id
-    GROUP BY  g.pg_id
+                     THEN v.visitor_id END)                                          AS qualified_leads
+    FROM      visitors   v
+    LEFT JOIN gallery    g ON v.pg_id = g.pg_id AND v.visitor_id = g.visitor_id
+    LEFT JOIN interest   i ON v.pg_id = i.pg_id AND v.visitor_id = i.visitor_id
+    LEFT JOIN enquire    e ON v.pg_id = e.pg_id AND v.visitor_id = e.visitor_id
+    LEFT JOIN directions d ON v.pg_id = d.pg_id AND v.visitor_id = d.visitor_id
+    GROUP BY  v.pg_id
   `);
 
   return result.rows as unknown as PgMetricsRow[];

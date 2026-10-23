@@ -24,8 +24,8 @@ export default function SavedPGsClient() {
   const [sharingPg, setSharingPg] = useState<any | null>(null);
   const [showClearModal, setShowClearModal] = useState(false);
 
-  // Only show PGs that are still in owner's savedPgs (removes instantly on unsave)
-  const visiblePgs = pgs.filter(pg => owner?.savedPgs?.includes(pg.id));
+  // Only show PGs that are still in owner's savedPgs and are active
+  const visiblePgs = pgs.filter(pg => owner?.savedPgs?.includes(pg.id) && pg.isActive !== false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {

@@ -57,6 +57,7 @@ export const pgs = pgTable("pgs", {
   paymentPhone: text("payment_phone"),             // Phone number for rent collection (e.g. GPay number)
   liveVideoUrl: text("live_video_url"),            // ImageKit URL for 5-10s live location video
   liveVideo: text("live_video"),                   // JSON: { url, fileId, duration, createdAt }
+  isActive: boolean("is_active").default(true).notNull(), // Admin active/inactive control
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

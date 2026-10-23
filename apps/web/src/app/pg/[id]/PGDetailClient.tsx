@@ -31,6 +31,7 @@ interface PGData {
   description?: string | null;
   liveVideoUrl?: string | null;
   liveVideo?: { url: string; fileId?: string; duration?: number } | null;
+  isActive?: boolean;
 }
 
 interface Props {
@@ -69,9 +70,19 @@ export default function PGDetailClient({ pg }: Props) {
     }
   }, [isLoading, isAuthenticated]);
 
+  // Track page view / gallery open for Leads metrics
+  useEffect(() => {
+    if (pg?.id) {
+      trackEvent("pg_gallery_open", pg.id);
+    }
+  }, [pg?.id]);
+
   const openGallery = () => {
     window.history.pushState({ gallery: true }, "");
     setLightboxOpen(true);
+    if (pg?.id) {
+      trackEvent("pg_gallery_open", pg.id);
+    }
   };
   const closeGallery = () => {
     if (window.history.state?.gallery) window.history.back();
@@ -143,12 +154,54 @@ export default function PGDetailClient({ pg }: Props) {
   );
 
   return (
-    <main className={`${styles.main} ${pgStyles.main}`} data-theme={theme}>
+    <main className={`${styles.main} ${pgStyles.main} ${pg.isActive === false ? pgStyles.contentDisabled : ""}`} data-theme={theme}>
       <div className={styles.orb1} />
       <div className={styles.orb2} />
 
+      {/* ── Inactive PG "OFF" Frosted Overlay ── */}
+      {pg.isActive === false && (
+        <div className={pgStyles.offOverlay}>
+          <div className={pgStyles.offCard}>
+            <div className={pgStyles.offStatusPill}>
+              <span className={pgStyles.offDot} />
+              WEBSITE STATUS: OFF
+            </div>
+            <h1 className={pgStyles.offTitle}>
+              your Website is <span className={pgStyles.offHighlight}>&quot; OFF &quot;</span>
+            </h1>
+            <p className={pgStyles.offSub}>
+              Please Contact{" "}
+              <a href="tel:6281975993" className={pgStyles.offPhoneHighlight}>
+                {"{ 6281975993 }"}
+              </a>{" "}
+              , for more information
+            </p>
+            <div className={pgStyles.offActionRow}>
+              <a href="tel:6281975993" className={pgStyles.offCallBtn}>
+                📞 Call 6281975993
+              </a>
+              <a
+                href="https://wa.me/916281975993?text=Hello%20PG-EG%20Admin,%20my%20PG%20website%20is%20OFF"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={pgStyles.offWhatsappBtn}
+              >
+                💬 WhatsApp Support
+              </a>
+            </div>
+            <button
+              type="button"
+              className={pgStyles.offBackBtn}
+              onClick={() => router.push("/find-pg")}
+            >
+              ← Explore Other PGs Near Me
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Navbar: back ← | PG-EG App Logo (Top Centre) | theme toggle ── */}
-      <div className={pgStyles.navbar}>
+      <div className={`${pgStyles.navbar} ${pg.isActive === false ? pgStyles.contentDisabled : ""}`}>
         <button className={pgStyles.navBtn} onClick={() => router.push("/find-pg")} title="Find PGs">←</button>
         <div className={pgStyles.navLogoWrap}>
           <AppLogo size="sm" href="/find-pg" />

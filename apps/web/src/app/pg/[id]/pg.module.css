@@ -721,3 +721,229 @@
   from { opacity: 0; transform: translate(-50%, 12px); }
   to   { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* ── Inactive PG "OFF" Frosted Overlay ── */
+.offOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(8, 12, 20, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 40px 16px 80px;
+  overflow-y: auto;
+  pointer-events: all;
+  animation: fadeInOff 0.25s ease-out;
+}
+
+:global([data-theme="light"]) .offOverlay {
+  background: rgba(241, 245, 249, 0.75);
+}
+
+@keyframes fadeInOff {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.offCard {
+  max-width: 580px;
+  width: 100%;
+  background: rgba(15, 23, 42, 0.94);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  box-shadow: 0 24px 50px -10px rgba(0, 0, 0, 0.8), 0 0 35px rgba(239, 68, 68, 0.18);
+  border-radius: 18px;
+  padding: 30px 24px;
+  text-align: center;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+:global([data-theme="light"]) .offCard {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(239, 68, 68, 0.45);
+  box-shadow: 0 24px 50px -10px rgba(0, 0, 0, 0.14), 0 0 35px rgba(239, 68, 68, 0.12);
+}
+
+.offStatusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+:global([data-theme="light"]) .offStatusPill {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.offDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 10px #ef4444;
+  animation: pulseDot 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+.offTitle {
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+:global([data-theme="light"]) .offTitle {
+  color: #0f172a;
+}
+
+.offHighlight {
+  color: #ef4444;
+  text-shadow: 0 0 16px rgba(239, 68, 68, 0.45);
+  font-weight: 900;
+}
+
+.offSub {
+  font-size: 16px;
+  color: #cbd5e1;
+  margin: 0;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+:global([data-theme="light"]) .offSub {
+  color: #475569;
+}
+
+.offPhoneHighlight {
+  color: #38bdf8;
+  font-weight: 700;
+  text-decoration: none;
+  border-bottom: 2px dashed rgba(56, 189, 248, 0.6);
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.1);
+  transition: all 0.2s;
+}
+
+:global([data-theme="light"]) .offPhoneHighlight {
+  color: #0284c7;
+  background: rgba(2, 132, 199, 0.08);
+  border-bottom-color: rgba(2, 132, 199, 0.6);
+}
+
+.offPhoneHighlight:hover {
+  color: #60a5fa;
+  background: rgba(56, 189, 248, 0.2);
+  border-bottom-style: solid;
+}
+
+.offActionRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.offCallBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: 12px;
+  background: #ef4444;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14.5px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+}
+
+.offCallBtn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+}
+
+.offWhatsappBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border-radius: 12px;
+  background: rgba(34, 197, 94, 0.16);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+  font-weight: 700;
+  font-size: 14.5px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+:global([data-theme="light"]) .offWhatsappBtn {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #15803d;
+}
+
+.offWhatsappBtn:hover {
+  background: rgba(34, 197, 94, 0.25);
+  transform: translateY(-1px);
+}
+
+.offBackBtn {
+  margin-top: 4px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 6px 12px;
+  transition: color 0.2s;
+}
+
+.offBackBtn:hover {
+  color: #f8fafc;
+}
+
+:global([data-theme="light"]) .offBackBtn:hover {
+  color: #0f172a;
+}
+
+.contentDisabled {
+  pointer-events: none !important;
+  user-select: none !important;
+  opacity: 0.65 !important;
+  filter: grayscale(0.25) !important;
+}
+
