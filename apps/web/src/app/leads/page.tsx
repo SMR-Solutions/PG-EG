@@ -6,7 +6,7 @@
  * Shows Monthly and Today's Leads funnel metrics from GET /api/leads/metrics:
  *   - Views           : distinct visitors who opened the PG gallery
  *   - Interested Leads: visitors who saved the PG (share removed)
- *   - Qualified Leads : gallery openers who clicked both Enquire and Directions
+ *   - Qualified Leads : gallery visitors who clicked Enquire or Directions
  *
  * Uses the same auth pattern as /expenses and /dashboard.
  * Never exposes visitor IDs or personal details.
@@ -321,7 +321,7 @@ export default function LeadsPage() {
           <div className={styles.legendRow}>
             <span className={`${styles.legendDot} ${styles.indigo}`} />
             <span className={styles.legendText}>
-              <strong>Qualified</strong> &mdash; gallery visitors who clicked both Enquire and Directions for your PG.
+              <strong>Qualified</strong> &mdash; gallery visitors who clicked Enquire or Directions for your PG.
             </span>
           </div>
         </div>

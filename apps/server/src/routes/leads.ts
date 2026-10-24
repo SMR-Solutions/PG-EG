@@ -13,7 +13,7 @@
  * Metrics (per PG, distinct-visitor counts):
  *   views           - visitors who opened the PG gallery
  *   interestedLeads - visitors who saved that PG (share removed)
- *   qualifiedLeads  - gallery openers who clicked BOTH Enquire AND Directions
+ *   qualifiedLeads  - gallery visitors who clicked Enquire or Directions
  *
  * Privacy: visitor_id values are NEVER returned. Only aggregate counts.
  */
@@ -117,8 +117,8 @@ async function fetchMetricsForPgs(
       v.pg_id,
       COUNT(DISTINCT g.visitor_id)                                                   AS views,
       COUNT(DISTINCT i.visitor_id)                                                   AS interested_leads,
-      COUNT(DISTINCT CASE WHEN e.visitor_id IS NOT NULL
-                          AND d.visitor_id IS NOT NULL
+      COUNT(DISTINCT CASE WHEN g.visitor_id IS NOT NULL
+                          AND (e.visitor_id IS NOT NULL OR d.visitor_id IS NOT NULL)
                      THEN v.visitor_id END)                                          AS qualified_leads
     FROM      visitors   v
     LEFT JOIN gallery    g ON v.pg_id = g.pg_id AND v.visitor_id = g.visitor_id
