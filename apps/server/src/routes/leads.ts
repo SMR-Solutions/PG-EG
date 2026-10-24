@@ -12,7 +12,7 @@
  *
  * Metrics (per PG, distinct-visitor counts):
  *   views           - visitors who opened the PG gallery
- *   interestedLeads - gallery openers who also saved OR shared that PG
+ *   interestedLeads - visitors who saved that PG (share removed)
  *   qualifiedLeads  - gallery openers who clicked BOTH Enquire AND Directions
  *
  * Privacy: visitor_id values are NEVER returned. Only aggregate counts.
@@ -105,7 +105,7 @@ async function fetchMetricsForPgs(
       SELECT DISTINCT pg_id, visitor_id FROM filtered WHERE event_type = 'pg_gallery_open'
     ),
     interest AS (
-      SELECT DISTINCT pg_id, visitor_id FROM filtered WHERE event_type IN ('pg_saved', 'pg_shared')
+      SELECT DISTINCT pg_id, visitor_id FROM filtered WHERE event_type = 'pg_saved'
     ),
     enquire AS (
       SELECT DISTINCT pg_id, visitor_id FROM filtered WHERE event_type = 'pg_enquire_clicked'

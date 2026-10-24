@@ -345,6 +345,8 @@ export default function SavedPGsClient() {
           open={true}
           close={closeGallery}
           images={viewImagesFor.pgImages}
+          pgName={viewImagesFor.name}
+          liveVideoUrl={viewImagesFor.liveVideoUrl}
         />
       )}
 

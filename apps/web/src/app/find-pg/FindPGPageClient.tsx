@@ -8,6 +8,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import styles from "./page.module.css";
 import dynamic from "next/dynamic";
 import AppLogo from "@/components/AppLogo";
+import PGImageSlider from "@/components/PGImageSlider";
 
 const PGPhotoLightbox = dynamic(() => import("@/components/PGPhotoLightbox"), { ssr: false });
 const LivePGModal = dynamic(() => import("@/components/LivePGModal"), { ssr: false });
@@ -260,13 +261,17 @@ export default function FindPGPage() {
   // Type filter for results
   const [typeFilter, setTypeFilter] = useState<"all" | "gents" | "ladies" | "coliving">("all");
   const [viewImagesFor, setViewImagesFor] = useState<PGResult | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxTab, setLightboxTab] = useState<"photos" | "live">("photos");
   const [sharingPg, setSharingPg] = useState<PGResult | null>(null);
   const [activeLivePg, setActiveLivePg] = useState<PGResult | null>(null);
 
   // Gallery History state management
-  const openGallery = (pg: PGResult) => {
+  const openGallery = (pg: PGResult, index = 0, tab: "photos" | "live" = "photos") => {
     window.history.pushState({ gallery: true }, "");
     setViewImagesFor(pg);
+    setLightboxIndex(index);
+    setLightboxTab(tab);
     // Track EVERY genuine gallery open — close + reopen = two separate events.
     // React re-renders never re-invoke click handlers, so no dedup Set is needed.
     trackEvent("pg_gallery_open", pg.id);
@@ -1259,7 +1264,7 @@ export default function FindPGPage() {
                       className={styles.livePgHeaderBtn}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setActiveLivePg(pg);
+                        openGallery(pg, 0, "live");
                       }}
                       id={`btn-live-pg-${pg.id}`}
                       title="Watch 5–10s live location video of building & neighbourhood"
@@ -1307,55 +1312,45 @@ export default function FindPGPage() {
                   </div>
 
                   <div className={styles.cardLayout}>
-                    {/* Left: Image (Top on mobile) */}
-                    <div className={styles.cardImageArea} onClick={() => openGallery(pg)}>
-                      {pg.pgImages && pg.pgImages.length > 0 ? (
-                        <img
-                          src={pg.pgImages[0]?.url || pg.pgImages[0]}
-                          alt={pg.name}
-                          className={styles.pgMainImg}
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : (
-                        <div className={styles.pgMainImgPlaceholder}>No Image</div>
-                      )}
-
-                      {/* Save/Share on IMAGE — MOBILE only (hidden ≥768px via CSS) */}
-                      <div className={styles.cardImageActions}>
-                        <div
-                          className={styles.favBtn}
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (!isAuthenticated) {
-                              router.push("/sign-in?from=/find-pg&role=user");
-                              return;
-                            }
-                            if (consentRequired) { setConsentModalOpen(true); return; }
-                            const saving = !owner?.savedPgs?.includes(pg.id);
-                            if (toggleSavePg) {
-                              const ok = await toggleSavePg(pg.id, saving);
-                              // Track pg_saved only after a confirmed save (not on unsave)
-                              if (ok && saving) trackEvent("pg_saved", pg.id);
-                            }
-                          }}
-                        >
-                          {owner?.savedPgs?.includes(pg.id) ? "❤️" : "🤍"}
-                        </div>
-                        <div
-                          className={styles.shareBtn}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSharePg(pg);
-                          }}
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                        </div>
-                      </div>
-
-                      <div className={styles.photosBadge}>
-                        🖼 {pg.pgImages?.length || 0} Photos
-                      </div>
+                    {/* Left: Image (Top on mobile) — Slider with touch swipe, chevrons, dots & (2/3) badge */}
+                    <div className={styles.cardImageArea}>
+                      <PGImageSlider
+                        images={pg.pgImages}
+                        pgName={pg.name}
+                        onOpenLightbox={(idx) => openGallery(pg, idx, "photos")}
+                        renderTopRight={
+                          <div className={styles.cardImageActions}>
+                            <div
+                              className={styles.favBtn}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (!isAuthenticated) {
+                                  router.push("/sign-in?from=/find-pg&role=user");
+                                  return;
+                                }
+                                if (consentRequired) { setConsentModalOpen(true); return; }
+                                const saving = !owner?.savedPgs?.includes(pg.id);
+                                if (toggleSavePg) {
+                                  const ok = await toggleSavePg(pg.id, saving);
+                                  // Track pg_saved only after a confirmed save (not on unsave)
+                                  if (ok && saving) trackEvent("pg_saved", pg.id);
+                                }
+                              }}
+                            >
+                              {owner?.savedPgs?.includes(pg.id) ? "❤️" : "🤍"}
+                            </div>
+                            <div
+                              className={styles.shareBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSharePg(pg);
+                              }}
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                            </div>
+                          </div>
+                        }
+                      />
                     </div>
 
 
@@ -1433,7 +1428,7 @@ export default function FindPGPage() {
 
                       {/* Buttons */}
                       <div className={styles.pgCardBtns}>
-                        <button className={`${styles.actionBtn} ${styles.actionBtnView}`} onClick={() => openGallery(pg)} id={`btn-view-${pg.id}`}>
+                        <button className={`${styles.actionBtn} ${styles.actionBtnView}`} onClick={() => openGallery(pg, 0, "photos")} id={`btn-view-${pg.id}`}>
                           <span className={styles.actionIcon}>🏢</span>
                           <div className={styles.actionText}>
                             <span className={styles.actionTitle}>View PG</span>
@@ -1538,6 +1533,11 @@ export default function FindPGPage() {
           open={true}
           close={closeGallery}
           images={viewImagesFor.pgImages}
+          index={lightboxIndex}
+          onIndexChange={setLightboxIndex}
+          pgName={viewImagesFor.name}
+          liveVideoUrl={viewImagesFor.liveVideoUrl}
+          initialTab={lightboxTab}
         />
       )}
 

@@ -281,45 +281,48 @@
   }
 }
 
-/* ── Boxy Icon Buttons (Save / Share) ── */
+/* ── Icon Buttons (Save / Share) ── */
 .iconBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 0 !important;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(15, 23, 42, 0.85);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  background: rgba(30, 41, 59, 0.9) !important;
   color: #ffffff !important;
-  font-size: 16px;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.15s ease, border-color 0.15s ease;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  font-size: 16px !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  transition: all 0.18s ease !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
 }
 
 .iconBtn:hover {
-  transform: none !important;
-  background: rgba(15, 23, 42, 1);
-  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px) !important;
+  background: rgba(51, 65, 85, 1) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
 }
 
 .iconBtn svg {
   stroke: #ffffff;
+  display: block;
 }
 
 :global([data-theme="light"]) .iconBtn {
-  background: rgba(255, 255, 255, 0.9) !important;
-  border-color: rgba(0, 0, 0, 0.18) !important;
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.16) !important;
   color: #0f172a !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
 }
 :global([data-theme="light"]) .iconBtn:hover {
-  background: #ffffff !important;
-  border-color: rgba(0, 0, 0, 0.35) !important;
+  background: #f8fafc !important;
+  border-color: rgba(0, 0, 0, 0.3) !important;
 }
-:global([data-theme="light"]) .iconBtn svg {
+:global([data-theme="light"]) .iconBtn svg:not([fill="#ef4444"]) {
   stroke: #0f172a !important;
 }
 
@@ -334,19 +337,10 @@
   .headerActions {
     display: flex;
   }
-  .imageActions {
-    display: none !important;
-  }
 }
 
 .imageActions {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  z-index: 5;
+  display: none !important;
 }
 
 /* ── Split Layout (Hero Image + Content) ── */
@@ -438,43 +432,108 @@
   align-items: center;
 }
 
-/* Live PG button */
+/* Live PG button & Mobile Save/Share row */
 .livePgTopRow {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  margin-bottom: 12px !important;
+  gap: 12px !important;
+}
+
+.mobileLiveRowActions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-left: auto !important;
+  flex-shrink: 0 !important;
+}
+
+@media (min-width: 900px) {
+  .mobileLiveRowActions {
+    display: none !important;
+  }
+}
+
+@keyframes liveJumpPop {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 2px 10px rgba(239, 68, 68, 0.22);
+  }
+  12% {
+    transform: translateY(-6px) scale(1.06);
+    box-shadow: 0 12px 26px rgba(239, 68, 68, 0.48);
+  }
+  24% {
+    transform: translateY(0) scale(1.02);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.28);
+  }
+  36% {
+    transform: translateY(-3px) scale(1.04);
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+  }
+  48% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 2px 10px rgba(239, 68, 68, 0.22);
+  }
 }
 
 .livePgBannerBtn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.16), rgba(220, 38, 38, 0.08));
-  border: 1.5px solid rgba(239, 68, 68, 0.45);
-  border-radius: 0 !important;
+  padding: 7px 14px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(220, 38, 38, 0.1));
+  border: 1.5px solid rgba(239, 68, 68, 0.55);
+  border-radius: 8px !important;
   color: var(--text-primary, #ffffff);
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.15s ease, border-color 0.15s ease;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.12);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.22);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
+  animation: liveJumpPop 2.5s ease-in-out infinite;
+  will-change: transform, box-shadow;
 }
 
 .livePgBannerBtn:hover {
+  animation-play-state: paused;
+  transform: translateY(-4px) scale(1.06) !important;
   border-color: #ef4444;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.24), rgba(220, 38, 38, 0.14));
-  transform: none !important;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.28), rgba(220, 38, 38, 0.18));
+  box-shadow: 0 10px 26px rgba(239, 68, 68, 0.45);
+}
+
+.livePgBannerBtn:active {
+  transform: translateY(0) scale(0.98) !important;
 }
 
 .livePulseDot {
   width: 8px;
   height: 8px;
-  border-radius: 0 !important;
+  border-radius: 50% !important;
   background: #ef4444;
   display: inline-block;
   flex-shrink: 0;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  animation: liveDotPulseAnim 1.8s infinite;
+}
+
+@keyframes liveDotPulseAnim {
+  0% {
+    transform: scale(0.92);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.75);
+  }
+  70% {
+    transform: scale(1.18);
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+  100% {
+    transform: scale(0.92);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
 }
 
 .livePgBannerTitle {
@@ -499,16 +558,22 @@
   background: rgba(239, 68, 68, 0.15);
   width: 18px;
   height: 18px;
-  border-radius: 0 !important;
+  border-radius: 4px !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin-left: 2px;
+  transition: transform 0.2s ease;
+}
+
+.livePgBannerBtn:hover .livePgPlayIcon {
+  transform: translateX(2px);
 }
 
 :global([data-theme="light"]) .livePgBannerBtn {
   background: linear-gradient(135deg, #fef2f2, #fee2e2);
   border-color: #f87171;
+  box-shadow: 0 3px 12px rgba(239, 68, 68, 0.2);
 }
 :global([data-theme="light"]) .livePgBannerTitle { color: #dc2626; }
 :global([data-theme="light"]) .livePgBannerBadge { color: #374151; border-left-color: rgba(0, 0, 0, 0.15); }
@@ -561,34 +626,36 @@
   }
 }
 
-/* Action button boxy styling & NO scaling to prevent blurriness */
+/* Action buttons (View PG, Enquire, Directions) — Sleek Rounded Corners */
 .actionBtn {
-  border-radius: 0 !important;
+  border-radius: 12px !important;
   animation: none !important;
   transform: none !important;
-  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease !important;
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease !important;
   box-sizing: border-box;
 }
 
 .actionBtn:hover {
-  transform: none !important;
+  transform: translateY(-2px) !important;
   scale: none !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14) !important;
 }
 
 .actionBtn1,
 .actionBtn2,
 .actionBtn3 {
+  border-radius: 12px !important;
   animation: none !important;
 }
 .actionBtn1:hover,
 .actionBtn2:hover,
 .actionBtn3:hover {
-  transform: none !important;
+  transform: translateY(-2px) !important;
   scale: none !important;
 }
 
 .actionIcon {
-  border-radius: 0 !important;
+  border-radius: 8px !important;
 }
 
 /* Global resets for boxy appearance on this page */
@@ -610,7 +677,9 @@
   margin: 6px 0 10px;
   color: #ffffff;
 }
-:global([data-theme="light"]) .pgName {
+:global([data-theme="light"]) .pgName,
+[data-theme="light"] .pgName,
+:global([data-theme="light"]) :global(.pgName) {
   color: #0f172a !important;
 }
 

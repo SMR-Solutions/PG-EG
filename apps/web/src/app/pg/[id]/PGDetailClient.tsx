@@ -11,6 +11,7 @@ import styles from "../../find-pg/page.module.css";
 import pgStyles from "./pg.module.css";
 import { trackEvent } from "@/lib/trackEvent";
 import AppLogo from "@/components/AppLogo";
+import PGImageSlider from "@/components/PGImageSlider";
 
 const PGPhotoLightbox = dynamic(() => import("@/components/PGPhotoLightbox"), { ssr: false });
 const LivePGModal = dynamic(() => import("@/components/LivePGModal"), { ssr: false });
@@ -44,6 +45,8 @@ export default function PGDetailClient({ pg }: Props) {
   const { theme, setTheme } = useTheme();
   const { canInstall, installing, triggerInstall } = usePwaInstall();
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxTab, setLightboxTab] = useState<"photos" | "live">("photos");
   const [liveModalOpen, setLiveModalOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
@@ -77,8 +80,10 @@ export default function PGDetailClient({ pg }: Props) {
     }
   }, [pg?.id]);
 
-  const openGallery = () => {
+  const openGallery = (index = 0, tab: "photos" | "live" = "photos") => {
     window.history.pushState({ gallery: true }, "");
+    setLightboxIndex(index);
+    setLightboxTab(tab);
     setLightboxOpen(true);
     if (pg?.id) {
       trackEvent("pg_gallery_open", pg.id);
@@ -104,8 +109,8 @@ export default function PGDetailClient({ pg }: Props) {
   const typeClass = pg.type === "ladies" ? styles.pgTypeLadies : pg.type === "gents" ? styles.pgTypeGents : styles.pgTypeColiving;
   const typeLabel = pg.type === "ladies" ? "👩‍🦰 Ladies" : pg.type === "gents" ? "👨‍🦱 Gents" : "🤝 Co-Living";
 
-  const SaveShareButtons = ({ inline = false }: { inline?: boolean }) => (
-    <div className={inline ? pgStyles.headerActions : pgStyles.imageActions}>
+  const SaveShareButtons = ({ className }: { className?: string }) => (
+    <div className={className || pgStyles.headerActions}>
       <button
         type="button"
         className={pgStyles.iconBtn}
@@ -252,40 +257,27 @@ export default function PGDetailClient({ pg }: Props) {
               </span>
             )}
             {/* Save/Share shown here on desktop */}
-            <SaveShareButtons inline />
+            <SaveShareButtons className={pgStyles.headerActions} />
           </div>
 
           <div className={`${styles.cardLayout} ${pgStyles.cardLayout}`}>
-            {/* Image */}
-            <div className={`${styles.cardImageArea} ${pgStyles.cardImageArea}`} onClick={openGallery} style={{ cursor: pg.pgImages?.length ? "pointer" : "default" }}>
-              {pg.pgImages && pg.pgImages.length > 0 ? (
-                <img
-                  src={pg.pgImages[0]?.url || pg.pgImages[0]}
-                  alt={pg.name}
-                  className={styles.pgMainImg}
-                  loading="lazy"
-                  decoding="async"
-                />
-              ) : (
-                <div className={styles.pgMainImgPlaceholder}>No Image Available</div>
-              )}
-
-              {/* Save/Share shown on image for mobile */}
-              <SaveShareButtons />
-
-              {pg.pgImages && pg.pgImages.length > 0 && (
-                <div className={styles.photosBadge}>🖼 {pg.pgImages.length} Photos</div>
-              )}
+            {/* Image Slider — Auto-sliding, touch-friendly swipe, small chevrons on big screens, dots & (2/3) badge */}
+            <div className={`${styles.cardImageArea} ${pgStyles.cardImageArea}`}>
+              <PGImageSlider
+                images={pg.pgImages}
+                pgName={pg.name}
+                onOpenLightbox={(idx) => openGallery(idx, "photos")}
+              />
             </div>
 
             {/* Content */}
             <div className={`${styles.cardContentArea} ${pgStyles.cardContentArea}`}>
-              {/* Eye-catching 🔴 Live PG button directly above PG Name */}
+              {/* Eye-catching 🔴 Live PG button directly above PG Name (with Save & Share on small/medium screens) */}
               <div className={pgStyles.livePgTopRow}>
                 <button
                   type="button"
                   className={pgStyles.livePgBannerBtn}
-                  onClick={() => setLiveModalOpen(true)}
+                  onClick={() => openGallery(0, "live")}
                   id="btn-live-pg-detail"
                   title="Watch Live Location Video — Exterior & Street"
                 >
@@ -294,9 +286,20 @@ export default function PGDetailClient({ pg }: Props) {
                   <span className={pgStyles.livePgBannerBadge}>Exterior &amp; Street</span>
                   <span className={pgStyles.livePgPlayIcon}>▶</span>
                 </button>
+
+                {/* Mobile & Medium screens: Save & Share buttons beside LIVE PG button at the right end */}
+                <SaveShareButtons className={pgStyles.mobileLiveRowActions} />
               </div>
 
-              <h1 className={styles.pgName} style={{ fontSize: "clamp(18px, 4vw, 24px)" }}>{pg.name}</h1>
+              <h1
+                className={`${styles.pgName} ${pgStyles.pgName}`}
+                style={{
+                  fontSize: "clamp(18px, 4vw, 24px)",
+                  color: theme === "light" ? "#0f172a" : "#ffffff",
+                }}
+              >
+                {pg.name}
+              </h1>
 
               <div className={`${styles.pgTypeRow} ${pgStyles.pgTypeRow}`}>
                 <span className={typeClass}>{typeLabel}</span>
@@ -367,7 +370,7 @@ export default function PGDetailClient({ pg }: Props) {
               {/* Buttons — same layout as FindPGs page */}
               <div className={`${styles.pgCardBtns} ${pgStyles.pgCardBtns}`}>
                 {pg.pgImages && pg.pgImages.length > 0 && (
-                  <button className={`${styles.actionBtn} ${styles.actionBtnView} ${pgStyles.actionBtn} ${pgStyles.actionBtn1}`} onClick={openGallery} id="btn-view-photos">
+                  <button className={`${styles.actionBtn} ${styles.actionBtnView} ${pgStyles.actionBtn} ${pgStyles.actionBtn1}`} onClick={() => openGallery(0, "photos")} id="btn-view-photos">
                     <span className={`${styles.actionIcon} ${pgStyles.actionIcon}`}>🏢</span>
                     <div className={`${styles.actionText} ${pgStyles.actionText}`}>
                       <span className={`${styles.actionTitle} ${pgStyles.actionTitle}`}>View PG</span>
@@ -450,12 +453,17 @@ export default function PGDetailClient({ pg }: Props) {
         </div>
       </div>
 
-      {/* Lightbox */}
+      {/* Unified Lightbox with Photos & Live View */}
       {lightboxOpen && pg.pgImages && pg.pgImages.length > 0 && (
         <PGPhotoLightbox
           open={true}
           close={closeGallery}
           images={pg.pgImages}
+          index={lightboxIndex}
+          onIndexChange={setLightboxIndex}
+          pgName={pg.name}
+          liveVideoUrl={pg.liveVideoUrl}
+          initialTab={lightboxTab}
         />
       )}
 
