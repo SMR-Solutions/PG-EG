@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppLogo from "@/components/AppLogo";
 import { useAuth } from "@/contexts/AuthContext";
@@ -55,6 +55,15 @@ function TenantProfileInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [idFlipped, setIdFlipped] = useState(false);
+
+  // Hidden refs for camera capture & gallery upload
+  const selfieRef = useRef<HTMLInputElement>(null);     // gallery upload
+  const selfieCamRef = useRef<HTMLInputElement>(null);  // camera capture
+  const idCardRef = useRef<HTMLInputElement>(null);     // gallery upload
+  const idCardCamRef = useRef<HTMLInputElement>(null);  // camera capture
+
+  // Which picker popup is open: null | "selfie" | "id"
+  const [photoPicker, setPhotoPicker] = useState<null | "selfie" | "id">(null);
 
   // Lightbox state
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
@@ -341,6 +350,98 @@ function TenantProfileInner() {
     <main className={styles.main}>
       <div className={styles.orb1} /><div className={styles.orb2} />
 
+      {/* ── Photo source picker overlay — Camera vs Gallery ── */}
+      {photoPicker && (
+        <div className={styles.pickerBackdrop} onClick={() => setPhotoPicker(null)}>
+          <div className={styles.pickerPopup} onClick={e => e.stopPropagation()}>
+            <div className={styles.pickerTitle}>
+              {photoPicker === "selfie"
+                ? (editPhotoUrl ? "Change Selfie Photo" : "Add Selfie Photo")
+                : (editIdUrl ? "Change ID Card Photo" : "Add ID Card Photo")}
+            </div>
+            <button
+              type="button"
+              className={styles.pickerBtn}
+              onClick={() => {
+                const target = photoPicker === "selfie" ? selfieCamRef.current : idCardCamRef.current;
+                setPhotoPicker(null);
+                target?.click();
+              }}>
+              <span>📷</span> Camera
+            </button>
+            <div className={styles.pickerDivider} />
+            <button
+              type="button"
+              className={styles.pickerBtn}
+              onClick={() => {
+                const target = photoPicker === "selfie" ? selfieRef.current : idCardRef.current;
+                setPhotoPicker(null);
+                target?.click();
+              }}>
+              <span>🖼️</span> Upload from Gallery
+            </button>
+            <button
+              type="button"
+              className={styles.pickerCancel}
+              onClick={() => setPhotoPicker(null)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Hidden inputs for Camera / Gallery ── */}
+      <input
+        ref={selfieCamRef}
+        type="file"
+        accept="image/*"
+        capture="user"
+        hidden
+        onChange={async (e) => {
+          const f = e.target.files?.[0]; if (!f) return;
+          e.target.value = "";
+          const url = await uploadImage(f, "selfie");
+          if (url) setEditPhotoUrl(url);
+        }}
+      />
+      <input
+        ref={selfieRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={async (e) => {
+          const f = e.target.files?.[0]; if (!f) return;
+          e.target.value = "";
+          const url = await uploadImage(f, "selfie");
+          if (url) setEditPhotoUrl(url);
+        }}
+      />
+      <input
+        ref={idCardCamRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={async (e) => {
+          const f = e.target.files?.[0]; if (!f) return;
+          e.target.value = "";
+          const url = await uploadImage(f, "id");
+          if (url) setEditIdUrl(url);
+        }}
+      />
+      <input
+        ref={idCardRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={async (e) => {
+          const f = e.target.files?.[0]; if (!f) return;
+          e.target.value = "";
+          const url = await uploadImage(f, "id");
+          if (url) setEditIdUrl(url);
+        }}
+      />
+
       {/* Header */}
       <header className={styles.header}>
         <button className={styles.backBtn} onClick={() => router.push("/dashboard")} id="btn-back">← Dashboard</button>
@@ -444,16 +545,14 @@ function TenantProfileInner() {
                 {editPhotoUrl
                   ? <img src={editPhotoUrl} className={styles.editThumb} alt="selfie" />
                   : <div className={styles.editThumbEmpty}>👤</div>}
-                <label className={styles.editUploadBtn} htmlFor="ep-selfie">
+                <button
+                  type="button"
+                  className={styles.editUploadBtn}
+                  onClick={() => setPhotoPicker("selfie")}
+                  disabled={uploadingSelfie}
+                  id="btn-edit-selfie">
                   {uploadingSelfie ? "Uploading…" : (editPhotoUrl ? "Change Photo" : "+ Add Selfie")}
-                  <input id="ep-selfie" type="file" accept="image/*" hidden disabled={uploadingSelfie}
-                    onChange={async e => {
-                      const f = e.target.files?.[0]; if (!f) return;
-                      e.target.value = "";
-                      const url = await uploadImage(f, "selfie");
-                      if (url) setEditPhotoUrl(url);
-                    }} />
-                </label>
+                </button>
               </div>
 
               <p className={styles.editGroupLabel} style={{ marginTop: 14 }}>🪪 ID Card</p>
@@ -461,16 +560,14 @@ function TenantProfileInner() {
                 {editIdUrl
                   ? <img src={editIdUrl} className={styles.editThumb} alt="id" style={{ objectFit: "contain" }} />
                   : <div className={styles.editThumbEmpty}>🪪</div>}
-                <label className={styles.editUploadBtn} htmlFor="ep-id">
+                <button
+                  type="button"
+                  className={styles.editUploadBtn}
+                  onClick={() => setPhotoPicker("id")}
+                  disabled={uploadingId}
+                  id="btn-edit-id">
                   {uploadingId ? "Uploading…" : (editIdUrl ? "Change ID" : "+ Add ID Card")}
-                  <input id="ep-id" type="file" accept="image/*" hidden disabled={uploadingId}
-                    onChange={async e => {
-                      const f = e.target.files?.[0]; if (!f) return;
-                      e.target.value = "";
-                      const url = await uploadImage(f, "id");
-                      if (url) setEditIdUrl(url);
-                    }} />
-                </label>
+                </button>
               </div>
 
               {/* Alt phone */}

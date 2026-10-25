@@ -562,3 +562,78 @@
   transition: background 0.15s;
 }
 .lightboxDownload:hover { background: rgba(255,255,255,0.25); }
+
+/* ─── Photo source picker — fixed centered overlay ─── */
+.pickerBackdrop {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  animation: backdropIn 0.15s ease both;
+  padding: 16px;
+  box-sizing: border-box;
+}
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.pickerPopup {
+  background: var(--bg-card, #131824);
+  border: 1.5px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  width: 100%;
+  max-width: 280px;
+  animation: pickerIn 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes pickerIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.pickerTitle {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  padding: 16px 18px 10px; text-align: center;
+}
+.pickerBtn {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 15px 22px;
+  background: none; border: none;
+  color: var(--text-primary, #ffffff); font-size: 15px; font-weight: 600;
+  font-family: inherit; cursor: pointer; text-align: left;
+  transition: background 0.12s;
+}
+.pickerBtn:hover { background: var(--bg-overlay, rgba(255, 255, 255, 0.06)); }
+.pickerDivider { height: 1px; background: var(--border, rgba(255, 255, 255, 0.1)); }
+.pickerCancel {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; padding: 14px;
+  background: none; border: none; border-top: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  color: var(--text-muted, rgba(255, 255, 255, 0.5)); font-size: 14px; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.pickerCancel:hover { background: var(--bg-overlay, rgba(255, 255, 255, 0.06)); color: var(--text-primary, #ffffff); }
+
+:global([data-theme="light"]) .pickerPopup {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+}
+:global([data-theme="light"]) .pickerTitle,
+:global([data-theme="light"]) .pickerCancel {
+  color: #64748b;
+}
+:global([data-theme="light"]) .pickerBtn {
+  color: #0f172a;
+}
+:global([data-theme="light"]) .pickerBtn:hover,
+:global([data-theme="light"]) .pickerCancel:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+:global([data-theme="light"]) .pickerDivider,
+:global([data-theme="light"]) .pickerCancel {
+  border-color: #e2e8f0;
+}
