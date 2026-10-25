@@ -97,6 +97,11 @@ function CheckInForm() {
   }
 
   async function handlePhoto(file: File, type: "selfie" | "id") {
+    if (file.size > 15 * 1024 * 1024) {
+      setError(`File is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Please choose an image under 15MB.`);
+      return;
+    }
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const b64 = await fileToBase64(file);
     const setPreview = type === "selfie" ? setSelfiePreview : setIdPreview;
     const setUrl = type === "selfie" ? setSelfieUrl : setIdUrl;
@@ -112,11 +117,13 @@ function CheckInForm() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ base64: b64, fileName: `${type}_${Date.now()}.jpg`, folder }),
+        body: JSON.stringify({ base64: b64, fileName: `${type}_${Date.now()}.${ext}`, folder }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
       setUrl(data.url || b64);
-    } catch {
+    } catch (err) {
+      console.error("Photo upload error:", err);
       setUrl(b64); // fallback: store locally if upload fails
     } finally {
       setUploading(false);

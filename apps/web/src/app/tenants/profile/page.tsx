@@ -188,22 +188,70 @@ function TenantProfileInner() {
   async function uploadImage(file: File, field: "selfie" | "id"): Promise<string | null> {
     const setter = field === "selfie" ? setUploadingSelfie : setUploadingId;
     setter(true);
+    setEditError("");
     try {
-      const form = new FormData();
-      form.append("file", file);
-      form.append("type", field === "selfie" ? "selfie" : "id");
+      const MAX_MB = 15;
+      if (file.size > MAX_MB * 1024 * 1024) {
+        throw new Error(`File is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Please choose an image under ${MAX_MB}MB.`);
+      }
+
+      // Read file as base64 Data URL
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve(ev.target?.result as string);
+        reader.onerror = () => reject(new Error("Could not read image file."));
+        reader.readAsDataURL(file);
+      });
+
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const folder = field === "selfie" ? "pg-eg/tenants/selfies" : "pg-eg/tenants/ids";
+      const fileName = `tenant-${field}-${tenantId || Date.now()}-${Date.now()}.${ext}`;
+
       const res = await fetch(`${API_URL}/api/upload`, {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: form,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          base64,
+          fileName,
+          folder,
+        }),
       });
-      const j = await res.json();
+
+      const j = await res.json().catch(() => ({ error: `Upload error (${res.status})` }));
       if (!res.ok) throw new Error(j.error || "Upload failed");
-      return j.url as string;
+      const url = j.url as string;
+
+      // Auto-persist immediately to tenant record so it's not lost
+      if (tenantId && url) {
+        try {
+          await fetch(`${API_URL}/api/tenants/${tenantId}/contact`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({
+              [field === "selfie" ? "photoUrl" : "idPhotoUrl"]: url,
+            }),
+          });
+          setEditSuccess(field === "selfie" ? "Selfie photo saved! ✅" : "ID card saved! ✅");
+          await load();
+          setTimeout(() => setEditSuccess(""), 3000);
+        } catch (autoErr) {
+          console.error("Auto-save photo error:", autoErr);
+        }
+      }
+
+      return url;
     } catch (e) {
       setEditError(e instanceof Error ? e.message : "Upload failed");
       return null;
-    } finally { setter(false); }
+    } finally {
+      setter(false);
+    }
   }
 
   async function saveProfile() {
@@ -401,6 +449,7 @@ function TenantProfileInner() {
                   <input id="ep-selfie" type="file" accept="image/*" hidden disabled={uploadingSelfie}
                     onChange={async e => {
                       const f = e.target.files?.[0]; if (!f) return;
+                      e.target.value = "";
                       const url = await uploadImage(f, "selfie");
                       if (url) setEditPhotoUrl(url);
                     }} />
@@ -417,6 +466,7 @@ function TenantProfileInner() {
                   <input id="ep-id" type="file" accept="image/*" hidden disabled={uploadingId}
                     onChange={async e => {
                       const f = e.target.files?.[0]; if (!f) return;
+                      e.target.value = "";
                       const url = await uploadImage(f, "id");
                       if (url) setEditIdUrl(url);
                     }} />
