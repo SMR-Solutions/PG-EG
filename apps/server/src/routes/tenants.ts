@@ -310,8 +310,9 @@ router.patch("/:id/contact", requireAuth, async (req: Request, res: Response) =>
   try {
     const { id } = req.params;
     const { phone, altPhone, emergencyContact, emergencyRelation, idPhotoUrl,
-            photoUrl, profession, professionDetail } = req.body as {
+            photoUrl, profession, professionDetail, joiningDate } = req.body as {
       phone?: string;
+      joiningDate?: string | null;
       altPhone?: string | null;
       emergencyContact?: string | null;
       emergencyRelation?: string | null;
@@ -335,6 +336,12 @@ router.patch("/:id/contact", requireAuth, async (req: Request, res: Response) =>
     const db = createDb(process.env.DATABASE_URL!);
     const updates: Record<string, unknown> = {};
     if (phone !== undefined) updates.phone = phone.replace(/\D/g, "").slice(-10);
+    if ("joiningDate" in req.body && req.body.joiningDate) {
+      const d = new Date(req.body.joiningDate);
+      if (!isNaN(d.getTime())) {
+        updates.joiningDate = d;
+      }
+    }
     if ("altPhone" in req.body) updates.altPhone = altPhone?.trim() || null;
     if ("emergencyContact" in req.body) updates.emergencyContact = emergencyContact?.trim() || null;
     if ("emergencyRelation" in req.body) updates.emergencyRelation = emergencyRelation?.trim() || null;

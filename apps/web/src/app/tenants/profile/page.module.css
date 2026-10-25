@@ -637,3 +637,89 @@
 :global([data-theme="light"]) .pickerCancel {
   border-color: #e2e8f0;
 }
+
+/* ─── Primary Mobile Phone Row in Edit Profile ─── */
+.editPhoneRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.phonePrefix {
+  background: var(--bg-card);
+  border: 1px solid var(--border-hover);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+}
+:global([data-theme="light"]) .phonePrefix {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+/* ─── Share Receipt Button (beside payment history items) ─── */
+.shareReceiptIconBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: rgba(37, 211, 102, 0.12);
+  border: 1px solid rgba(37, 211, 102, 0.35);
+  color: #25d366;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.shareReceiptIconBtn:hover {
+  background: rgba(37, 211, 102, 0.24);
+  border-color: #25d366;
+  transform: translateY(-1px);
+}
+:global([data-theme="light"]) .shareReceiptIconBtn {
+  background: rgba(22, 163, 74, 0.1);
+  border-color: rgba(22, 163, 74, 0.35);
+  color: #16a34a;
+}
+:global([data-theme="light"]) .shareReceiptIconBtn:hover {
+  background: rgba(22, 163, 74, 0.2);
+  border-color: #16a34a;
+}
+
+/* ─── Receipt Modal Styles ─── */
+.receiptBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(45, 198, 83, 0.14);
+  border: 1px solid rgba(45, 198, 83, 0.4);
+  border-radius: 20px;
+  color: #2dc653;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+:global([data-theme="light"]) .receiptBadge {
+  background: rgba(22, 163, 74, 0.12);
+  border-color: rgba(22, 163, 74, 0.35);
+  color: #15803d;
+}
+.receiptAmount {
+  font-size: 28px;
+  font-weight: 900;
+  color: #2dc653;
+  letter-spacing: -0.5px;
+}
+:global([data-theme="light"]) .receiptAmount {
+  color: #16a34a;
+}

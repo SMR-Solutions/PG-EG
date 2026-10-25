@@ -140,10 +140,12 @@ function TenantProfileInner() {
 
   // ── Edit / Complete Profile state ──────────────────────────────────────
   const [editOpen, setEditOpen] = useState(false);
+  const [editPhone, setEditPhone] = useState("");
+  const [editJoiningDate, setEditJoiningDate] = useState("");
   const [editAltPhone, setEditAltPhone] = useState("");
   const [editEmergency, setEditEmergency] = useState("");
   const [editEmergencyRel, setEditEmergencyRel] = useState("Father");
-  const [editProfession, setEditProfession] = useState<"student"|"jobholder"|"other"|"">("" );
+  const [editProfession, setEditProfession] = useState<"student"|"jobholder"|"other"|"">("");
   const [editProfDetail, setEditProfDetail] = useState("");
   const [editPhotoUrl, setEditPhotoUrl] = useState<string|null>(null);
   const [editIdUrl, setEditIdUrl] = useState<string|null>(null);
@@ -152,6 +154,17 @@ function TenantProfileInner() {
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState("");
   const [editSuccess, setEditSuccess] = useState("");
+
+  // ── Rent Receipt Modal state ───────────────────────────────────────────
+  interface ReceiptData {
+    amount: number;
+    mode: string;
+    month: string;
+    note?: string | null;
+    createdAt: string;
+  }
+  const [receiptModal, setReceiptModal] = useState<ReceiptData | null>(null);
+  const [receiptCopied, setReceiptCopied] = useState(false);
 
   const load = useCallback(async () => {
     if (!tenantId) { setError("No tenant ID"); setLoading(false); return; }
@@ -183,6 +196,8 @@ function TenantProfileInner() {
 
   function openEdit() {
     const t = data!.tenant;
+    setEditPhone((t.phone || "").replace(/\D/g, "").slice(-10));
+    setEditJoiningDate(t.joiningDate ? new Date(t.joiningDate).toISOString().split("T")[0] : "");
     setEditAltPhone(t.altPhone || "");
     setEditEmergency(t.emergencyContact || "");
     setEditEmergencyRel(t.emergencyRelation || "Father");
@@ -267,7 +282,15 @@ function TenantProfileInner() {
     if (!tenantId) return;
     setEditSaving(true); setEditError(""); setEditSuccess("");
     try {
+      const cleanPhone = editPhone.replace(/\D/g, "").slice(-10);
+      if (cleanPhone.length !== 10) {
+        setEditError("Primary mobile number must be 10 digits");
+        setEditSaving(false);
+        return;
+      }
       const body: Record<string, unknown> = {
+        phone: cleanPhone,
+        joiningDate: editJoiningDate || null,
         altPhone: editAltPhone.replace(/\D/g, "").slice(-10) || null,
         emergencyContact: editEmergency.replace(/\D/g, "").slice(-10) || null,
         emergencyRelation: editEmergency ? editEmergencyRel : null,
@@ -570,6 +593,32 @@ function TenantProfileInner() {
                 </button>
               </div>
 
+              {/* Primary Mobile */}
+              <p className={styles.editGroupLabel} style={{ marginTop: 14 }}>📞 Primary Mobile Number</p>
+              <div className={styles.editPhoneRow}>
+                <span className={styles.phonePrefix}>+91</span>
+                <input
+                  type="tel"
+                  className={styles.editInput}
+                  placeholder="10-digit primary mobile number"
+                  value={editPhone}
+                  onChange={e => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  id="ep-primary-phone"
+                  maxLength={10}
+                  inputMode="numeric"
+                />
+              </div>
+
+              {/* Joining Date */}
+              <p className={styles.editGroupLabel} style={{ marginTop: 14 }}>📅 Joining Date</p>
+              <input
+                type="date"
+                className={styles.editInput}
+                value={editJoiningDate}
+                onChange={e => setEditJoiningDate(e.target.value)}
+                id="ep-joining-date"
+              />
+
               {/* Alt phone */}
               <p className={styles.editGroupLabel} style={{ marginTop: 14 }}>📱 Alternate Number</p>
               <input type="tel" className={styles.editInput} placeholder="Alternate mobile (optional)"
@@ -776,7 +825,24 @@ function TenantProfileInner() {
                         <p className={styles.txnMeta}>{txn.paymentMode?.toUpperCase()} · {fmt(txn.createdAt)} {fmtTime(txn.createdAt)}</p>
                       </div>
                     </div>
-                    {txn.note && <span className={styles.txnNote}>{txn.note}</span>}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {txn.note && <span className={styles.txnNote}>{txn.note}</span>}
+                      <button
+                        type="button"
+                        className={styles.shareReceiptIconBtn}
+                        onClick={() => setReceiptModal({ amount: txn.amount, mode: txn.paymentMode, month: currentRent.month, note: txn.note, createdAt: txn.createdAt })}
+                        title="Share Payment Receipt"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="18" cy="5" r="3"/>
+                          <circle cx="6" cy="12" r="3"/>
+                          <circle cx="18" cy="19" r="3"/>
+                          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                        </svg>
+                        <span>Receipt</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -802,7 +868,24 @@ function TenantProfileInner() {
                     {rec.transactions.map((txn) => (
                       <div key={txn.id} className={styles.pastTxnRow}>
                         <span>{txn.paymentMode === "upi" ? "📱" : "💵"} ₹{txn.amount.toLocaleString()}</span>
-                        <span className={styles.pastTxnDate}>{fmt(txn.createdAt)}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span className={styles.pastTxnDate}>{fmt(txn.createdAt)}</span>
+                          <button
+                            type="button"
+                            className={styles.shareReceiptIconBtn}
+                            onClick={() => setReceiptModal({ amount: txn.amount, mode: txn.paymentMode, month: rec.month, note: txn.note, createdAt: txn.createdAt })}
+                            title="Share Payment Receipt"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="18" cy="5" r="3"/>
+                              <circle cx="6" cy="12" r="3"/>
+                              <circle cx="18" cy="19" r="3"/>
+                              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                            </svg>
+                            <span>Receipt</span>
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -849,11 +932,28 @@ function TenantProfileInner() {
                       <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: isLast ? 0 : 20, position: "relative" }}>
                         <div style={{ position: "absolute", left: -22, top: 4, width: 12, height: 12, borderRadius: "50%", background: "#f4a261", border: "2px solid var(--bg-base)" }} />
                         <div className={`${styles.historyCard} ${styles.historyCardRent}`}>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                             <span style={{ fontWeight: 700, fontSize: 13, color: "#f4a261" }}>
                               {item.mode === "upi" ? "📱" : "💵"} Rent Paid · {monthLabel(item.month)}
                             </span>
-                            <span className={styles.historyTimestamp}>{fmt(item.createdAt)} {fmtTime(item.createdAt)}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span className={styles.historyTimestamp}>{fmt(item.createdAt)} {fmtTime(item.createdAt)}</span>
+                              <button
+                                type="button"
+                                className={styles.shareReceiptIconBtn}
+                                onClick={() => setReceiptModal({ amount: item.amount, mode: item.mode, month: item.month, note: item.note, createdAt: item.createdAt })}
+                                title="Share Payment Receipt"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="18" cy="5" r="3"/>
+                                  <circle cx="6" cy="12" r="3"/>
+                                  <circle cx="18" cy="19" r="3"/>
+                                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                                </svg>
+                                <span>Receipt</span>
+                              </button>
+                            </div>
                           </div>
                           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                             <span className={styles.historyAmount}>₹{item.amount.toLocaleString()}</span>
@@ -1035,6 +1135,125 @@ function TenantProfileInner() {
                 </svg>
                 Send Reminder via WhatsApp
               </a>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ─── Rent Payment Receipt Modal ─── */}
+      {receiptModal && (() => {
+        const { tenant, room, bed } = data!;
+        const activePg = allPgs.find(p => p.id === activePgId);
+        const pgName = activePg?.name ?? "PG";
+        const pgType = activePg?.type ?? "";
+        const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+        const [yr, m] = receiptModal.month.split("-");
+        const monthStr = m ? `${MONTHS[parseInt(m)-1]} ${yr}` : receiptModal.month;
+        const rawPhone = (tenant.phone || "").replace(/\D/g, "");
+        const waPhone  = rawPhone.startsWith("91") ? rawPhone : `91${rawPhone}`;
+
+        const waReceiptMsg = [
+          `★ *${pgName}${pgType ? ` — ${pgType}` : ""}*`,
+          `🧾 *RENT PAYMENT RECEIPT*`,
+          ``,
+          `Dear *${tenant.name}*,`,
+          ``,
+          `Thank you for your rent payment! Here is your official receipt:`,
+          ``,
+          `▸ *Period / Month:* ${monthStr}`,
+          `▸ *Amount Paid:* *₹${receiptModal.amount.toLocaleString("en-IN")}*`,
+          `▸ *Payment Mode:* ${receiptModal.mode.toUpperCase()}`,
+          `▸ *Date & Time:* ${fmt(receiptModal.createdAt)} ${fmtTime(receiptModal.createdAt)}`,
+          `▸ *Room & Bed:* Room ${room?.roomNumber ?? "—"} · Bed ${bed?.bedNumber ?? "—"} · Floor ${room?.floor ?? "—"}`,
+          receiptModal.note ? `▸ *Note:* ${receiptModal.note}` : null,
+          remaining === 0 ? `▸ *Status:* ✅ Fully Paid (₹0 Due)` : null,
+          ``,
+          `━━━━━━━━━━━━━━━`,
+          `Thank you for staying with us at *${pgName}*! 🙏`,
+          `Have a wonderful day ahead! ✨`,
+        ].filter(l => l !== null).join("\n");
+
+        const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(waReceiptMsg)}`;
+
+        function copyReceipt() {
+          navigator.clipboard.writeText(waReceiptMsg).then(() => {
+            setReceiptCopied(true);
+            setTimeout(() => setReceiptCopied(false), 2000);
+          });
+        }
+
+        return (
+          <div className={styles.reminderOverlay} onClick={() => setReceiptModal(null)}>
+            <div className={styles.reminderModal} onClick={e => e.stopPropagation()}>
+              <button className={styles.reminderClose} onClick={() => setReceiptModal(null)}>✕</button>
+
+              <div className={styles.invoiceHeader}>
+                <div className={styles.receiptBadge}>✓ Official Rent Receipt</div>
+                <div className={styles.invoicePgName}>{pgName}</div>
+                {pgType && <div className={styles.invoicePgType}>{pgType}</div>}
+                <div className={styles.invoiceDivider} />
+              </div>
+
+              <div className={styles.invoiceRow}>
+                <span className={styles.invoiceLabel}>Tenant</span>
+                <span className={styles.invoiceValue}>{tenant.name}</span>
+              </div>
+              <div className={styles.invoiceRow}>
+                <span className={styles.invoiceLabel}>Room · Bed</span>
+                <span className={styles.invoiceValue}>{room?.roomNumber ?? "—"} · Bed {bed?.bedNumber ?? "—"} · Floor {room?.floor ?? "—"}</span>
+              </div>
+              <div className={styles.invoiceRow}>
+                <span className={styles.invoiceLabel}>Rent Period</span>
+                <span className={styles.invoiceValue}>{monthStr}</span>
+              </div>
+              <div className={styles.invoiceRow}>
+                <span className={styles.invoiceLabel}>Paid On</span>
+                <span className={styles.invoiceValue}>{fmt(receiptModal.createdAt)} {fmtTime(receiptModal.createdAt)}</span>
+              </div>
+              <div className={styles.invoiceRow}>
+                <span className={styles.invoiceLabel}>Payment Mode</span>
+                <span className={styles.invoiceValue} style={{ textTransform: "uppercase" }}>{receiptModal.mode}</span>
+              </div>
+              {receiptModal.note && (
+                <div className={styles.invoiceRow}>
+                  <span className={styles.invoiceLabel}>Note</span>
+                  <span className={styles.invoiceValue}>{receiptModal.note}</span>
+                </div>
+              )}
+
+              <div className={styles.invoiceDivider} />
+
+              <div className={styles.invoiceAmountRow}>
+                <span className={styles.invoiceAmountLabel}>Amount Received</span>
+                <span className={styles.receiptAmount}>₹{receiptModal.amount.toLocaleString("en-IN")}</span>
+              </div>
+
+              <div className={styles.invoiceDivider} />
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
+                <a
+                  href={waUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.waSendBtn}
+                  id="btn-share-receipt-wa"
+                >
+                  <svg viewBox="0 0 32 32" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="16" cy="16" r="16" fill="#25D366"/>
+                    <path fill="#fff" d="M23.5 8.5A10.44 10.44 0 0 0 16 5.5C10.2 5.5 5.5 10.2 5.5 16a10.4 10.4 0 0 0 1.4 5.2L5.5 26.5l5.4-1.4a10.5 10.5 0 0 0 5.1 1.3c5.8 0 10.5-4.7 10.5-10.5a10.4 10.4 0 0 0-3-7.4zm-7.5 16.1a8.7 8.7 0 0 1-4.5-1.2l-.3-.2-3.2.8.9-3.1-.2-.3A8.7 8.7 0 0 1 7.3 16a8.7 8.7 0 0 1 8.7-8.7 8.7 8.7 0 0 1 8.7 8.7 8.7 8.7 0 0 1-8.7 8.6zm4.8-6.5c-.3-.1-1.6-.8-1.8-.9s-.4-.1-.6.1-.7.9-.8 1-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7 7 0 0 1-1.3-1.6c-.1-.3 0-.4.1-.6l.4-.5.3-.4v-.4l-.9-2.1c-.2-.5-.5-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8c.1.2 1.5 2.4 3.8 3.3a13 13 0 0 0 1.3.5 3.1 3.1 0 0 0 1.4.1c.4-.1 1.3-.5 1.5-1s.2-1 .1-1a.5.5 0 0 0-.4-.3z"/>
+                  </svg>
+                  Share Receipt via WhatsApp
+                </a>
+
+                <button
+                  type="button"
+                  className={styles.upiCopyBtn}
+                  style={{ width: "100%", justifyContent: "center", padding: "11px", fontSize: "13px" }}
+                  onClick={copyReceipt}
+                >
+                  {receiptCopied ? "✓ Receipt Text Copied!" : "📋 Copy Receipt Message"}
+                </button>
+              </div>
             </div>
           </div>
         );
