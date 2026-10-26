@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppLogo from "@/components/AppLogo";
-import ShareTenantModal from "@/components/ShareTenantModal";
 import { useAuth } from "@/contexts/AuthContext";
 import styles from "./page.module.css";
 
@@ -69,6 +68,8 @@ interface PGInfo {
   managerName?: string | null;
   managerPhone?: string | null;
   paymentPhone?: string | null;
+  coverImageUrl?: string | null;
+  pgImages?: string[] | string | null;
 }
 interface ProfileData {
   tenant: TenantProfile;
@@ -206,7 +207,6 @@ function TenantProfileInner() {
   const [receiptCopied, setReceiptCopied] = useState(false);
 
   // ── Share & Download PDF state ─────────────────────────────────────────
-  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
   const activePg = allPgs?.find(p => p.id === activePgId);
@@ -219,6 +219,7 @@ function TenantProfileInner() {
     const pgName = pg?.name || currentActivePg?.name || "PG Accommodation";
     const rawPgType = pg?.type || currentActivePg?.type || "gents";
     const pgType = rawPgType === "ladies" ? "👩‍🦰 LADIES PG" : rawPgType === "coliving" ? "🤝 CO-LIVING PG" : "👨‍🦱 GENTS PG";
+    const pgTypeBadgeText = rawPgType === "ladies" ? "LADIES PG" : rawPgType === "coliving" ? "CO-LIVING PG" : "GENTS PG";
     const pgAddress = pg?.address ? `${pg.address}${pg.city ? `, ${pg.city}` : ""}` : "Address on record";
     const pgPhone = pg?.managerPhone || pg?.paymentPhone || currentActivePg?.paymentPhone || owner?.phone || "—";
 
@@ -234,10 +235,14 @@ function TenantProfileInner() {
       }
     }
 
+    const currentAny = currentActivePg as any;
+    const rawPgPhoto = pg?.coverImageUrl || (Array.isArray(pg?.pgImages) ? pg?.pgImages[0] : null) || currentAny?.coverImageUrl || (Array.isArray(currentAny?.pgImages) ? currentAny.pgImages[0] : null) || "";
+
     // Convert images to base64 Data URLs so they print cleanly without network delays or CORS errors
-    const [avatarDataUrl, idDataUrl] = await Promise.all([
+    const [avatarDataUrl, idDataUrl, pgThumbDataUrl] = await Promise.all([
       tenant.photoUrl ? toDataUrl(tenant.photoUrl) : Promise.resolve(""),
       tenant.idPhotoUrl ? toDataUrl(tenant.idPhotoUrl) : Promise.resolve(""),
+      rawPgPhoto ? toDataUrl(rawPgPhoto) : Promise.resolve(""),
     ]);
 
     const tenantIdShort = tenant.id ? tenant.id.slice(0, 8).toUpperCase() : "";
@@ -245,8 +250,6 @@ function TenantProfileInner() {
     const issueTime = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 
     const cleanPhone = (tenant.phone || "").replace(/\D/g, "").slice(-10);
-    const waPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-    const waShareUrl = waPhone ? `https://wa.me/${waPhone}` : "https://api.whatsapp.com/send";
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -256,413 +259,542 @@ function TenantProfileInner() {
 <title>Tenant Stay Details – ${tenant.name}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  
   body {
-    background: #ffffff;
+    background: #f1f5f9;
     color: #0f172a;
     font-size: 11.5px;
-    padding: 16px;
-    line-height: 1.4;
+    padding: 20px 14px;
+    display: flex;
+    justify-content: center;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .doc-wrapper {
+    background: #ffffff;
     width: 100%;
     max-width: 960px;
-    margin: 0 auto;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 18px 20px;
     box-sizing: border-box;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
   }
-  
+
+  /* ── Header Card ────────────────────────────── */
   .header-card {
-    border: 2px solid #0f172a;
-    border-radius: 8px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 12px;
     padding: 14px 18px;
     margin-bottom: 14px;
-    background: #f8fafc;
+    background: #ffffff;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    gap: 16px;
   }
-  .pg-title { font-size: 20px; font-weight: 900; color: #0f172a; margin-bottom: 3px; letter-spacing: -0.02em; }
+  .header-left {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    flex: 1;
+  }
+  .pg-thumb {
+    width: 120px;
+    height: 90px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1.5px solid #e2e8f0;
+    flex-shrink: 0;
+  }
+  .pg-info {
+    flex: 1;
+  }
+  .pg-title {
+    font-size: 21px;
+    font-weight: 900;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+    margin-bottom: 3px;
+  }
   .pg-type-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     background: #0f172a;
     color: #ffffff;
-    font-size: 9px;
+    font-size: 9.5px;
     font-weight: 800;
     padding: 2px 7px;
     border-radius: 4px;
     letter-spacing: 0.04em;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
   }
-  .pg-meta-line { font-size: 11px; color: #334155; margin-bottom: 2px; }
-  .pg-meta-line strong { color: #0f172a; }
+  .pg-meta-line {
+    font-size: 11px;
+    color: #334155;
+    margin-bottom: 3px;
+    line-height: 1.4;
+  }
+  .pg-meta-line strong {
+    color: #0f172a;
+  }
 
-  .doc-meta { text-align: right; }
-  .doc-title { font-size: 13px; font-weight: 900; letter-spacing: 0.08em; color: #0f172a; text-transform: uppercase; }
+  .doc-meta {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .doc-title {
+    font-size: 13.5px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    color: #0f172a;
+    text-transform: uppercase;
+  }
   .doc-badge {
     display: inline-block;
     background: #10b981;
-    color: #fff;
-    font-size: 9px;
+    color: #ffffff;
+    font-size: 9.5px;
     font-weight: 800;
-    padding: 2px 8px;
+    padding: 2.5px 9px;
     border-radius: 12px;
-    margin: 3px 0 4px 0;
-    letter-spacing: 0.04em;
+    margin: 4px 0;
+    letter-spacing: 0.03em;
   }
-  .doc-id { font-size: 10px; font-family: monospace; color: #64748b; font-weight: 700; }
-  .doc-date { font-size: 9.5px; color: #64748b; margin-top: 2px; }
+  .doc-id {
+    font-size: 10px;
+    font-family: monospace;
+    font-weight: 700;
+    color: #64748b;
+  }
+  .doc-date {
+    font-size: 9.5px;
+    color: #64748b;
+    margin-top: 2px;
+  }
 
+  /* ── Tenant Identity Card ───────────────────── */
   .identity-card {
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
     display: flex;
-    gap: 16px;
     align-items: center;
+    gap: 20px;
     background: #ffffff;
   }
   .photos-cluster {
     display: flex;
-    gap: 12px;
-    align-items: center;
+    gap: 14px;
+    align-items: flex-start;
     flex-shrink: 0;
   }
   .photo-box {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
-  }
-  .photo-box-label {
-    font-size: 8px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #64748b;
+    gap: 5px;
   }
   .avatar-img {
-    width: 85px;
-    height: 100px;
-    border-radius: 6px;
+    width: 78px;
+    height: 78px;
+    border-radius: 50%;
     object-fit: cover;
-    border: 1px solid #94a3b8;
-    background: #f1f5f9;
-    display: block;
+    border: 2px solid #e2e8f0;
   }
   .id-img {
-    width: 140px;
-    height: 100px;
-    border-radius: 6px;
+    width: 105px;
+    height: 78px;
+    border-radius: 8px;
     object-fit: cover;
-    border: 1px solid #94a3b8;
-    background: #f1f5f9;
-    display: block;
+    border: 1.5px solid #e2e8f0;
   }
   .photo-placeholder {
-    width: 85px;
-    height: 100px;
+    width: 78px;
+    height: 78px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    border: 2px solid #e2e8f0;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f8fafc;
-    color: #94a3b8;
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 9px;
+    color: #64748b;
     text-align: center;
-    border: 1px dashed #cbd5e1;
-    border-radius: 6px;
-    padding: 6px;
+    font-weight: 700;
   }
   .id-placeholder {
-    width: 140px;
-    height: 100px;
+    width: 105px;
+    height: 78px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    border: 1.5px solid #e2e8f0;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f8fafc;
-    color: #94a3b8;
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 9px;
+    color: #64748b;
     text-align: center;
-    border: 1px dashed #cbd5e1;
-    border-radius: 6px;
-    padding: 6px;
+    font-weight: 700;
+  }
+  .photo-caption {
+    font-size: 9px;
+    font-weight: 800;
+    color: #475569;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   .identity-details {
     flex: 1;
-    min-width: 0;
   }
   .tenant-name-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 6px;
+    gap: 12px;
+    margin-bottom: 10px;
   }
   .tenant-name {
-    font-size: 17px;
+    font-size: 22px;
     font-weight: 900;
     color: #0f172a;
     letter-spacing: -0.01em;
   }
   .status-pill-active {
-    font-size: 9.5px;
-    font-weight: 800;
-    color: #15803d;
     background: #dcfce7;
-    border: 1px solid #86efac;
-    padding: 2px 7px;
-    border-radius: 12px;
+    color: #15803d;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
   .status-pill-checkout {
-    font-size: 9.5px;
-    font-weight: 800;
-    color: #b91c1c;
     background: #fee2e2;
-    border: 1px solid #fca5a5;
-    padding: 2px 7px;
-    border-radius: 12px;
+    color: #b91c1c;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
-
-  .grid-2 {
+  .details-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px 14px;
-  }
-  .grid-3 {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px 14px;
+    gap: 10px 24px;
   }
   .field {
     display: flex;
     flex-direction: column;
-    gap: 1px;
   }
-  .field label {
-    font-size: 8.5px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #64748b;
-  }
-  .field span {
-    font-size: 11.5px;
-    font-weight: 700;
-    color: #0f172a;
-  }
-
-  .section-card {
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    margin-bottom: 12px;
-    overflow: hidden;
-  }
-  .section-header {
-    background: #0f172a;
-    color: #ffffff;
-    font-size: 10.5px;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    padding: 6px 12px;
+  .field-label {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-  }
-  .section-body {
-    padding: 10px 14px;
-    background: #ffffff;
-  }
-
-  .badge {
+    gap: 5px;
     font-size: 9.5px;
     font-weight: 800;
-    padding: 2px 6px;
-    border-radius: 4px;
-  }
-  .badge-paid { background: #dcfce7; color: #15803d; }
-  .badge-partial { background: #fef3c7; color: #b45309; }
-  .badge-pending { background: #fee2e2; color: #b91c1c; }
-
-  .undertaking {
-    font-size: 10px;
-    color: #334155;
-    border-left: 3px solid #0f172a;
-    padding: 6px 12px;
-    background: #f8fafc;
-    margin-bottom: 14px;
-    line-height: 1.45;
-  }
-
-  /* Sleek screen-only action toolbar */
-  .no-print {
-    box-sizing: border-box;
-  }
-  .doc-action-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #0f172a;
-    color: #ffffff;
-    padding: 10px 16px;
-    border-radius: 8px;
-    margin-bottom: 14px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  }
-  .doc-action-brand { display: flex; align-items: center; gap: 8px; }
-  .doc-action-logo { font-weight: 900; font-size: 13px; color: #10b981; }
-  .doc-action-tag { font-size: 11px; color: #94a3b8; }
-  .doc-action-buttons { display: flex; align-items: center; gap: 10px; }
-  .action-btn-print, .action-btn-wa {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    font-size: 11px;
-    font-weight: 700;
-    border-radius: 6px;
-    cursor: pointer;
-    text-decoration: none;
-    border: none;
-    transition: opacity 0.15s;
-  }
-  .action-btn-print { background: #ffffff; color: #0f172a; }
-  .action-btn-wa { background: #25D366; color: #ffffff; }
-  .action-btn-print:hover { background: #f1f5f9; }
-  .action-btn-wa:hover { opacity: 0.92; }
-
-  /* Signatures: Kept in one horizontal line (left end & right end) on all viewports */
-  .signatures-row {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    justify-content: space-between !important;
-    align-items: flex-end !important;
-    gap: 20px !important;
-    margin-top: 24px;
-    padding-top: 12px;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-  .sig-box {
-    flex: 1 1 0 !important;
-    min-width: 0 !important;
-    max-width: 45% !important;
-    border-top: 1.5px solid #0f172a !important;
-    padding-top: 6px !important;
-    box-sizing: border-box !important;
-  }
-  .sig-box-left {
-    text-align: left !important;
-  }
-  .sig-box-right {
-    text-align: right !important;
-    margin-left: auto !important;
-  }
-  .sig-title {
-    font-size: 11px;
-    font-weight: 800;
-    color: #0f172a;
+    color: #64748b;
     text-transform: uppercase;
     margin-bottom: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
-  .sig-sub {
-    font-size: 9.5px;
-    color: #64748b;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .field-val {
+    font-size: 12px;
+    font-weight: 800;
+    color: #0f172a;
   }
 
-  .footer {
-    text-align: center;
+  /* ── Main Content Grid (Stay + Financials) ──── */
+  .main-content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+    align-items: stretch;
+  }
+  .section-card {
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+  }
+  .section-banner {
+    background: #0f172a;
+    color: #ffffff;
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-transform: uppercase;
+  }
+  .section-body {
+    padding: 12px 14px;
+    flex: 1;
+  }
+
+  /* Stay Details Grid */
+  .stay-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px 10px;
+  }
+  .stay-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .stay-icon {
+    font-size: 17px;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .check-icon {
+    color: #10b981;
+  }
+  .stay-label {
     font-size: 9px;
+    font-weight: 800;
     color: #64748b;
-    margin-top: 16px;
-    padding-top: 8px;
-    border-top: 1px dashed #cbd5e1;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+    display: block;
+  }
+  .stay-val {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #0f172a;
+    display: block;
+  }
+
+  /* Financials Card */
+  .right-column-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .fin-card {
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #ffffff;
+  }
+  .fin-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    gap: 12px;
+  }
+  .fin-stat {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+  }
+  .fin-icon-square {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 900;
+    flex-shrink: 0;
+  }
+  .rupee-sq {
+    background: #e0f2fe;
+    color: #0284c7;
+  }
+  .shield-sq {
+    background: #e0f2fe;
+    color: #0284c7;
+  }
+  .fin-label {
+    font-size: 9px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+    display: block;
+  }
+  .fin-val {
+    font-size: 14px;
+    font-weight: 900;
+    color: #0f172a;
+    display: block;
+  }
+  .fin-divider {
+    width: 1px;
+    height: 40px;
+    background: #e2e8f0;
+    flex-shrink: 0;
+  }
+
+  /* Declaration box */
+  .undertaking-box {
+    border: 1.5px solid #bfdbfe;
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 10px 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .undertaking-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: #e0f2fe;
+    color: #0284c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .undertaking-text {
+    font-size: 10px;
+    color: #334155;
+    line-height: 1.45;
+  }
+  .undertaking-text strong {
+    color: #0f172a;
+  }
+
+  /* ── Signatures Section ──────────────────────── */
+  .signatures-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .sig-card {
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+    padding: 12px 14px;
+    box-sizing: border-box;
+  }
+  .sig-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #0f172a;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .sig-meta {
+    font-size: 9.5px;
+    color: #64748b;
+    margin-bottom: 8px;
+  }
+  .sig-dotted-box {
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 6px;
+    height: 42px;
+    background: #f8fafc;
+  }
+
+  /* ── Footer ─────────────────────────────────── */
+  .doc-footer {
+    border-top: 1px dotted #cbd5e1;
+    padding-top: 10px;
+    margin-top: 14px;
+    text-align: center;
+    font-size: 9.5px;
+    color: #64748b;
     font-weight: 600;
   }
 
-  /* Responsive screen adaptations */
-  @media (max-width: 768px) {
-    body { padding: 12px; font-size: 11px; }
-    .doc-action-bar { flex-direction: column; gap: 8px; align-items: stretch; text-align: center; }
-    .doc-action-brand { justify-content: center; }
-    .doc-action-buttons { justify-content: center; flex-wrap: wrap; }
-    .header-card { flex-direction: column; gap: 12px; }
-    .doc-meta { text-align: left; }
-    .identity-card { flex-direction: column; align-items: flex-start; gap: 14px; }
-    .photos-cluster { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 10px; }
-    .grid-2 { grid-template-columns: 1fr 1fr; gap: 8px 12px; }
-    .grid-3 { grid-template-columns: 1fr 1fr; gap: 8px 12px; }
-    .signatures-row { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; gap: 16px !important; }
-    .sig-box { max-width: 46% !important; }
-  }
-
-  @media (max-width: 480px) {
-    body { padding: 10px 8px; font-size: 10.5px; }
-    .header-card { padding: 12px; }
+  /* ── Responsive Adaptations for Small Screens (Mobile) ── */
+  @media (max-width: 767px) {
+    body { padding: 6px 4px; font-size: 10.5px; }
+    .doc-wrapper { padding: 10px 8px; border-radius: 12px; }
+    .header-card { padding: 10px 12px; gap: 8px; justify-content: space-between; }
+    .pg-thumb { display: none; }
     .pg-title { font-size: 17px; }
-    .identity-card { padding: 10px 12px; }
-    .grid-2, .grid-3 { grid-template-columns: 1fr 1fr; gap: 6px 10px; }
-    .avatar-img { width: 75px; height: 90px; }
-    .id-img { width: 125px; height: 90px; }
-    .photo-placeholder { width: 75px; height: 90px; font-size: 9px; }
-    .id-placeholder { width: 125px; height: 90px; font-size: 9px; }
-    .signatures-row { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; gap: 10px !important; }
-    .sig-box { max-width: 48% !important; }
-    .sig-title { font-size: 9.5px !important; }
-    .sig-sub { font-size: 8px !important; }
+    .pg-meta-line { font-size: 10px; margin-bottom: 2px; }
+    .doc-meta { text-align: right; min-width: 135px; flex-shrink: 0; }
+    .doc-title { font-size: 11.5px; }
+    .doc-badge { font-size: 8px; padding: 2px 7px; }
+    .doc-id, .doc-date { font-size: 9px; }
+
+    .identity-card { padding: 10px 12px; gap: 10px; align-items: center; }
+    .avatar-img, .photo-placeholder { width: 56px; height: 56px; }
+    .id-img, .id-placeholder { width: 70px; height: 56px; }
+    .photo-caption { font-size: 7.5px; }
+    .tenant-name { font-size: 18px; }
+    .status-pill-active, .status-pill-checkout { font-size: 9.5px; padding: 2px 8px; }
+    .details-grid { gap: 6px 8px; }
+    .field-label { font-size: 8px; }
+    .field-val { font-size: 10px; }
+
+    .main-content-grid { display: flex; flex-direction: column; gap: 10px; }
+    .stay-grid { grid-template-columns: repeat(3, 1fr); gap: 8px 6px; }
+    .stay-icon { font-size: 14px; }
+    .stay-label { font-size: 7.5px; }
+    .stay-val { font-size: 10px; }
+
+    .fin-row { padding: 10px 12px; }
+    .fin-icon-square { width: 30px; height: 30px; font-size: 15px; }
+    .fin-label { font-size: 8px; }
+    .fin-val { font-size: 11.5px; }
+
+    .undertaking-box { padding: 8px 10px; gap: 8px; }
+    .undertaking-icon { width: 22px; height: 22px; font-size: 12px; }
+    .undertaking-text { font-size: 8.5px; }
+
+    .signatures-grid { display: flex; flex-direction: column; gap: 10px; }
+    .sig-card { padding: 10px 12px; }
+    .sig-header { font-size: 10px; }
+    .sig-meta { font-size: 8.5px; margin-bottom: 6px; }
+    .sig-dotted-box { height: 36px; }
   }
 
+  /* ── Print Styles (A4 Single Page) ─────────── */
   @media print {
-    .no-print { display: none !important; }
-    body { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
-    .header-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; display: flex !important; flex-direction: row !important; justify-content: space-between !important; }
-    .doc-meta { text-align: right !important; }
-    .identity-card { display: flex !important; flex-direction: row !important; align-items: center !important; }
-    .photos-cluster { display: flex !important; flex-direction: row !important; }
-    .grid-2 { display: grid !important; grid-template-columns: 1fr 1fr !important; }
-    .grid-3 { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; }
-    .signatures-row { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; }
-    .sig-box { max-width: 45% !important; }
-    .section-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #0f172a !important; color: #ffffff !important; }
-    .doc-badge, .status-pill-active, .status-pill-checkout, .badge-paid, .badge-partial, .badge-pending { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    @page { size: A4 portrait; margin: 10mm 12mm; }
+    body { background: #ffffff !important; padding: 0 !important; margin: 0 !important; }
+    .doc-wrapper { border: none !important; box-shadow: none !important; padding: 0 !important; max-width: 100% !important; }
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    .main-content-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+    .signatures-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+    @page { size: A4 portrait; margin: 8mm 10mm; }
   }
 </style>
 </head>
 <body>
-
-  <!-- Top Action Bar (Screen Only - Hidden in Print / PDF) -->
-  <div class="no-print doc-action-bar">
-    <div class="doc-action-brand">
-      <span class="doc-action-logo">⚡ PG-EG</span>
-      <span class="doc-action-tag">Official Tenant Verification Document</span>
-    </div>
-    <div class="doc-action-buttons">
-      <button type="button" class="action-btn-print" onclick="window.print()">
-        🖨️ Save as PDF / Print
-      </button>
-      <a href="${waShareUrl}" target="_blank" rel="noopener noreferrer" class="action-btn-wa">
-        💬 Send to Tenant WhatsApp (+91 ${cleanPhone})
-      </a>
-    </div>
-  </div>
+<div class="doc-wrapper">
 
   <!-- Top PG Header -->
   <div class="header-card">
-    <div>
-      <div class="pg-title">${pgName}</div>
-      <div class="pg-type-badge">${pgType}</div>
-      <div class="pg-meta-line">📍 <strong>Address:</strong> ${pgAddress}</div>
-      <div class="pg-meta-line">📞 <strong>Contact:</strong> ${pgPhone} &nbsp;·&nbsp; 🛏️ <strong>Sharings Available:</strong> ${sharingsDisplay}</div>
+    <div class="header-left">
+      ${pgThumbDataUrl ? `<img src="${pgThumbDataUrl}" alt="${pgName}" class="pg-thumb" />` : ""}
+      <div class="pg-info">
+        <div class="pg-title">${pgName}</div>
+        <div class="pg-type-badge">🏠 ${pgTypeBadgeText}</div>
+        <div class="pg-meta-line"><span style="color:#ef4444;font-size:11px;margin-right:4px;">📍</span><strong>Address:</strong> ${pgAddress}</div>
+        <div class="pg-meta-line"><span style="color:#ef4444;font-size:11px;margin-right:4px;">📞</span><strong>Contact:</strong> ${pgPhone}</div>
+        <div class="pg-meta-line"><span style="color:#0f172a;font-size:11px;margin-right:4px;">🛏️</span><strong>Sharings Available:</strong> ${sharingsDisplay}</div>
+      </div>
     </div>
     <div class="doc-meta">
-      <div class="doc-title">Tenant Stay Details</div>
+      <div class="doc-title">TENANT STAY DETAILS</div>
       <div class="doc-badge">DIGITAL VERIFICATION DOCUMENT</div>
       <div class="doc-id">ID: PG-T-${tenantIdShort}</div>
       <div class="doc-date">Generated: ${issueDate}, ${issueTime}</div>
@@ -677,14 +809,14 @@ function TenantProfileInner() {
           ? `<img src="${avatarDataUrl}" alt="${tenant.name}" class="avatar-img" />`
           : `<div class="photo-placeholder">👤 Photo Not Uploaded</div>`
         }
-        <span class="photo-box-label">Tenant Photo</span>
+        <span class="photo-caption">TENANT PHOTO</span>
       </div>
       <div class="photo-box">
         ${idDataUrl
           ? `<img src="${idDataUrl}" alt="Govt ID Proof" class="id-img" />`
           : `<div class="id-placeholder">🪪 ID Proof Not Uploaded</div>`
         }
-        <span class="photo-box-label">Govt ID Proof</span>
+        <span class="photo-caption">GOVT ID PROOF</span>
       </div>
     </div>
 
@@ -697,117 +829,161 @@ function TenantProfileInner() {
         }
       </div>
 
-      <div class="grid-2">
+      <div class="details-grid">
         <div class="field">
-          <label>Primary Mobile</label>
-          <span>+91 ${tenant.phone}</span>
+          <span class="field-label">PRIMARY MOBILE</span>
+          <span class="field-val"><span style="font-size:11px;margin-right:4px;">📞</span>+91 ${cleanPhone || tenant.phone}</span>
         </div>
         <div class="field">
-          <label>Alternate Mobile</label>
-          <span>${tenant.altPhone ? `+91 ${tenant.altPhone}` : "—"}</span>
+          <span class="field-label">ALTERNATE MOBILE</span>
+          <span class="field-val"><span style="font-size:11px;margin-right:4px;">📞</span>${tenant.altPhone ? `+91 ${tenant.altPhone}` : "—"}</span>
         </div>
         <div class="field">
-          <label>Emergency Contact</label>
-          <span>${tenant.emergencyContact ? `+91 ${tenant.emergencyContact} (${tenant.emergencyRelation || "Relative"})` : "—"}</span>
+          <span class="field-label">EMERGENCY CONTACT</span>
+          <span class="field-val"><span style="font-size:11px;margin-right:4px;">🛡️</span>${tenant.emergencyContact ? `+91 ${tenant.emergencyContact} (${tenant.emergencyRelation || "Relative"})` : "—"}</span>
         </div>
         <div class="field">
-          <label>Profession / Details</label>
-          <span>${tenant.profession ? `${tenant.profession}${tenant.professionDetail ? ` (${tenant.professionDetail})` : ""}` : "—"}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Stay Details Section -->
-  <div class="section-card">
-    <div class="section-header">
-      <span>🏠 Stay & Accommodation Details</span>
-      <span>${room?.sharingType ? `${room.sharingType}-Sharing Room` : "Allocated Room"}</span>
-    </div>
-    <div class="section-body">
-      <div class="grid-3">
-        <div class="field">
-          <label>Floor</label>
-          <span>Floor ${room?.floor ?? "—"}</span>
-        </div>
-        <div class="field">
-          <label>Room Number</label>
-          <span>Room ${room?.roomNumber || "—"}</span>
-        </div>
-        <div class="field">
-          <label>Bed Allocation</label>
-          <span>Bed ${bed?.bedNumber || "—"}</span>
-        </div>
-        <div class="field">
-          <label>Room Sharing</label>
-          <span>${room?.sharingType ? `${room.sharingType}-Sharing` : "—"}</span>
-        </div>
-        <div class="field">
-          <label>Joining Date</label>
-          <span>${fmt(tenant.joiningDate)}</span>
-        </div>
-        <div class="field">
-          <label>Stay Status / Checkout</label>
-          <span>${tenant.leavingDate ? `Checked out on ${fmt(tenant.leavingDate)}` : "Present & Staying"}</span>
+          <span class="field-label">PROFESSION / DETAILS</span>
+          <span class="field-val"><span style="font-size:11px;margin-right:4px;">💼</span>${tenant.profession ? `${tenant.profession}${tenant.professionDetail ? ` (${tenant.professionDetail})` : ""}` : "—"}</span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Financials & Payment Section -->
-  <div class="section-card">
-    <div class="section-header">
-      <span>💵 Financial Terms & Deposit Record</span>
-    </div>
-    <div class="section-body">
-      <div class="grid-2">
-        <div class="field">
-          <label>Monthly Rent</label>
-          <span>₹${(tenant.rentAmount || 0).toLocaleString("en-IN")} / month</span>
-        </div>
-        <div class="field">
-          <label>Security Deposit (Advance)</label>
-          <span>₹${(tenant.advanceAmount || 0).toLocaleString("en-IN")} via ${(tenant.paymentMode || "cash").toUpperCase()}</span>
+  <!-- Main Content Grid -->
+  <div class="main-content-grid">
+    <!-- Left Column: Stay & Accommodation Details -->
+    <div class="section-card">
+      <div class="section-banner">
+        <span>🏠 STAY & ACCOMMODATION DETAILS</span>
+        <span>${room?.sharingType ? `${room.sharingType}-SHARING ROOM` : "ALLOCATED ROOM"}</span>
+      </div>
+      <div class="section-body">
+        <div class="stay-grid">
+          <div class="stay-item">
+            <span class="stay-icon">🏢</span>
+            <div>
+              <span class="stay-label">FLOOR</span>
+              <span class="stay-val">Floor ${room?.floor ?? "—"}</span>
+            </div>
+          </div>
+          <div class="stay-item">
+            <span class="stay-icon">🚪</span>
+            <div>
+              <span class="stay-label">ROOM NUMBER</span>
+              <span class="stay-val">Room ${room?.roomNumber || "—"}</span>
+            </div>
+          </div>
+          <div class="stay-item">
+            <span class="stay-icon">🛏️</span>
+            <div>
+              <span class="stay-label">BED ALLOCATION</span>
+              <span class="stay-val">Bed ${bed?.bedNumber || "—"}</span>
+            </div>
+          </div>
+          <div class="stay-item">
+            <span class="stay-icon">👥</span>
+            <div>
+              <span class="stay-label">ROOM SHARING</span>
+              <span class="stay-val">${room?.sharingType ? `${room.sharingType}-Sharing` : "—"}</span>
+            </div>
+          </div>
+          <div class="stay-item">
+            <span class="stay-icon">📅</span>
+            <div>
+              <span class="stay-label">JOINING DATE</span>
+              <span class="stay-val">${fmt(tenant.joiningDate)}</span>
+            </div>
+          </div>
+          <div class="stay-item">
+            <span class="stay-icon check-icon">✔️</span>
+            <div>
+              <span class="stay-label">STAY STATUS / CHECKOUT</span>
+              <span class="stay-val">${tenant.leavingDate ? `Checked out on ${fmt(tenant.leavingDate)}` : "Present & Staying"}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Undertaking / Declaration -->
-  <div class="undertaking">
-    <strong>Declaration & Terms of Stay:</strong> The tenant agrees to follow PG house rules, maintain a peaceful stay, and pay monthly rent on or before the due date. The security deposit is refundable as per terms upon checkout.
+    <!-- Right Column: Financials & Declaration -->
+    <div class="right-column-wrap">
+      <div class="fin-card">
+        <div class="section-banner">
+          <span>💰 FINANCIAL TERMS & DEPOSIT RECORD</span>
+        </div>
+        <div class="fin-row">
+          <div class="fin-stat">
+            <div class="fin-icon-square rupee-sq">₹</div>
+            <div>
+              <span class="fin-label">MONTHLY RENT</span>
+              <span class="fin-val">₹${(tenant.rentAmount || 0).toLocaleString("en-IN")} / month</span>
+            </div>
+          </div>
+          <div class="fin-divider"></div>
+          <div class="fin-stat">
+            <div class="fin-icon-square shield-sq">🛡️</div>
+            <div>
+              <span class="fin-label">SECURITY DEPOSIT (ADVANCE)</span>
+              <span class="fin-val">₹${(tenant.advanceAmount || 0).toLocaleString("en-IN")} via ${(tenant.paymentMode || "cash").toUpperCase()}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Undertaking / Declaration -->
+      <div class="undertaking-box">
+        <div class="undertaking-icon">📄</div>
+        <div class="undertaking-text">
+          <strong>Declaration & Terms of Stay:</strong> The tenant agrees to follow PG house rules, maintain a peaceful stay, and pay monthly rent on or before the due date. The security deposit is refundable as per terms upon checkout.
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Official Signatures -->
-  <div class="signatures-row">
-    <div class="sig-box sig-box-left">
-      <div class="sig-title">Tenant Signature</div>
-      <div class="sig-sub">${tenant.name} &nbsp;·&nbsp; Date: _______________</div>
+  <div class="signatures-grid">
+    <div class="sig-card">
+      <div class="sig-header">
+        <span>✒️</span>
+        <span>TENANT SIGNATURE</span>
+      </div>
+      <div class="sig-meta">${tenant.name} &nbsp;•&nbsp; Date: _________________</div>
+      <div class="sig-dotted-box"></div>
     </div>
-    <div class="sig-box sig-box-right">
-      <div class="sig-title">Authorized PG Signature / Stamp</div>
-      <div class="sig-sub">For ${pgName} &nbsp;·&nbsp; Date: _______________</div>
+    <div class="sig-card">
+      <div class="sig-header">
+        <span>🏛️</span>
+        <span>AUTHORIZED PG SIGNATURE / STAMP</span>
+      </div>
+      <div class="sig-meta">For ${pgName} &nbsp;•&nbsp; Date: _________________</div>
+      <div class="sig-dotted-box"></div>
     </div>
   </div>
 
   <!-- Footer Watermark -->
-  <div class="footer">
-    Digital Verification Document &nbsp;·&nbsp; Generated via PG-EG &nbsp;·&nbsp; Find PGs & Manage PGs
+  <div class="doc-footer">
+    Digital Verification Document &nbsp;•&nbsp; Generated via PG-EG &nbsp;•&nbsp; Find PGs & Manage PGs
   </div>
 
-  <script>window.onload = function(){ window.print(); }<\/script>
+</div>
+
+<script>window.onload = function(){ window.print(); }<\/script>
 </body>
 </html>`;
   }, [data, allPgs, activePgId, owner?.phone]);
 
-  // ── Share Document Action (Exact as Download, with native Web Share on mobile) ──
+  // ── Share Document Action: Directly to Tenant's Primary Mobile Number ──
   const handleShare = useCallback(async () => {
     if (!data) return;
     setGeneratingPdf(true);
     try {
       const html = await buildTenantDocumentHTML();
       const safeName = data.tenant.name.replace(/[^a-zA-Z0-9]/g, "_") || "details";
-      const file = new File([html], `Tenant-Stay-Details-${safeName}.html`, { type: "text/html" });
+      const cleanPhone = (data.tenant.phone || "").replace(/\D/g, "").slice(-10);
+      const blob = new Blob([html], { type: "text/html" });
+      const fileName = `Tenant-Stay-Details-${safeName}.html`;
+      const file = new File([blob], fileName, { type: "text/html" });
 
       // On mobile / supported devices with Web Share file capability
       if (typeof navigator !== "undefined" && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -815,7 +991,7 @@ function TenantProfileInner() {
           await navigator.share({
             files: [file],
             title: `Tenant Stay Details – ${data.tenant.name}`,
-            text: `Tenant Stay Details for ${data.tenant.name} (${activePg?.name || "PG Accommodation"})`,
+            text: `Official Tenant Stay Details for ${data.tenant.name} (${activePg?.name || "PG Accommodation"})`,
           });
           return;
         } catch (e: any) {
@@ -823,20 +999,19 @@ function TenantProfileInner() {
         }
       }
 
-      // Exact as Download: open the document in a new window/tab
-      const w = window.open("", "_blank");
-      if (w) {
-        w.document.write(html);
-        w.document.close();
-      } else {
-        const blob = new Blob([html], { type: "text/html" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `Tenant-${safeName}.html`;
-        a.click();
-        URL.revokeObjectURL(url);
+      // Direct WhatsApp share to tenant's Primary Mobile Number (+91)
+      if (cleanPhone) {
+        const waMsg = `Hello ${data.tenant.name}, here are your official Tenant Stay Details for ${activePg?.name || "PG Accommodation"}.\n\n📄 Room: Room ${data.room?.roomNumber || "—"}, Bed ${data.bed?.bedNumber || "—"}\n💰 Monthly Rent: ₹${(data.tenant.rentAmount || 0).toLocaleString("en-IN")}\n🛡️ Security Deposit: ₹${(data.tenant.advanceAmount || 0).toLocaleString("en-IN")}`;
+        window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(waMsg)}`, "_blank");
       }
+
+      // Download the document file directly
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Share failed:", err);
       alert("Unable to share Tenant Stay Details document.");
@@ -851,6 +1026,7 @@ function TenantProfileInner() {
     setGeneratingPdf(true);
     try {
       const html = await buildTenantDocumentHTML();
+      const safeName = data.tenant.name.replace(/[^a-zA-Z0-9]/g, "_") || "tenant";
       const w = window.open("", "_blank");
       if (w) {
         w.document.write(html);
@@ -861,7 +1037,7 @@ function TenantProfileInner() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `Tenant-${data.tenant.name.replace(/\s+/g, "_")}.html`;
+        a.download = `Tenant-Stay-Details-${safeName}.html`;
         a.click();
         URL.revokeObjectURL(url);
       }
@@ -2061,24 +2237,6 @@ function TenantProfileInner() {
           </div>
         );
       })()}
-
-      {/* Share Tenant Modal */}
-      {data && (
-        <ShareTenantModal
-          isOpen={shareModalOpen}
-          onClose={() => setShareModalOpen(false)}
-          tenant={data.tenant}
-          room={data.room}
-          bed={data.bed}
-          pg={data.pg || (activePg ? {
-            name: activePg.name,
-            type: activePg.type,
-            paymentPhone: activePg.paymentPhone
-          } : null)}
-          onDownloadPdf={handleDownloadPDF}
-          getPdfHtml={buildTenantDocumentHTML}
-        />
-      )}
 
     </main>
   );
