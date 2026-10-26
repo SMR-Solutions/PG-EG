@@ -265,10 +265,21 @@ function TenantProfileInner() {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Tenant Dossier – ${tenant.name}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Tenant Stay Details – ${tenant.name}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  body { background: #ffffff; color: #0f172a; font-size: 11.5px; padding: 22px; line-height: 1.4; }
+  body {
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 11.5px;
+    padding: 16px;
+    line-height: 1.4;
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
   
   .header-card {
     border: 2px solid #0f172a;
@@ -301,11 +312,12 @@ function TenantProfileInner() {
     display: inline-block;
     background: #10b981;
     color: #fff;
-    font-size: 9.5px;
+    font-size: 9px;
     font-weight: 800;
     padding: 2px 8px;
     border-radius: 12px;
     margin: 3px 0 4px 0;
+    letter-spacing: 0.04em;
   }
   .doc-id { font-size: 10px; font-family: monospace; color: #64748b; font-weight: 700; }
   .doc-date { font-size: 9.5px; color: #64748b; margin-top: 2px; }
@@ -485,10 +497,10 @@ function TenantProfileInner() {
   .badge-pending { background: #fee2e2; color: #b91c1c; }
 
   .undertaking {
-    font-size: 9.5px;
-    color: #475569;
+    font-size: 10px;
+    color: #334155;
     border-left: 3px solid #0f172a;
-    padding: 5px 10px;
+    padding: 6px 12px;
     background: #f8fafc;
     margin-bottom: 14px;
     line-height: 1.45;
@@ -521,16 +533,47 @@ function TenantProfileInner() {
 
   .footer {
     text-align: center;
-    font-size: 8.5px;
-    color: #94a3b8;
+    font-size: 9px;
+    color: #64748b;
     margin-top: 16px;
-    padding-top: 6px;
+    padding-top: 8px;
     border-top: 1px dashed #cbd5e1;
+    font-weight: 600;
+  }
+
+  /* Responsive screen adaptations */
+  @media (max-width: 768px) {
+    body { padding: 12px; font-size: 11px; }
+    .header-card { flex-direction: column; gap: 12px; }
+    .doc-meta { text-align: left; }
+    .identity-card { flex-direction: column; align-items: flex-start; gap: 14px; }
+    .photos-cluster { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 10px; }
+    .grid-2 { grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+    .grid-3 { grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+    .signatures-row { flex-direction: column; gap: 20px; }
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 10px 8px; font-size: 10.5px; }
+    .header-card { padding: 12px; }
+    .pg-title { font-size: 17px; }
+    .identity-card { padding: 10px 12px; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 6px; }
+    .avatar-img { width: 75px; height: 90px; }
+    .id-img { width: 125px; height: 90px; }
+    .photo-placeholder { width: 75px; height: 90px; font-size: 9px; }
+    .id-placeholder { width: 125px; height: 90px; font-size: 9px; }
   }
 
   @media print {
-    body { padding: 0; }
-    .header-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
+    .header-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; display: flex !important; flex-direction: row !important; justify-content: space-between !important; }
+    .doc-meta { text-align: right !important; }
+    .identity-card { display: flex !important; flex-direction: row !important; align-items: center !important; }
+    .photos-cluster { display: flex !important; flex-direction: row !important; }
+    .grid-2 { display: grid !important; grid-template-columns: 1fr 1fr !important; }
+    .grid-3 { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; }
+    .signatures-row { display: flex !important; flex-direction: row !important; }
     .section-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #0f172a !important; color: #ffffff !important; }
     .doc-badge, .status-pill-active, .status-pill-checkout, .badge-paid, .badge-partial, .badge-pending { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     @page { size: A4 portrait; margin: 10mm 12mm; }
@@ -548,8 +591,8 @@ function TenantProfileInner() {
       <div class="pg-meta-line">📞 <strong>Contact:</strong> ${pgPhone} &nbsp;·&nbsp; 🛏️ <strong>Sharings Available:</strong> ${sharingsDisplay}</div>
     </div>
     <div class="doc-meta">
-      <div class="doc-title">Tenant Stay Dossier</div>
-      <div class="doc-badge">OFFICIAL VERIFIED</div>
+      <div class="doc-title">Tenant Stay Details</div>
+      <div class="doc-badge">DIGITAL VERIFICATION DOCUMENT</div>
       <div class="doc-id">ID: PG-T-${tenantIdShort}</div>
       <div class="doc-date">Generated: ${issueDate}, ${issueTime}</div>
     </div>
@@ -678,7 +721,7 @@ function TenantProfileInner() {
 
   <!-- Undertaking / Declaration -->
   <div class="undertaking">
-    <strong>Declaration & Terms of Stay:</strong> The tenant agrees to maintain peaceful occupancy, follow PG house rules, avoid disturbance to fellow residents, and remit monthly rent on or before the due date. The security deposit is refundable subject to notice and damage inspection.
+    <strong>Declaration & Terms of Stay:</strong> The tenant agrees to follow PG house rules, maintain a peaceful stay, and pay monthly rent on or before the due date. The security deposit is refundable as per terms upon checkout.
   </div>
 
   <!-- Official Signatures -->
@@ -695,7 +738,7 @@ function TenantProfileInner() {
 
   <!-- Footer Watermark -->
   <div class="footer">
-    Official Digital Verification Dossier &nbsp;·&nbsp; Generated via PG-EG (www.pgeg.in) &nbsp;·&nbsp; Find PGs & Manage PGs
+    Digital Verification Document &nbsp;·&nbsp; Generated via PG-EG &nbsp;·&nbsp; Find PGs & Manage PGs
   </div>
 
   <script>window.onload = function(){ window.print(); }<\/script>
