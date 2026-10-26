@@ -234,23 +234,6 @@ function TenantProfileInner() {
       }
     }
 
-    const currMonth = currentMonthStr();
-    const currMonthRecord = data.rentRecords?.find((r) => r.month === currMonth);
-    let rentStatusBadge = `<span class="badge badge-pending">DUE / PENDING</span>`;
-    let rentStatusDetail = `₹${(tenant.rentAmount || 0).toLocaleString("en-IN")}`;
-    if (currMonthRecord) {
-      if (currMonthRecord.status === "paid") {
-        rentStatusBadge = `<span class="badge badge-paid">PAID ✓</span>`;
-        rentStatusDetail = `₹${currMonthRecord.paidAmount.toLocaleString("en-IN")}${currMonthRecord.paymentMode ? ` (${currMonthRecord.paymentMode.toUpperCase()})` : ""}`;
-      } else if (currMonthRecord.status === "partial") {
-        rentStatusBadge = `<span class="badge badge-partial">PARTIAL</span>`;
-        rentStatusDetail = `Paid ₹${currMonthRecord.paidAmount.toLocaleString("en-IN")} of ₹${currMonthRecord.amount.toLocaleString("en-IN")}`;
-      } else {
-        rentStatusBadge = `<span class="badge badge-pending">PENDING</span>`;
-        rentStatusDetail = `₹${currMonthRecord.amount.toLocaleString("en-IN")}`;
-      }
-    }
-
     // Convert images to base64 Data URLs so they print cleanly without network delays or CORS errors
     const [avatarDataUrl, idDataUrl] = await Promise.all([
       tenant.photoUrl ? toDataUrl(tenant.photoUrl) : Promise.resolve(""),
@@ -260,6 +243,10 @@ function TenantProfileInner() {
     const tenantIdShort = tenant.id ? tenant.id.slice(0, 8).toUpperCase() : "";
     const issueDate = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
     const issueTime = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+
+    const cleanPhone = (tenant.phone || "").replace(/\D/g, "").slice(-10);
+    const waPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const waShareUrl = waPhone ? `https://wa.me/${waPhone}` : "https://api.whatsapp.com/send";
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -506,29 +493,87 @@ function TenantProfileInner() {
     line-height: 1.45;
   }
 
-  .signatures-row {
+  /* Sleek screen-only action toolbar */
+  .no-print {
+    box-sizing: border-box;
+  }
+  .doc-action-bar {
     display: flex;
     justify-content: space-between;
-    gap: 40px;
-    margin-top: 18px;
-    padding-top: 8px;
+    align-items: center;
+    background: #0f172a;
+    color: #ffffff;
+    padding: 10px 16px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .doc-action-brand { display: flex; align-items: center; gap: 8px; }
+  .doc-action-logo { font-weight: 900; font-size: 13px; color: #10b981; }
+  .doc-action-tag { font-size: 11px; color: #94a3b8; }
+  .doc-action-buttons { display: flex; align-items: center; gap: 10px; }
+  .action-btn-print, .action-btn-wa {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    border: none;
+    transition: opacity 0.15s;
+  }
+  .action-btn-print { background: #ffffff; color: #0f172a; }
+  .action-btn-wa { background: #25D366; color: #ffffff; }
+  .action-btn-print:hover { background: #f1f5f9; }
+  .action-btn-wa:hover { opacity: 0.92; }
+
+  /* Signatures: Kept in one horizontal line (left end & right end) on all viewports */
+  .signatures-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
+    align-items: flex-end !important;
+    gap: 20px !important;
+    margin-top: 24px;
+    padding-top: 12px;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   .sig-box {
-    flex: 1;
-    border-top: 1.5px solid #0f172a;
-    padding-top: 5px;
-    text-align: center;
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    max-width: 45% !important;
+    border-top: 1.5px solid #0f172a !important;
+    padding-top: 6px !important;
+    box-sizing: border-box !important;
+  }
+  .sig-box-left {
+    text-align: left !important;
+  }
+  .sig-box-right {
+    text-align: right !important;
+    margin-left: auto !important;
   }
   .sig-title {
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 800;
     color: #0f172a;
     text-transform: uppercase;
-    margin-bottom: 1px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .sig-sub {
     font-size: 9.5px;
     color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .footer {
@@ -544,13 +589,17 @@ function TenantProfileInner() {
   /* Responsive screen adaptations */
   @media (max-width: 768px) {
     body { padding: 12px; font-size: 11px; }
+    .doc-action-bar { flex-direction: column; gap: 8px; align-items: stretch; text-align: center; }
+    .doc-action-brand { justify-content: center; }
+    .doc-action-buttons { justify-content: center; flex-wrap: wrap; }
     .header-card { flex-direction: column; gap: 12px; }
     .doc-meta { text-align: left; }
     .identity-card { flex-direction: column; align-items: flex-start; gap: 14px; }
     .photos-cluster { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 10px; }
     .grid-2 { grid-template-columns: 1fr 1fr; gap: 8px 12px; }
     .grid-3 { grid-template-columns: 1fr 1fr; gap: 8px 12px; }
-    .signatures-row { flex-direction: column; gap: 20px; }
+    .signatures-row { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; gap: 16px !important; }
+    .sig-box { max-width: 46% !important; }
   }
 
   @media (max-width: 480px) {
@@ -558,14 +607,19 @@ function TenantProfileInner() {
     .header-card { padding: 12px; }
     .pg-title { font-size: 17px; }
     .identity-card { padding: 10px 12px; }
-    .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 6px; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr 1fr; gap: 6px 10px; }
     .avatar-img { width: 75px; height: 90px; }
     .id-img { width: 125px; height: 90px; }
     .photo-placeholder { width: 75px; height: 90px; font-size: 9px; }
     .id-placeholder { width: 125px; height: 90px; font-size: 9px; }
+    .signatures-row { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; gap: 10px !important; }
+    .sig-box { max-width: 48% !important; }
+    .sig-title { font-size: 9.5px !important; }
+    .sig-sub { font-size: 8px !important; }
   }
 
   @media print {
+    .no-print { display: none !important; }
     body { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
     .header-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; display: flex !important; flex-direction: row !important; justify-content: space-between !important; }
     .doc-meta { text-align: right !important; }
@@ -573,7 +627,8 @@ function TenantProfileInner() {
     .photos-cluster { display: flex !important; flex-direction: row !important; }
     .grid-2 { display: grid !important; grid-template-columns: 1fr 1fr !important; }
     .grid-3 { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; }
-    .signatures-row { display: flex !important; flex-direction: row !important; }
+    .signatures-row { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; }
+    .sig-box { max-width: 45% !important; }
     .section-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #0f172a !important; color: #ffffff !important; }
     .doc-badge, .status-pill-active, .status-pill-checkout, .badge-paid, .badge-partial, .badge-pending { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     @page { size: A4 portrait; margin: 10mm 12mm; }
@@ -581,6 +636,22 @@ function TenantProfileInner() {
 </style>
 </head>
 <body>
+
+  <!-- Top Action Bar (Screen Only - Hidden in Print / PDF) -->
+  <div class="no-print doc-action-bar">
+    <div class="doc-action-brand">
+      <span class="doc-action-logo">⚡ PG-EG</span>
+      <span class="doc-action-tag">Official Tenant Verification Document</span>
+    </div>
+    <div class="doc-action-buttons">
+      <button type="button" class="action-btn-print" onclick="window.print()">
+        🖨️ Save as PDF / Print
+      </button>
+      <a href="${waShareUrl}" target="_blank" rel="noopener noreferrer" class="action-btn-wa">
+        💬 Send to Tenant WhatsApp (+91 ${cleanPhone})
+      </a>
+    </div>
+  </div>
 
   <!-- Top PG Header -->
   <div class="header-card">
@@ -687,10 +758,9 @@ function TenantProfileInner() {
   <div class="section-card">
     <div class="section-header">
       <span>💵 Financial Terms & Deposit Record</span>
-      <span>${monthLabel(currMonth)} Status</span>
     </div>
     <div class="section-body">
-      <div class="grid-3">
+      <div class="grid-2">
         <div class="field">
           <label>Monthly Rent</label>
           <span>₹${(tenant.rentAmount || 0).toLocaleString("en-IN")} / month</span>
@@ -698,22 +768,6 @@ function TenantProfileInner() {
         <div class="field">
           <label>Security Deposit (Advance)</label>
           <span>₹${(tenant.advanceAmount || 0).toLocaleString("en-IN")} via ${(tenant.paymentMode || "cash").toUpperCase()}</span>
-        </div>
-        <div class="field">
-          <label>Current Month Rent (${monthLabel(currMonth)})</label>
-          <span>${rentStatusBadge} ${rentStatusDetail}</span>
-        </div>
-        <div class="field">
-          <label>Deposit Deduction / Refund</label>
-          <span>${tenant.depositDeduction != null ? `₹${tenant.depositDeduction.toLocaleString("en-IN")} deducted` : "No deductions"}</span>
-        </div>
-        <div class="field">
-          <label>Refund Mode</label>
-          <span>${tenant.refundMode ? tenant.refundMode.toUpperCase() : "—"}</span>
-        </div>
-        <div class="field">
-          <label>Last Payment Recorded</label>
-          <span>${data.rentRecords[0]?.paidAt ? fmt(data.rentRecords[0].paidAt) : "—"}</span>
         </div>
       </div>
     </div>
@@ -726,11 +780,11 @@ function TenantProfileInner() {
 
   <!-- Official Signatures -->
   <div class="signatures-row">
-    <div class="sig-box">
+    <div class="sig-box sig-box-left">
       <div class="sig-title">Tenant Signature</div>
       <div class="sig-sub">${tenant.name} &nbsp;·&nbsp; Date: _______________</div>
     </div>
-    <div class="sig-box">
+    <div class="sig-box sig-box-right">
       <div class="sig-title">Authorized PG Signature / Stamp</div>
       <div class="sig-sub">For ${pgName} &nbsp;·&nbsp; Date: _______________</div>
     </div>
@@ -745,6 +799,51 @@ function TenantProfileInner() {
 </body>
 </html>`;
   }, [data, allPgs, activePgId, owner?.phone]);
+
+  // ── Share Document Action (Exact as Download, with native Web Share on mobile) ──
+  const handleShare = useCallback(async () => {
+    if (!data) return;
+    setGeneratingPdf(true);
+    try {
+      const html = await buildTenantDocumentHTML();
+      const safeName = data.tenant.name.replace(/[^a-zA-Z0-9]/g, "_") || "details";
+      const file = new File([html], `Tenant-Stay-Details-${safeName}.html`, { type: "text/html" });
+
+      // On mobile / supported devices with Web Share file capability
+      if (typeof navigator !== "undefined" && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: `Tenant Stay Details – ${data.tenant.name}`,
+            text: `Tenant Stay Details for ${data.tenant.name} (${activePg?.name || "PG Accommodation"})`,
+          });
+          return;
+        } catch (e: any) {
+          if (e?.name === "AbortError") return;
+        }
+      }
+
+      // Exact as Download: open the document in a new window/tab
+      const w = window.open("", "_blank");
+      if (w) {
+        w.document.write(html);
+        w.document.close();
+      } else {
+        const blob = new Blob([html], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Tenant-${safeName}.html`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error("Share failed:", err);
+      alert("Unable to share Tenant Stay Details document.");
+    } finally {
+      setGeneratingPdf(false);
+    }
+  }, [data, buildTenantDocumentHTML, activePg?.name]);
 
   // ── Download PDF Action ────────────────────────────────────────────────
   const handleDownloadPDF = useCallback(async () => {
@@ -1080,8 +1179,9 @@ function TenantProfileInner() {
           <button
             type="button"
             className={`${styles.navActionBtn} ${styles.navShareBtn}`}
-            onClick={() => setShareModalOpen(true)}
-            title="Share Tenant Details"
+            onClick={handleShare}
+            disabled={generatingPdf}
+            title="Share Tenant Stay Details"
             id="btn-nav-share"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -1089,7 +1189,7 @@ function TenantProfileInner() {
               <polyline points="16 6 12 2 8 6" />
               <line x1="12" y1="2" x2="12" y2="15" />
             </svg>
-            <span className={styles.navBtnLabel}>Share</span>
+            <span className={styles.navBtnLabel}>{generatingPdf ? "Exporting..." : "Share"}</span>
           </button>
           <button
             type="button"
