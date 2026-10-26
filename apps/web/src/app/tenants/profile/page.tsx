@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppLogo from "@/components/AppLogo";
+import ShareTenantModal from "@/components/ShareTenantModal";
 import { useAuth } from "@/contexts/AuthContext";
 import styles from "./page.module.css";
 
@@ -23,6 +24,26 @@ function fmtTime(d: string | Date | null | undefined) {
   return dt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 }
 
+function toDataUrl(url: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth || img.width;
+        c.height = img.naturalHeight || img.height;
+        const ctx = c.getContext("2d");
+        if (!ctx) { resolve(url); return; }
+        ctx.drawImage(img, 0, 0);
+        resolve(c.toDataURL("image/jpeg", 0.9));
+      } catch { resolve(url); }
+    };
+    img.onerror = () => resolve(url);
+    img.src = url;
+  });
+}
+
 interface Transaction { id: string; amount: number; paymentMode: string; note?: string; createdAt: string; }
 interface RentRecord { id: string; month: string; amount: number; paidAmount: number; status: string; paymentMode?: string | null; paidAt?: string | null; transactions: Transaction[]; }
 interface HistoryEvent { id: string; eventType: string; fromRoom?: string | null; toRoom?: string | null; note?: string | null; createdAt: string; }
@@ -38,7 +59,25 @@ interface TenantProfile {
 }
 interface Bed { id: string; bedNumber: number; }
 interface Room { id: string; roomNumber: string; floor: number; sharingType: number; }
-interface ProfileData { tenant: TenantProfile; bed: Bed | null; room: Room | null; rentRecords: RentRecord[]; history: HistoryEvent[]; }
+interface PGInfo {
+  id?: string;
+  name?: string;
+  type?: string | null;
+  address?: string | null;
+  city?: string | null;
+  sharings?: string | number[] | null;
+  managerName?: string | null;
+  managerPhone?: string | null;
+  paymentPhone?: string | null;
+}
+interface ProfileData {
+  tenant: TenantProfile;
+  bed: Bed | null;
+  room: Room | null;
+  rentRecords: RentRecord[];
+  history: HistoryEvent[];
+  pg?: PGInfo | null;
+}
 
 function currentMonthStr() {
   const d = new Date();
@@ -165,6 +204,532 @@ function TenantProfileInner() {
   }
   const [receiptModal, setReceiptModal] = useState<ReceiptData | null>(null);
   const [receiptCopied, setReceiptCopied] = useState(false);
+
+  // ── Share & Download PDF state ─────────────────────────────────────────
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  const activePg = allPgs?.find(p => p.id === activePgId);
+
+  // ── Build Single-Tenant Official Dossier & Printable HTML ─────────────
+  const buildTenantDocumentHTML = useCallback(async () => {
+    if (!data) return "";
+    const { tenant, room, bed, pg } = data;
+    const currentActivePg = allPgs?.find(p => p.id === activePgId);
+    const pgName = pg?.name || currentActivePg?.name || "PG Accommodation";
+    const rawPgType = pg?.type || currentActivePg?.type || "gents";
+    const pgType = rawPgType === "ladies" ? "👩‍🦰 LADIES PG" : rawPgType === "coliving" ? "🤝 CO-LIVING PG" : "👨‍🦱 GENTS PG";
+    const pgAddress = pg?.address ? `${pg.address}${pg.city ? `, ${pg.city}` : ""}` : "Address on record";
+    const pgPhone = pg?.managerPhone || pg?.paymentPhone || currentActivePg?.paymentPhone || owner?.phone || "—";
+
+    let sharingsDisplay = "1, 2, 3 Sharing";
+    if (pg?.sharings) {
+      try {
+        const raw = typeof pg.sharings === "string" ? JSON.parse(pg.sharings) : pg.sharings;
+        if (Array.isArray(raw) && raw.length > 0) {
+          sharingsDisplay = raw.map((s: number) => `${s}-Sharing`).join(", ");
+        }
+      } catch {
+        sharingsDisplay = String(pg.sharings);
+      }
+    }
+
+    const currMonth = currentMonthStr();
+    const currMonthRecord = data.rentRecords?.find((r) => r.month === currMonth);
+    let rentStatusBadge = `<span class="badge badge-pending">DUE / PENDING</span>`;
+    let rentStatusDetail = `₹${(tenant.rentAmount || 0).toLocaleString("en-IN")}`;
+    if (currMonthRecord) {
+      if (currMonthRecord.status === "paid") {
+        rentStatusBadge = `<span class="badge badge-paid">PAID ✓</span>`;
+        rentStatusDetail = `₹${currMonthRecord.paidAmount.toLocaleString("en-IN")}${currMonthRecord.paymentMode ? ` (${currMonthRecord.paymentMode.toUpperCase()})` : ""}`;
+      } else if (currMonthRecord.status === "partial") {
+        rentStatusBadge = `<span class="badge badge-partial">PARTIAL</span>`;
+        rentStatusDetail = `Paid ₹${currMonthRecord.paidAmount.toLocaleString("en-IN")} of ₹${currMonthRecord.amount.toLocaleString("en-IN")}`;
+      } else {
+        rentStatusBadge = `<span class="badge badge-pending">PENDING</span>`;
+        rentStatusDetail = `₹${currMonthRecord.amount.toLocaleString("en-IN")}`;
+      }
+    }
+
+    // Convert images to base64 Data URLs so they print cleanly without network delays or CORS errors
+    const [avatarDataUrl, idDataUrl] = await Promise.all([
+      tenant.photoUrl ? toDataUrl(tenant.photoUrl) : Promise.resolve(""),
+      tenant.idPhotoUrl ? toDataUrl(tenant.idPhotoUrl) : Promise.resolve(""),
+    ]);
+
+    const tenantIdShort = tenant.id ? tenant.id.slice(0, 8).toUpperCase() : "";
+    const issueDate = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    const issueTime = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tenant Dossier – ${tenant.name}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { background: #ffffff; color: #0f172a; font-size: 11.5px; padding: 22px; line-height: 1.4; }
+  
+  .header-card {
+    border: 2px solid #0f172a;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    background: #f8fafc;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .pg-title { font-size: 20px; font-weight: 900; color: #0f172a; margin-bottom: 3px; letter-spacing: -0.02em; }
+  .pg-type-badge {
+    display: inline-block;
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+    margin-bottom: 5px;
+  }
+  .pg-meta-line { font-size: 11px; color: #334155; margin-bottom: 2px; }
+  .pg-meta-line strong { color: #0f172a; }
+
+  .doc-meta { text-align: right; }
+  .doc-title { font-size: 13px; font-weight: 900; letter-spacing: 0.08em; color: #0f172a; text-transform: uppercase; }
+  .doc-badge {
+    display: inline-block;
+    background: #10b981;
+    color: #fff;
+    font-size: 9.5px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin: 3px 0 4px 0;
+  }
+  .doc-id { font-size: 10px; font-family: monospace; color: #64748b; font-weight: 700; }
+  .doc-date { font-size: 9.5px; color: #64748b; margin-top: 2px; }
+
+  .identity-card {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    background: #ffffff;
+  }
+  .photos-cluster {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .photo-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .photo-box-label {
+    font-size: 8px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+  }
+  .avatar-img {
+    width: 85px;
+    height: 100px;
+    border-radius: 6px;
+    object-fit: cover;
+    border: 1px solid #94a3b8;
+    background: #f1f5f9;
+    display: block;
+  }
+  .id-img {
+    width: 140px;
+    height: 100px;
+    border-radius: 6px;
+    object-fit: cover;
+    border: 1px solid #94a3b8;
+    background: #f1f5f9;
+    display: block;
+  }
+  .photo-placeholder {
+    width: 85px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    border: 1px dashed #cbd5e1;
+    border-radius: 6px;
+    padding: 6px;
+  }
+  .id-placeholder {
+    width: 140px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    border: 1px dashed #cbd5e1;
+    border-radius: 6px;
+    padding: 6px;
+  }
+
+  .identity-details {
+    flex: 1;
+    min-width: 0;
+  }
+  .tenant-name-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .tenant-name {
+    font-size: 17px;
+    font-weight: 900;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+  }
+  .status-pill-active {
+    font-size: 9.5px;
+    font-weight: 800;
+    color: #15803d;
+    background: #dcfce7;
+    border: 1px solid #86efac;
+    padding: 2px 7px;
+    border-radius: 12px;
+  }
+  .status-pill-checkout {
+    font-size: 9.5px;
+    font-weight: 800;
+    color: #b91c1c;
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    padding: 2px 7px;
+    border-radius: 12px;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 14px;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px 14px;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .field label {
+    font-size: 8.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+  }
+  .field span {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .section-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .section-header {
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .section-body {
+    padding: 10px 14px;
+    background: #ffffff;
+  }
+
+  .badge {
+    font-size: 9.5px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .badge-paid { background: #dcfce7; color: #15803d; }
+  .badge-partial { background: #fef3c7; color: #b45309; }
+  .badge-pending { background: #fee2e2; color: #b91c1c; }
+
+  .undertaking {
+    font-size: 9.5px;
+    color: #475569;
+    border-left: 3px solid #0f172a;
+    padding: 5px 10px;
+    background: #f8fafc;
+    margin-bottom: 14px;
+    line-height: 1.45;
+  }
+
+  .signatures-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 40px;
+    margin-top: 18px;
+    padding-top: 8px;
+  }
+  .sig-box {
+    flex: 1;
+    border-top: 1.5px solid #0f172a;
+    padding-top: 5px;
+    text-align: center;
+  }
+  .sig-title {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #0f172a;
+    text-transform: uppercase;
+    margin-bottom: 1px;
+  }
+  .sig-sub {
+    font-size: 9.5px;
+    color: #64748b;
+  }
+
+  .footer {
+    text-align: center;
+    font-size: 8.5px;
+    color: #94a3b8;
+    margin-top: 16px;
+    padding-top: 6px;
+    border-top: 1px dashed #cbd5e1;
+  }
+
+  @media print {
+    body { padding: 0; }
+    .header-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .section-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #0f172a !important; color: #ffffff !important; }
+    .doc-badge, .status-pill-active, .status-pill-checkout, .badge-paid, .badge-partial, .badge-pending { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { size: A4 portrait; margin: 10mm 12mm; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Top PG Header -->
+  <div class="header-card">
+    <div>
+      <div class="pg-title">${pgName}</div>
+      <div class="pg-type-badge">${pgType}</div>
+      <div class="pg-meta-line">📍 <strong>Address:</strong> ${pgAddress}</div>
+      <div class="pg-meta-line">📞 <strong>Contact:</strong> ${pgPhone} &nbsp;·&nbsp; 🛏️ <strong>Sharings Available:</strong> ${sharingsDisplay}</div>
+    </div>
+    <div class="doc-meta">
+      <div class="doc-title">Tenant Stay Dossier</div>
+      <div class="doc-badge">OFFICIAL VERIFIED</div>
+      <div class="doc-id">ID: PG-T-${tenantIdShort}</div>
+      <div class="doc-date">Generated: ${issueDate}, ${issueTime}</div>
+    </div>
+  </div>
+
+  <!-- Tenant Identity & Photos -->
+  <div class="identity-card">
+    <div class="photos-cluster">
+      <div class="photo-box">
+        ${avatarDataUrl
+          ? `<img src="${avatarDataUrl}" alt="${tenant.name}" class="avatar-img" />`
+          : `<div class="photo-placeholder">👤 Photo Not Uploaded</div>`
+        }
+        <span class="photo-box-label">Tenant Photo</span>
+      </div>
+      <div class="photo-box">
+        ${idDataUrl
+          ? `<img src="${idDataUrl}" alt="Govt ID Proof" class="id-img" />`
+          : `<div class="id-placeholder">🪪 ID Proof Not Uploaded</div>`
+        }
+        <span class="photo-box-label">Govt ID Proof</span>
+      </div>
+    </div>
+
+    <div class="identity-details">
+      <div class="tenant-name-row">
+        <span class="tenant-name">${tenant.name}</span>
+        ${tenant.status === "active"
+          ? `<span class="status-pill-active">● Active Staying</span>`
+          : `<span class="status-pill-checkout">● Checked Out (${fmt(tenant.leavingDate)})</span>`
+        }
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Primary Mobile</label>
+          <span>+91 ${tenant.phone}</span>
+        </div>
+        <div class="field">
+          <label>Alternate Mobile</label>
+          <span>${tenant.altPhone ? `+91 ${tenant.altPhone}` : "—"}</span>
+        </div>
+        <div class="field">
+          <label>Emergency Contact</label>
+          <span>${tenant.emergencyContact ? `+91 ${tenant.emergencyContact} (${tenant.emergencyRelation || "Relative"})` : "—"}</span>
+        </div>
+        <div class="field">
+          <label>Profession / Details</label>
+          <span>${tenant.profession ? `${tenant.profession}${tenant.professionDetail ? ` (${tenant.professionDetail})` : ""}` : "—"}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stay Details Section -->
+  <div class="section-card">
+    <div class="section-header">
+      <span>🏠 Stay & Accommodation Details</span>
+      <span>${room?.sharingType ? `${room.sharingType}-Sharing Room` : "Allocated Room"}</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-3">
+        <div class="field">
+          <label>Floor</label>
+          <span>Floor ${room?.floor ?? "—"}</span>
+        </div>
+        <div class="field">
+          <label>Room Number</label>
+          <span>Room ${room?.roomNumber || "—"}</span>
+        </div>
+        <div class="field">
+          <label>Bed Allocation</label>
+          <span>Bed ${bed?.bedNumber || "—"}</span>
+        </div>
+        <div class="field">
+          <label>Room Sharing</label>
+          <span>${room?.sharingType ? `${room.sharingType}-Sharing` : "—"}</span>
+        </div>
+        <div class="field">
+          <label>Joining Date</label>
+          <span>${fmt(tenant.joiningDate)}</span>
+        </div>
+        <div class="field">
+          <label>Stay Status / Checkout</label>
+          <span>${tenant.leavingDate ? `Checked out on ${fmt(tenant.leavingDate)}` : "Present & Staying"}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Financials & Payment Section -->
+  <div class="section-card">
+    <div class="section-header">
+      <span>💵 Financial Terms & Deposit Record</span>
+      <span>${monthLabel(currMonth)} Status</span>
+    </div>
+    <div class="section-body">
+      <div class="grid-3">
+        <div class="field">
+          <label>Monthly Rent</label>
+          <span>₹${(tenant.rentAmount || 0).toLocaleString("en-IN")} / month</span>
+        </div>
+        <div class="field">
+          <label>Security Deposit (Advance)</label>
+          <span>₹${(tenant.advanceAmount || 0).toLocaleString("en-IN")} via ${(tenant.paymentMode || "cash").toUpperCase()}</span>
+        </div>
+        <div class="field">
+          <label>Current Month Rent (${monthLabel(currMonth)})</label>
+          <span>${rentStatusBadge} ${rentStatusDetail}</span>
+        </div>
+        <div class="field">
+          <label>Deposit Deduction / Refund</label>
+          <span>${tenant.depositDeduction != null ? `₹${tenant.depositDeduction.toLocaleString("en-IN")} deducted` : "No deductions"}</span>
+        </div>
+        <div class="field">
+          <label>Refund Mode</label>
+          <span>${tenant.refundMode ? tenant.refundMode.toUpperCase() : "—"}</span>
+        </div>
+        <div class="field">
+          <label>Last Payment Recorded</label>
+          <span>${data.rentRecords[0]?.paidAt ? fmt(data.rentRecords[0].paidAt) : "—"}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Undertaking / Declaration -->
+  <div class="undertaking">
+    <strong>Declaration & Terms of Stay:</strong> The tenant agrees to maintain peaceful occupancy, follow PG house rules, avoid disturbance to fellow residents, and remit monthly rent on or before the due date. The security deposit is refundable subject to notice and damage inspection.
+  </div>
+
+  <!-- Official Signatures -->
+  <div class="signatures-row">
+    <div class="sig-box">
+      <div class="sig-title">Tenant Signature</div>
+      <div class="sig-sub">${tenant.name} &nbsp;·&nbsp; Date: _______________</div>
+    </div>
+    <div class="sig-box">
+      <div class="sig-title">Authorized PG Signature / Stamp</div>
+      <div class="sig-sub">For ${pgName} &nbsp;·&nbsp; Date: _______________</div>
+    </div>
+  </div>
+
+  <!-- Footer Watermark -->
+  <div class="footer">
+    Official Digital Verification Dossier &nbsp;·&nbsp; Generated via PG-EG (www.pgeg.in) &nbsp;·&nbsp; Find PGs & Manage PGs
+  </div>
+
+  <script>window.onload = function(){ window.print(); }<\/script>
+</body>
+</html>`;
+  }, [data, allPgs, activePgId, owner?.phone]);
+
+  // ── Download PDF Action ────────────────────────────────────────────────
+  const handleDownloadPDF = useCallback(async () => {
+    if (!data) return;
+    setGeneratingPdf(true);
+    try {
+      const html = await buildTenantDocumentHTML();
+      const w = window.open("", "_blank");
+      if (w) {
+        w.document.write(html);
+        w.document.close();
+      } else {
+        // Fallback if popup was blocked by browser
+        const blob = new Blob([html], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Tenant-${data.tenant.name.replace(/\s+/g, "_")}.html`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      alert("Unable to generate PDF document. Please try again.");
+    } finally {
+      setGeneratingPdf(false);
+    }
+  }, [data, buildTenantDocumentHTML]);
 
   const load = useCallback(async () => {
     if (!tenantId) { setError("No tenant ID"); setLoading(false); return; }
@@ -468,6 +1033,37 @@ function TenantProfileInner() {
       {/* Header */}
       <header className={styles.header}>
         <button className={styles.backBtn} onClick={() => router.push("/dashboard")} id="btn-back">← Dashboard</button>
+        <div className={styles.headerNavActions}>
+          <button
+            type="button"
+            className={`${styles.navActionBtn} ${styles.navShareBtn}`}
+            onClick={() => setShareModalOpen(true)}
+            title="Share Tenant Details"
+            id="btn-nav-share"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
+            <span className={styles.navBtnLabel}>Share</span>
+          </button>
+          <button
+            type="button"
+            className={`${styles.navActionBtn} ${styles.navDownloadBtn}`}
+            onClick={handleDownloadPDF}
+            disabled={generatingPdf}
+            title="Download Tenant Details PDF"
+            id="btn-nav-download"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span className={styles.navBtnLabel}>{generatingPdf ? "Exporting..." : "Download"}</span>
+          </button>
+        </div>
         <AppLogo size="xs" />
       </header>
 
@@ -1322,6 +1918,24 @@ function TenantProfileInner() {
           </div>
         );
       })()}
+
+      {/* Share Tenant Modal */}
+      {data && (
+        <ShareTenantModal
+          isOpen={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          tenant={data.tenant}
+          room={data.room}
+          bed={data.bed}
+          pg={data.pg || (activePg ? {
+            name: activePg.name,
+            type: activePg.type,
+            paymentPhone: activePg.paymentPhone
+          } : null)}
+          onDownloadPdf={handleDownloadPDF}
+          getPdfHtml={buildTenantDocumentHTML}
+        />
+      )}
 
     </main>
   );

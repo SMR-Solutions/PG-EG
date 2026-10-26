@@ -192,8 +192,14 @@ router.get("/:id", requireAuth, async (req: Request, res: Response) => {
       }
     }
 
+    let pg = null;
+    if (tenant.pgId) {
+      const [pgRow] = await db.select().from(pgs).where(eq(pgs.id, tenant.pgId)).limit(1);
+      pg = pgRow || null;
+    }
+
     const rentWithTxns = rentRecords.map((r) => ({ ...r, transactions: txnsByRentId[r.id] || [] }));
-    res.json({ tenant, bed, room, history, rentRecords: rentWithTxns });
+    res.json({ tenant, bed, room, history, rentRecords: rentWithTxns, pg });
   } catch (error) {
     console.error("Tenant profile error:", error);
     res.status(500).json({ error: "Failed to load tenant profile" });
