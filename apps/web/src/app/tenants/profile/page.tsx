@@ -1072,6 +1072,20 @@ function TenantProfileInner() {
     load();
   }, [load, authLoading, isAuthenticated, router]);
 
+  // Auto-rotate between Photo & ID Proof every 2 seconds if both exist
+  useEffect(() => {
+    const hasPhoto = Boolean(data?.tenant?.photoUrl);
+    const hasId = Boolean(data?.tenant?.idPhotoUrl);
+    if (!hasPhoto || !hasId) return;
+    if (lightboxImg) return; // Don't auto-rotate while lightbox is open
+
+    const timer = setInterval(() => {
+      setIdFlipped(prev => !prev);
+    }, 2000);
+
+    return () => clearInterval(timer);
+  }, [data?.tenant?.photoUrl, data?.tenant?.idPhotoUrl, lightboxImg]);
+
   // Current month rent record
   const currentMonth = currentMonthStr();
   const currentRent = data?.rentRecords?.find((r) => r.month === currentMonth);
@@ -1401,21 +1415,60 @@ function TenantProfileInner() {
           style={{ cursor: (idFlipped ? tenant.idPhotoUrl : tenant.photoUrl) ? "zoom-in" : "default" }}
         >
           {/* Photo side */}
-          {!idFlipped && (
-            tenant.photoUrl
-              ? <img src={tenant.photoUrl} alt={tenant.name} className={styles.heroPhoto} />
-              : <div className={styles.heroPlaceholder}><span>👤</span></div>
+          {tenant.photoUrl && (
+            <img
+              src={tenant.photoUrl}
+              alt={tenant.name}
+              className={`${styles.heroPhoto} ${!idFlipped ? styles.heroPhotoVisible : styles.heroPhotoHidden}`}
+            />
           )}
           {/* ID card side */}
-          {idFlipped && tenant.idPhotoUrl && (
-            <img src={tenant.idPhotoUrl} alt="ID Card" className={styles.heroPhoto}
-              style={{ objectFit: "contain", background: "#0a0d14", padding: 14, boxSizing: "border-box" }} />
+          {tenant.idPhotoUrl && (
+            <img
+              src={tenant.idPhotoUrl}
+              alt="Govt ID Proof"
+              className={`${styles.heroPhoto} ${idFlipped ? styles.heroPhotoVisible : styles.heroPhotoHidden}`}
+              style={{ objectFit: "contain", background: "#0a0d14", padding: 14, boxSizing: "border-box" }}
+            />
           )}
+          {!tenant.photoUrl && !tenant.idPhotoUrl && (
+            <div className={styles.heroPlaceholder}><span>👤</span></div>
+          )}
+
           <div className={styles.heroGradient} />
+
+          {/* Indicator pill showing currently displayed image type */}
+          {tenant.photoUrl && tenant.idPhotoUrl && (
+            <div className={styles.heroTypeIndicator}>
+              {idFlipped ? "🪪 Govt ID Proof" : "📷 Tenant Photo"}
+            </div>
+          )}
+
           <div className={styles.heroName}>
             <h1 className={styles.tenantName}>{tenant.name}</h1>
             <span className={`${styles.statusBadge} ${tenant.status === "active" ? styles.statusActive : styles.statusOut}`}>
               {tenant.status === "active" ? "● ACTIVE" : "● CHECKED OUT"}
+            </span>
+          </div>
+        </div>
+
+        {/* Profession row — positioned ABOVE 📞 Contact */}
+        <div className={styles.professionRowAbove}>
+          <div className={styles.professionBadge}>
+            <span className={styles.professionLabel}>Profession -</span>
+            <span className={styles.professionValue}>
+              {(() => {
+                const pType = tenant.profession
+                  ? (tenant.profession === "jobholder"
+                      ? "Jobholder"
+                      : tenant.profession.charAt(0).toUpperCase() + tenant.profession.slice(1))
+                  : "";
+                const pDetail = tenant.professionDetail ? tenant.professionDetail.trim() : "";
+                if (pType && pDetail) return `${pType} - ${pDetail}`;
+                if (pType) return pType;
+                if (pDetail) return pDetail;
+                return "—";
+              })()}
             </span>
           </div>
         </div>
@@ -1434,27 +1487,6 @@ function TenantProfileInner() {
                 🔄 {idFlipped ? "See Photo" : "See ID"}
               </button>
             )}
-          </div>
-
-          {/* Profession row directly below 📞 Contact */}
-          <div className={styles.professionRow}>
-            <div className={styles.professionBadge}>
-              <span className={styles.professionLabel}>Profession -</span>
-              <span className={styles.professionValue}>
-                {(() => {
-                  const pType = tenant.profession
-                    ? (tenant.profession === "jobholder"
-                        ? "Jobholder"
-                        : tenant.profession.charAt(0).toUpperCase() + tenant.profession.slice(1))
-                    : "";
-                  const pDetail = tenant.professionDetail ? tenant.professionDetail.trim() : "";
-                  if (pType && pDetail) return `${pType} - ${pDetail}`;
-                  if (pType) return pType;
-                  if (pDetail) return pDetail;
-                  return "—";
-                })()}
-              </span>
-            </div>
           </div>
           <div className={styles.infoGrid}>
             <div className={styles.infoCard}>
