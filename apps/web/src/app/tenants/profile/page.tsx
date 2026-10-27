@@ -906,33 +906,134 @@ function TenantProfileInner() {
     .id-proof-footer-meta { flex-direction: column; align-items: flex-start; gap: 6px; }
   }
 
-  /* ── Print Styles (A4 2-Page Document) ──────── */
+  /* ── Print Styles (A4 Exact 2-Page Document) ──────── */
   @media print {
-    body { background: #ffffff !important; padding: 0 !important; margin: 0 !important; }
-    .doc-wrapper { border: none !important; box-shadow: none !important; padding: 0 !important; max-width: 100% !important; }
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    .page-divider { display: none !important; }
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      box-sizing: border-box !important;
+    }
+    html, body {
+      background: #ffffff !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      width: 100% !important;
+    }
+    .doc-wrapper {
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      max-width: 100% !important;
+      width: 100% !important;
+      background: #ffffff !important;
+    }
+    .page-divider,
+    .screen-only {
+      display: none !important;
+      visibility: hidden !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      max-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      overflow: hidden !important;
+    }
     .page-1 {
+      display: block !important;
+      width: 100% !important;
       page-break-after: always !important;
       break-after: page !important;
-      min-height: 98vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      page-break-before: avoid !important;
+      break-before: avoid !important;
+      margin: 0 !important;
+      padding: 0 !important;
     }
     .page-2 {
-      page-break-before: always !important;
-      break-before: page !important;
-      min-height: 98vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      display: block !important;
+      width: 100% !important;
+      page-break-before: auto !important;
+      break-before: auto !important;
+      page-break-after: avoid !important;
+      break-after: avoid !important;
+      margin: 0 !important;
+      padding: 0 !important;
     }
-    .main-content-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
-    .signatures-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
-    .full-size-id-img { max-height: 600px !important; }
-    @page { size: A4 portrait; margin: 8mm 10mm; }
+
+    /* Retain side-by-side grids on Page 1 exactly like on screen */
+    .main-content-grid {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 12px !important;
+      margin-bottom: 12px !important;
+    }
+    .stay-grid {
+      display: grid !important;
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 10px 8px !important;
+    }
+    .signatures-grid {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 12px !important;
+      margin-bottom: 12px !important;
+    }
+    .header-card {
+      margin-bottom: 12px !important;
+      padding: 12px 16px !important;
+    }
+    .identity-card {
+      margin-bottom: 12px !important;
+      padding: 12px 16px !important;
+    }
+    .id-proof-card {
+      margin-bottom: 12px !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+    .id-proof-display-area {
+      min-height: 480px !important;
+      max-height: 620px !important;
+      padding: 16px 20px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    .full-size-id-img {
+      max-height: 580px !important;
+      max-width: 100% !important;
+      width: auto !important;
+      height: auto !important;
+      object-fit: contain !important;
+    }
+    .id-proof-footer-meta {
+      padding: 10px 16px !important;
+    }
+    .doc-footer {
+      margin-top: 12px !important;
+      padding-top: 8px !important;
+    }
+
+    /* Avoid accidental breaks inside cards */
+    .header-card,
+    .identity-card,
+    .section-card,
+    .fin-card,
+    .undertaking-box,
+    .main-content-grid,
+    .signatures-grid,
+    .sig-card,
+    .id-proof-card,
+    .doc-footer {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 8mm 10mm;
+    }
   }
 </style>
 </head>
@@ -1134,8 +1235,8 @@ function TenantProfileInner() {
 
   </div>
 
-  <!-- Page Break / Screen Divider -->
-  <div class="page-divider">
+  <!-- Page Break / Screen Divider (Visible on Screen, Hidden in Print) -->
+  <div class="page-divider screen-only">
     <span>Attached Govt ID Document (Page 2)</span>
   </div>
 
@@ -1204,7 +1305,18 @@ function TenantProfileInner() {
 
 </div>
 
-<script>window.onload = function(){ window.print(); }<\/script>
+<script>
+  function triggerPrint() {
+    setTimeout(function() {
+      window.print();
+    }, 300);
+  }
+  if (document.readyState === 'complete') {
+    triggerPrint();
+  } else {
+    window.addEventListener('load', triggerPrint);
+  }
+<\/script>
 </body>
 </html>`;
   }, [data, allPgs, activePgId, owner?.phone]);
