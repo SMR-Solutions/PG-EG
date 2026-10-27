@@ -906,7 +906,7 @@ function TenantProfileInner() {
     .id-proof-footer-meta { flex-direction: column; align-items: flex-start; gap: 6px; }
   }
 
-  /* ── Print Styles (A4 Exact 2-Page Document) ──────── */
+  /* ── Print Styles (A4 Full-Page Executive 2-Page Document) ──────── */
   @media print {
     * {
       -webkit-print-color-adjust: exact !important;
@@ -918,6 +918,8 @@ function TenantProfileInner() {
       padding: 0 !important;
       margin: 0 !important;
       width: 100% !important;
+      font-size: 13px !important;
+      color: #0f172a !important;
     }
     .doc-wrapper {
       border: none !important;
@@ -940,79 +942,306 @@ function TenantProfileInner() {
       border: none !important;
       overflow: hidden !important;
     }
+
+    /* ── PAGE 1: Covers full A4 page top-to-bottom ── */
     .page-1 {
-      display: block !important;
+      box-sizing: border-box !important;
       width: 100% !important;
+      height: 275mm !important;
+      min-height: 275mm !important;
+      max-height: 275mm !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
       page-break-after: always !important;
       break-after: page !important;
       page-break-before: avoid !important;
       break-before: avoid !important;
-      margin: 0 !important;
-      padding: 0 !important;
-    }
-    .page-2 {
-      display: block !important;
-      width: 100% !important;
-      page-break-before: auto !important;
-      break-before: auto !important;
-      page-break-after: avoid !important;
-      break-after: avoid !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
       margin: 0 !important;
       padding: 0 !important;
     }
 
-    /* Retain side-by-side grids on Page 1 exactly like on screen */
+    /* ── PAGE 2: Covers full A4 page top-to-bottom with large ID ── */
+    .page-2 {
+      box-sizing: border-box !important;
+      width: 100% !important;
+      height: 275mm !important;
+      min-height: 275mm !important;
+      max-height: 275mm !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      page-break-before: auto !important;
+      break-before: auto !important;
+      page-break-after: avoid !important;
+      break-after: avoid !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    /* ── Page 1 Elements (Bigger, Clearer, Executive Layout) ── */
+    .header-card {
+      padding: 16px 22px !important;
+      margin-bottom: 0 !important;
+      border: 1.5px solid #cbd5e1 !important;
+      border-radius: 12px !important;
+    }
+    .pg-thumb {
+      width: 135px !important;
+      height: 100px !important;
+      border-radius: 8px !important;
+    }
+    .pg-title {
+      font-size: 24px !important;
+      font-weight: 900 !important;
+      margin-bottom: 4px !important;
+    }
+    .pg-type-badge {
+      font-size: 11px !important;
+      padding: 3px 9px !important;
+      margin-bottom: 6px !important;
+    }
+    .pg-meta-line {
+      font-size: 12.5px !important;
+      margin-bottom: 4px !important;
+      line-height: 1.45 !important;
+    }
+    .doc-title {
+      font-size: 15.5px !important;
+      font-weight: 900 !important;
+    }
+    .doc-badge {
+      font-size: 11px !important;
+      padding: 3.5px 10px !important;
+      margin: 4px 0 !important;
+    }
+    .doc-id {
+      font-size: 11.5px !important;
+    }
+    .doc-date {
+      font-size: 11px !important;
+    }
+
+    .identity-card {
+      padding: 18px 22px !important;
+      margin-bottom: 0 !important;
+      border: 1.5px solid #cbd5e1 !important;
+      border-radius: 12px !important;
+      gap: 22px !important;
+    }
+    .avatar-img {
+      width: 95px !important;
+      height: 95px !important;
+      border-radius: 50% !important;
+      border: 2.5px solid #cbd5e1 !important;
+    }
+    .photo-caption {
+      font-size: 10.5px !important;
+      font-weight: 800 !important;
+      margin-top: 5px !important;
+    }
+    .tenant-name {
+      font-size: 26px !important;
+      font-weight: 900 !important;
+    }
+    .status-pill-active,
+    .status-pill-checkout {
+      font-size: 12px !important;
+      padding: 4px 12px !important;
+    }
+    .details-grid {
+      gap: 14px 20px !important;
+    }
+    .field-label {
+      font-size: 10.5px !important;
+      font-weight: 800 !important;
+      margin-bottom: 3px !important;
+      color: #64748b !important;
+    }
+    .field-val {
+      font-size: 14px !important;
+      font-weight: 800 !important;
+      color: #0f172a !important;
+    }
+
     .main-content-grid {
       display: grid !important;
       grid-template-columns: 1fr 1fr !important;
-      gap: 12px !important;
-      margin-bottom: 12px !important;
+      gap: 16px !important;
+      margin-bottom: 0 !important;
+      align-items: stretch !important;
+    }
+    .section-card {
+      border: 1.5px solid #cbd5e1 !important;
+      border-radius: 12px !important;
+    }
+    .section-banner {
+      font-size: 12.5px !important;
+      padding: 11px 18px !important;
+      font-weight: 800 !important;
+    }
+    .section-body {
+      padding: 18px 18px !important;
     }
     .stay-grid {
       display: grid !important;
       grid-template-columns: repeat(3, 1fr) !important;
-      gap: 10px 8px !important;
+      gap: 16px 14px !important;
     }
+    .stay-icon {
+      font-size: 20px !important;
+    }
+    .stay-label {
+      font-size: 10px !important;
+      font-weight: 800 !important;
+      margin-bottom: 3px !important;
+    }
+    .stay-val {
+      font-size: 13.5px !important;
+      font-weight: 800 !important;
+    }
+
+    .right-column-wrap {
+      gap: 14px !important;
+    }
+    .fin-card {
+      border: 1.5px solid #cbd5e1 !important;
+      border-radius: 12px !important;
+    }
+    .fin-row {
+      padding: 16px 20px !important;
+      gap: 14px !important;
+    }
+    .fin-icon-square {
+      width: 44px !important;
+      height: 44px !important;
+      font-size: 22px !important;
+      border-radius: 10px !important;
+    }
+    .fin-label {
+      font-size: 10px !important;
+      font-weight: 800 !important;
+      margin-bottom: 3px !important;
+    }
+    .fin-val {
+      font-size: 16px !important;
+      font-weight: 900 !important;
+    }
+    .undertaking-box {
+      padding: 14px 16px !important;
+      gap: 12px !important;
+      border-radius: 10px !important;
+    }
+    .undertaking-icon {
+      width: 30px !important;
+      height: 30px !important;
+      font-size: 16px !important;
+    }
+    .undertaking-text {
+      font-size: 11.5px !important;
+      line-height: 1.5 !important;
+    }
+
     .signatures-grid {
       display: grid !important;
       grid-template-columns: 1fr 1fr !important;
-      gap: 12px !important;
-      margin-bottom: 12px !important;
+      gap: 16px !important;
+      margin-bottom: 0 !important;
     }
-    .header-card {
-      margin-bottom: 12px !important;
-      padding: 12px 16px !important;
+    .sig-card {
+      padding: 16px 20px !important;
+      border: 1.5px solid #cbd5e1 !important;
+      border-radius: 12px !important;
     }
-    .identity-card {
-      margin-bottom: 12px !important;
-      padding: 12px 16px !important;
+    .sig-header {
+      font-size: 12.5px !important;
+      font-weight: 900 !important;
+      margin-bottom: 5px !important;
     }
+    .sig-meta {
+      font-size: 11px !important;
+      margin-bottom: 10px !important;
+    }
+    .sig-dotted-box {
+      height: 60px !important;
+      border-radius: 8px !important;
+    }
+    .digital-sig-box {
+      height: 60px !important;
+      border-radius: 8px !important;
+      padding: 6px 12px !important;
+    }
+    .digital-sig-name {
+      font-size: 26px !important;
+      font-weight: 700 !important;
+    }
+    .digital-sig-seal {
+      font-size: 9.5px !important;
+      font-weight: 800 !important;
+      margin-top: 3px !important;
+    }
+    .digital-sig-note {
+      font-size: 9.5px !important;
+      margin-top: 6px !important;
+    }
+
+    /* ── Page 2: Govt ID Card (Fills Page 2 Prominently) ── */
     .id-proof-card {
-      margin-bottom: 12px !important;
+      flex: 1 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      border: 1.5px solid #cbd5e1 !important;
+      border-radius: 12px !important;
+      overflow: hidden !important;
+      margin-top: 14px !important;
+      margin-bottom: 14px !important;
       break-inside: avoid !important;
       page-break-inside: avoid !important;
     }
+    .id-proof-banner {
+      font-size: 13px !important;
+      padding: 12px 20px !important;
+      font-weight: 800 !important;
+    }
     .id-proof-display-area {
-      min-height: 480px !important;
-      max-height: 620px !important;
-      padding: 16px 20px !important;
+      flex: 1 !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
+      padding: 20px 20px !important;
+      background: #f8fafc !important;
+      min-height: 180mm !important;
     }
     .full-size-id-img {
-      max-height: 580px !important;
+      max-height: 175mm !important;
       max-width: 100% !important;
       width: auto !important;
       height: auto !important;
       object-fit: contain !important;
+      border: 2px solid #cbd5e1 !important;
+      border-radius: 8px !important;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08) !important;
     }
     .id-proof-footer-meta {
-      padding: 10px 16px !important;
+      padding: 14px 22px !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
     }
+
+    /* ── Footers ── */
     .doc-footer {
-      margin-top: 12px !important;
-      padding-top: 8px !important;
+      border-top: 1.5px dotted #cbd5e1 !important;
+      padding-top: 12px !important;
+      margin-top: 0 !important;
+      font-size: 11px !important;
+      gap: 12px !important;
+    }
+    .footer-logo {
+      height: 26px !important;
     }
 
     /* Avoid accidental breaks inside cards */
