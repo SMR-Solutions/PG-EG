@@ -1188,12 +1188,6 @@ function TenantProfileInner() {
         <div class="id-meta-item">
           <strong>Primary Mobile:</strong> +91 ${cleanPhone || tenant.phone}
         </div>
-        <div class="id-meta-item">
-          <strong>Room &amp; Bed:</strong> Floor ${room?.floor ?? "—"}, Room ${room?.roomNumber || "—"}, Bed ${bed?.bedNumber || "—"}
-        </div>
-        <div class="id-meta-item">
-          <strong>Verification Date:</strong> ${issueDate}
-        </div>
       </div>
     </div>
 
