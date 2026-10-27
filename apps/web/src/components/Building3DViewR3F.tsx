@@ -727,7 +727,7 @@ function RoofMesh({ totalFloors, pgName }: { totalFloors: number; pgName: string
   const roofSignTex = useMemo(() => createRoofSignTexture(pgName), [pgName]);
   useEffect(() => () => roofSignTex.dispose(), [roofSignTex]);
 
-  const signW = Math.min(FW * 0.76, 4.0);
+  const signW = FW - 0.25; // Spans full building width across screens
 
   return (
     <group position={[0, y, 0]}>

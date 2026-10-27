@@ -149,7 +149,7 @@ export default function Building3DView({ pgName, totalFloors, rooms, onRoomClick
             <div className={styles.roofGroup} style={{ transform: `translateY(${-totalH - 30}px)` }}>
               {/* Front parapet */}
               <div className={styles.roofFront} style={{ transform: `translateZ(${D / 2}px)`, width: W }}>
-                <div className={styles.signBoard}>{pgName}</div>
+                <div className={styles.signBoard} title={pgName}>{pgName}</div>
                 <div className={styles.tankRow}>
                   <div className={styles.tank} />
                   <div className={styles.tank} />

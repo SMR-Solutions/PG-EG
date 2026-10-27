@@ -42,13 +42,29 @@
   display: flex; align-items: center; justify-content: center;
 }
 
-/* PG name sign board */
+/* PG name sign board — covers the full building front width across all screen sizes */
 .signBoard {
-  background: rgba(255,255,255,0.94);
-  color: #111; font-size: 11px; font-weight: 900;
-  letter-spacing: 0.04em;
-  padding: 4px 14px; border-radius: 6px;
-  box-shadow: 0 3px 14px rgba(0,0,0,0.5);
+  width: calc(100% - 14px);
+  max-width: calc(100% - 14px);
+  height: 34px;
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.45), inset 0 1px 0 #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 /* Water tanks */

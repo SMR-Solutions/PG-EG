@@ -208,10 +208,10 @@ export default function DashboardPage() {
   const [searching, setSearching] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Viewport — FAB only shows on large screens; search on small screens is inside sidebar
+  // Viewport — FAB only shows on large desktop screens; small & medium screens have Search icon beside Share icon
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   useEffect(() => {
-    const check = () => setIsSmallScreen(window.innerWidth <= 640);
+    const check = () => setIsSmallScreen(window.innerWidth <= 1024);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -1100,45 +1100,86 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* ─── Share PG Location & Card (for Tenants / Inquiries) ─── */}
+        {/* ─── Share PG & Tenant Search Quick Actions ─── */}
         {pg && (
           <div className={styles.sharePgSection}>
-            <button
-              className={styles.sharePgBtn}
-              onClick={handleSharePg}
-              disabled={sharingPg}
-              id="btn-owner-share-pg"
-              aria-label="Share PG Card and Location"
-            >
-              <div className={styles.sharePgIconCircle}>
-                {sharingPg ? (
-                  <span className={styles.sharePgSpinner} />
-                ) : (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M14 9V5L21 12L14 19V14.9C9 14.9 5.5 16.5 3 20C4 15 7 10 14 9Z" />
-                  </svg>
-                )}
-              </div>
-              <div className={styles.sharePgInfo}>
-                <div className={styles.sharePgTitle}>
-                  Share PG Location &amp; Card
-                  <span className={styles.sharePgTag}>WhatsApp / Chat</span>
+            {/* Desktop View (> 1024px): Full Share Card */}
+            <div className={styles.desktopShareCard}>
+              <button
+                className={styles.sharePgBtn}
+                onClick={handleSharePg}
+                disabled={sharingPg}
+                id="btn-owner-share-pg"
+                aria-label="Share PG Card and Location"
+              >
+                <div className={styles.sharePgIconCircle}>
+                  {sharingPg ? (
+                    <span className={styles.sharePgSpinner} />
+                  ) : (
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M14 9V5L21 12L14 19V14.9C9 14.9 5.5 16.5 3 20C4 15 7 10 14 9Z" />
+                    </svg>
+                  )}
                 </div>
-                <div className={styles.sharePgSub}>
-                  Send photo, rent &amp; map link to callers &amp; inquiring tenants
+                <div className={styles.sharePgInfo}>
+                  <div className={styles.sharePgTitle}>
+                    Share PG Location &amp; Card
+                    <span className={styles.sharePgTag}>WhatsApp / Chat</span>
+                  </div>
+                  <div className={styles.sharePgSub}>
+                    Send photo, rent &amp; map link to callers &amp; inquiring tenants
+                  </div>
                 </div>
-              </div>
-              <div className={styles.sharePgActions}>
-                <span
-                  className={styles.sharePgCopyBtn}
-                  onClick={handleCopyPgLink}
-                  title="Copy link to clipboard"
+                <div className={styles.sharePgActions}>
+                  <span
+                    className={styles.sharePgCopyBtn}
+                    onClick={handleCopyPgLink}
+                    title="Copy link to clipboard"
+                  >
+                    🔗
+                  </span>
+                  <span className={styles.sharePgArrow}>↗</span>
+                </div>
+              </button>
+            </div>
+
+            {/* Small & Medium Screens (<= 1024px): Compact Action Icon Buttons */}
+            <div className={styles.mobileActionRow}>
+              {/* Share Icon Button */}
+              <div className={styles.mobileActionItem}>
+                <button
+                  className={`${styles.mobileCircleBtn} ${styles.mobileShareBtn}`}
+                  onClick={handleSharePg}
+                  disabled={sharingPg}
+                  id="btn-mobile-share-pg"
+                  title="Share PG Location & Card"
+                  aria-label="Share PG Card and Location"
                 >
-                  🔗
-                </span>
-                <span className={styles.sharePgArrow}>↗</span>
+                  {sharingPg ? (
+                    <span className={styles.sharePgSpinner} />
+                  ) : (
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M14 9V5L21 12L14 19V14.9C9 14.9 5.5 16.5 3 20C4 15 7 10 14 9Z" />
+                    </svg>
+                  )}
+                </button>
+                <span className={styles.mobileActionLabel}>Share</span>
               </div>
-            </button>
+
+              {/* Search Tenants Icon Button (from sidebar) */}
+              <div className={styles.mobileActionItem}>
+                <button
+                  className={`${styles.mobileCircleBtn} ${styles.mobileSearchBtn}`}
+                  onClick={() => setSearchOpen(true)}
+                  id="btn-mobile-search-tenants"
+                  title="Search Tenants"
+                  aria-label="Search tenants"
+                >
+                  🔍
+                </button>
+                <span className={styles.mobileActionLabel}>Search</span>
+              </div>
+            </div>
           </div>
         )}
       </div>
