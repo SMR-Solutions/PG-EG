@@ -35,7 +35,8 @@ function toDataUrl(url: string): Promise<string> {
         const ctx = c.getContext("2d");
         if (!ctx) { resolve(url); return; }
         ctx.drawImage(img, 0, 0);
-        resolve(c.toDataURL("image/jpeg", 0.9));
+        const mime = url.toLowerCase().includes(".png") ? "image/png" : "image/jpeg";
+        resolve(c.toDataURL(mime, 0.95));
       } catch { resolve(url); }
     };
     img.onerror = () => resolve(url);
@@ -237,12 +238,14 @@ function TenantProfileInner() {
 
     const currentAny = currentActivePg as any;
     const rawPgPhoto = pg?.coverImageUrl || (Array.isArray(pg?.pgImages) ? pg?.pgImages[0] : null) || currentAny?.coverImageUrl || (Array.isArray(currentAny?.pgImages) ? currentAny.pgImages[0] : null) || "";
+    const managerName = pg?.managerName || owner?.name || "PG Manager";
 
     // Convert images to base64 Data URLs so they print cleanly without network delays or CORS errors
-    const [avatarDataUrl, idDataUrl, pgThumbDataUrl] = await Promise.all([
+    const [avatarDataUrl, idDataUrl, pgThumbDataUrl, pgegLogoDataUrl] = await Promise.all([
       tenant.photoUrl ? toDataUrl(tenant.photoUrl) : Promise.resolve(""),
       tenant.idPhotoUrl ? toDataUrl(tenant.idPhotoUrl) : Promise.resolve(""),
       rawPgPhoto ? toDataUrl(rawPgPhoto) : Promise.resolve(""),
+      toDataUrl("/pg-eg-logo-wide.png").catch(() => ""),
     ]);
 
     const tenantIdShort = tenant.id ? tenant.id.slice(0, 8).toUpperCase() : "";
@@ -706,8 +709,47 @@ function TenantProfileInner() {
   .sig-dotted-box {
     border: 1.5px dashed #cbd5e1;
     border-radius: 6px;
-    height: 42px;
+    height: 44px;
     background: #f8fafc;
+  }
+  .digital-sig-box {
+    border: 1.5px dashed #93c5fd;
+    border-radius: 6px;
+    height: 44px;
+    background: #f0f7ff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    box-sizing: border-box;
+  }
+  .digital-sig-name {
+    font-family: 'Brush Script MT', 'Segoe Script', 'Dancing Script', 'Caveat', cursive, sans-serif;
+    font-size: 21px;
+    font-style: italic;
+    font-weight: 700;
+    color: #1e40af;
+    line-height: 1.1;
+    letter-spacing: 0.5px;
+  }
+  .digital-sig-seal {
+    font-size: 8px;
+    font-weight: 800;
+    color: #0284c7;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 2px;
+  }
+  .digital-sig-note {
+    font-size: 8.5px;
+    color: #64748b;
+    font-style: italic;
+    text-align: center;
+    margin-top: 5px;
   }
 
   /* ── Footer ─────────────────────────────────── */
@@ -715,10 +757,106 @@ function TenantProfileInner() {
     border-top: 1px dotted #cbd5e1;
     padding-top: 10px;
     margin-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
     text-align: center;
     font-size: 9.5px;
     color: #64748b;
     font-weight: 600;
+  }
+  .footer-logo {
+    height: 22px;
+    width: auto;
+    object-fit: contain;
+    display: inline-block;
+  }
+
+  /* ── Page 2: Govt ID Proof Document ────────── */
+  .page-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin: 32px 0 24px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .page-divider::before, .page-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    border-top: 1.5px dashed #cbd5e1;
+  }
+
+  .id-proof-card {
+    border: 1.5px solid #cbd5e1;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #ffffff;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+  }
+  .id-proof-banner {
+    background: #0f172a;
+    color: #ffffff;
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-transform: uppercase;
+  }
+  .id-proof-display-area {
+    padding: 24px 20px;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 520px;
+    box-sizing: border-box;
+  }
+  .full-size-id-img {
+    max-width: 100%;
+    max-height: 580px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1.5px solid #cbd5e1;
+    background: #ffffff;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+  }
+  .no-id-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: #64748b;
+    text-align: center;
+  }
+  .id-proof-footer-meta {
+    border-top: 1.5px solid #e2e8f0;
+    padding: 12px 18px;
+    background: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 10.5px;
+    color: #334155;
+  }
+  .id-meta-item strong {
+    color: #0f172a;
   }
 
   /* ── Responsive Adaptations for Small Screens (Mobile) ── */
@@ -736,7 +874,6 @@ function TenantProfileInner() {
 
     .identity-card { padding: 10px 12px; gap: 10px; align-items: center; }
     .avatar-img, .photo-placeholder { width: 56px; height: 56px; }
-    .id-img, .id-placeholder { width: 70px; height: 56px; }
     .photo-caption { font-size: 7.5px; }
     .tenant-name { font-size: 18px; }
     .status-pill-active, .status-pill-checkout { font-size: 9.5px; padding: 2px 8px; }
@@ -764,16 +901,37 @@ function TenantProfileInner() {
     .sig-header { font-size: 10px; }
     .sig-meta { font-size: 8.5px; margin-bottom: 6px; }
     .sig-dotted-box { height: 36px; }
+    .id-proof-display-area { min-height: 320px; padding: 14px 10px; }
+    .full-size-id-img { max-height: 380px; }
+    .id-proof-footer-meta { flex-direction: column; align-items: flex-start; gap: 6px; }
   }
 
-  /* ── Print Styles (A4 Single Page) ─────────── */
+  /* ── Print Styles (A4 2-Page Document) ──────── */
   @media print {
     body { background: #ffffff !important; padding: 0 !important; margin: 0 !important; }
     .doc-wrapper { border: none !important; box-shadow: none !important; padding: 0 !important; max-width: 100% !important; }
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    .page-divider { display: none !important; }
+    .page-1 {
+      page-break-after: always !important;
+      break-after: page !important;
+      min-height: 98vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .page-2 {
+      page-break-before: always !important;
+      break-before: page !important;
+      min-height: 98vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
     .main-content-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
     .signatures-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+    .full-size-id-img { max-height: 600px !important; }
     @page { size: A4 portrait; margin: 8mm 10mm; }
   }
 </style>
@@ -781,189 +939,273 @@ function TenantProfileInner() {
 <body>
 <div class="doc-wrapper">
 
-  <!-- Top PG Header -->
-  <div class="header-card">
-    <div class="header-left">
-      ${pgThumbDataUrl ? `<img src="${pgThumbDataUrl}" alt="${pgName}" class="pg-thumb" />` : ""}
-      <div class="pg-info">
-        <div class="pg-title">${pgName}</div>
-        <div class="pg-type-badge">🏠 ${pgTypeBadgeText}</div>
-        <div class="pg-meta-line"><span style="color:#ef4444;font-size:11px;margin-right:4px;">📍</span><strong>Address:</strong> ${pgAddress}</div>
-        <div class="pg-meta-line"><span style="color:#ef4444;font-size:11px;margin-right:4px;">📞</span><strong>Contact:</strong> ${pgPhone}</div>
-        <div class="pg-meta-line"><span style="color:#0f172a;font-size:11px;margin-right:4px;">🛏️</span><strong>Sharings Available:</strong> ${sharingsDisplay}</div>
-      </div>
-    </div>
-    <div class="doc-meta">
-      <div class="doc-title">TENANT STAY DETAILS</div>
-      <div class="doc-badge">DIGITAL VERIFICATION DOCUMENT</div>
-      <div class="doc-id">ID: PG-T-${tenantIdShort}</div>
-      <div class="doc-date">Generated: ${issueDate}, ${issueTime}</div>
-    </div>
-  </div>
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- PAGE 1: TENANT STAY DETAILS & VERIFICATION RECORD     -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="doc-page page-1">
 
-  <!-- Tenant Identity & Photos -->
-  <div class="identity-card">
-    <div class="photos-cluster">
-      <div class="photo-box">
-        ${avatarDataUrl
-          ? `<img src="${avatarDataUrl}" alt="${tenant.name}" class="avatar-img" />`
-          : `<div class="photo-placeholder">👤 Photo Not Uploaded</div>`
-        }
-        <span class="photo-caption">TENANT PHOTO</span>
+    <!-- Top PG Header -->
+    <div class="header-card">
+      <div class="header-left">
+        ${pgThumbDataUrl ? `<img src="${pgThumbDataUrl}" alt="${pgName}" class="pg-thumb" />` : ""}
+        <div class="pg-info">
+          <div class="pg-title">${pgName}</div>
+          <div class="pg-type-badge">🏠 ${pgTypeBadgeText}</div>
+          <div class="pg-meta-line"><span style="color:#ef4444;font-size:11px;margin-right:4px;">📍</span><strong>Address:</strong> ${pgAddress}</div>
+          <div class="pg-meta-line"><span style="color:#ef4444;font-size:11px;margin-right:4px;">📞</span><strong>Contact:</strong> ${pgPhone}</div>
+          <div class="pg-meta-line"><span style="color:#0f172a;font-size:11px;margin-right:4px;">🛏️</span><strong>Sharings Available:</strong> ${sharingsDisplay}</div>
+        </div>
       </div>
-      <div class="photo-box">
-        ${idDataUrl
-          ? `<img src="${idDataUrl}" alt="Govt ID Proof" class="id-img" />`
-          : `<div class="id-placeholder">🪪 ID Proof Not Uploaded</div>`
-        }
-        <span class="photo-caption">GOVT ID PROOF</span>
+      <div class="doc-meta">
+        <div class="doc-title">TENANT STAY DETAILS</div>
+        <div class="doc-badge">DIGITAL VERIFICATION DOCUMENT · PAGE 1 OF 2</div>
+        <div class="doc-id">ID: PG-T-${tenantIdShort}</div>
+        <div class="doc-date">Generated: ${issueDate}, ${issueTime}</div>
       </div>
     </div>
 
-    <div class="identity-details">
-      <div class="tenant-name-row">
-        <span class="tenant-name">${tenant.name}</span>
-        ${tenant.status === "active"
-          ? `<span class="status-pill-active">● Active Staying</span>`
-          : `<span class="status-pill-checkout">● Checked Out (${fmt(tenant.leavingDate)})</span>`
-        }
+    <!-- Tenant Identity Card (Tenant Photo ONLY - ID proof moved to Page 2) -->
+    <div class="identity-card">
+      <div class="photos-cluster">
+        <div class="photo-box">
+          ${avatarDataUrl
+            ? `<img src="${avatarDataUrl}" alt="${tenant.name}" class="avatar-img" />`
+            : `<div class="photo-placeholder">👤 Photo Not Uploaded</div>`
+          }
+          <span class="photo-caption">TENANT PHOTO</span>
+        </div>
       </div>
 
-      <div class="details-grid">
-        <div class="field">
-          <span class="field-label">PRIMARY MOBILE</span>
-          <span class="field-val"><span style="font-size:11px;margin-right:4px;">📞</span>+91 ${cleanPhone || tenant.phone}</span>
+      <div class="identity-details">
+        <div class="tenant-name-row">
+          <span class="tenant-name">${tenant.name}</span>
+          ${tenant.status === "active"
+            ? `<span class="status-pill-active">● Active Staying</span>`
+            : `<span class="status-pill-checkout">● Checked Out (${fmt(tenant.leavingDate)})</span>`
+          }
         </div>
-        <div class="field">
-          <span class="field-label">ALTERNATE MOBILE</span>
-          <span class="field-val"><span style="font-size:11px;margin-right:4px;">📞</span>${tenant.altPhone ? `+91 ${tenant.altPhone}` : "—"}</span>
-        </div>
-        <div class="field">
-          <span class="field-label">EMERGENCY CONTACT</span>
-          <span class="field-val"><span style="font-size:11px;margin-right:4px;">🛡️</span>${tenant.emergencyContact ? `+91 ${tenant.emergencyContact} (${tenant.emergencyRelation || "Relative"})` : "—"}</span>
-        </div>
-        <div class="field">
-          <span class="field-label">PROFESSION / DETAILS</span>
-          <span class="field-val"><span style="font-size:11px;margin-right:4px;">💼</span>${tenant.profession ? `${tenant.profession}${tenant.professionDetail ? ` (${tenant.professionDetail})` : ""}` : "—"}</span>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Main Content Grid -->
-  <div class="main-content-grid">
-    <!-- Left Column: Stay & Accommodation Details -->
-    <div class="section-card">
-      <div class="section-banner">
-        <span>🏠 STAY & ACCOMMODATION DETAILS</span>
-        <span>${room?.sharingType ? `${room.sharingType}-SHARING ROOM` : "ALLOCATED ROOM"}</span>
-      </div>
-      <div class="section-body">
-        <div class="stay-grid">
-          <div class="stay-item">
-            <span class="stay-icon">🏢</span>
-            <div>
-              <span class="stay-label">FLOOR</span>
-              <span class="stay-val">Floor ${room?.floor ?? "—"}</span>
-            </div>
+        <div class="details-grid">
+          <div class="field">
+            <span class="field-label">PRIMARY MOBILE</span>
+            <span class="field-val"><span style="font-size:11px;margin-right:4px;">📞</span>+91 ${cleanPhone || tenant.phone}</span>
           </div>
-          <div class="stay-item">
-            <span class="stay-icon">🚪</span>
-            <div>
-              <span class="stay-label">ROOM NUMBER</span>
-              <span class="stay-val">Room ${room?.roomNumber || "—"}</span>
-            </div>
+          <div class="field">
+            <span class="field-label">ALTERNATE MOBILE</span>
+            <span class="field-val"><span style="font-size:11px;margin-right:4px;">📞</span>${tenant.altPhone ? `+91 ${tenant.altPhone}` : "—"}</span>
           </div>
-          <div class="stay-item">
-            <span class="stay-icon">🛏️</span>
-            <div>
-              <span class="stay-label">BED ALLOCATION</span>
-              <span class="stay-val">Bed ${bed?.bedNumber || "—"}</span>
-            </div>
+          <div class="field">
+            <span class="field-label">EMERGENCY CONTACT</span>
+            <span class="field-val"><span style="font-size:11px;margin-right:4px;">🛡️</span>${tenant.emergencyContact ? `+91 ${tenant.emergencyContact} (${tenant.emergencyRelation || "Relative"})` : "—"}</span>
           </div>
-          <div class="stay-item">
-            <span class="stay-icon">👥</span>
-            <div>
-              <span class="stay-label">ROOM SHARING</span>
-              <span class="stay-val">${room?.sharingType ? `${room.sharingType}-Sharing` : "—"}</span>
-            </div>
-          </div>
-          <div class="stay-item">
-            <span class="stay-icon">📅</span>
-            <div>
-              <span class="stay-label">JOINING DATE</span>
-              <span class="stay-val">${fmt(tenant.joiningDate)}</span>
-            </div>
-          </div>
-          <div class="stay-item">
-            <span class="stay-icon check-icon">✔️</span>
-            <div>
-              <span class="stay-label">STAY STATUS / CHECKOUT</span>
-              <span class="stay-val">${tenant.leavingDate ? `Checked out on ${fmt(tenant.leavingDate)}` : "Present & Staying"}</span>
-            </div>
+          <div class="field">
+            <span class="field-label">PROFESSION / DETAILS</span>
+            <span class="field-val"><span style="font-size:11px;margin-right:4px;">💼</span>${tenant.profession ? `${tenant.profession}${tenant.professionDetail ? ` (${tenant.professionDetail})` : ""}` : "—"}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Right Column: Financials & Declaration -->
-    <div class="right-column-wrap">
-      <div class="fin-card">
+    <!-- Main Content Grid -->
+    <div class="main-content-grid">
+      <!-- Left Column: Stay & Accommodation Details -->
+      <div class="section-card">
         <div class="section-banner">
-          <span>💰 FINANCIAL TERMS & DEPOSIT RECORD</span>
+          <span>🏠 STAY & ACCOMMODATION DETAILS</span>
+          <span>${room?.sharingType ? `${room.sharingType}-SHARING ROOM` : "ALLOCATED ROOM"}</span>
         </div>
-        <div class="fin-row">
-          <div class="fin-stat">
-            <div class="fin-icon-square rupee-sq">₹</div>
-            <div>
-              <span class="fin-label">MONTHLY RENT</span>
-              <span class="fin-val">₹${(tenant.rentAmount || 0).toLocaleString("en-IN")} / month</span>
+        <div class="section-body">
+          <div class="stay-grid">
+            <div class="stay-item">
+              <span class="stay-icon">🏢</span>
+              <div>
+                <span class="stay-label">FLOOR</span>
+                <span class="stay-val">Floor ${room?.floor ?? "—"}</span>
+              </div>
+            </div>
+            <div class="stay-item">
+              <span class="stay-icon">🚪</span>
+              <div>
+                <span class="stay-label">ROOM NUMBER</span>
+                <span class="stay-val">Room ${room?.roomNumber || "—"}</span>
+              </div>
+            </div>
+            <div class="stay-item">
+              <span class="stay-icon">🛏️</span>
+              <div>
+                <span class="stay-label">BED ALLOCATION</span>
+                <span class="stay-val">Bed ${bed?.bedNumber || "—"}</span>
+              </div>
+            </div>
+            <div class="stay-item">
+              <span class="stay-icon">👥</span>
+              <div>
+                <span class="stay-label">ROOM SHARING</span>
+                <span class="stay-val">${room?.sharingType ? `${room.sharingType}-Sharing` : "—"}</span>
+              </div>
+            </div>
+            <div class="stay-item">
+              <span class="stay-icon">📅</span>
+              <div>
+                <span class="stay-label">JOINING DATE</span>
+                <span class="stay-val">${fmt(tenant.joiningDate)}</span>
+              </div>
+            </div>
+            <div class="stay-item">
+              <span class="stay-icon check-icon">✔️</span>
+              <div>
+                <span class="stay-label">STAY STATUS / CHECKOUT</span>
+                <span class="stay-val">${tenant.leavingDate ? `Checked out on ${fmt(tenant.leavingDate)}` : "Present & Staying"}</span>
+              </div>
             </div>
           </div>
-          <div class="fin-divider"></div>
-          <div class="fin-stat">
-            <div class="fin-icon-square shield-sq">🛡️</div>
-            <div>
-              <span class="fin-label">SECURITY DEPOSIT (ADVANCE)</span>
-              <span class="fin-val">₹${(tenant.advanceAmount || 0).toLocaleString("en-IN")} via ${(tenant.paymentMode || "cash").toUpperCase()}</span>
+        </div>
+      </div>
+
+      <!-- Right Column: Financials & Declaration -->
+      <div class="right-column-wrap">
+        <div class="fin-card">
+          <div class="section-banner">
+            <span>💰 FINANCIAL TERMS & DEPOSIT RECORD</span>
+          </div>
+          <div class="fin-row">
+            <div class="fin-stat">
+              <div class="fin-icon-square rupee-sq">₹</div>
+              <div>
+                <span class="fin-label">MONTHLY RENT</span>
+                <span class="fin-val">₹${(tenant.rentAmount || 0).toLocaleString("en-IN")} / month</span>
+              </div>
+            </div>
+            <div class="fin-divider"></div>
+            <div class="fin-stat">
+              <div class="fin-icon-square shield-sq">🛡️</div>
+              <div>
+                <span class="fin-label">SECURITY DEPOSIT (ADVANCE)</span>
+                <span class="fin-val">₹${(tenant.advanceAmount || 0).toLocaleString("en-IN")} via ${(tenant.paymentMode || "cash").toUpperCase()}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Undertaking / Declaration -->
-      <div class="undertaking-box">
-        <div class="undertaking-icon">📄</div>
-        <div class="undertaking-text">
-          <strong>Declaration & Terms of Stay:</strong> The tenant agrees to follow PG house rules, maintain a peaceful stay, and pay monthly rent on or before the due date. The security deposit is refundable as per terms upon checkout.
+        <!-- Undertaking / Declaration -->
+        <div class="undertaking-box">
+          <div class="undertaking-icon">📄</div>
+          <div class="undertaking-text">
+            <strong>Declaration & Terms of Stay:</strong> The tenant agrees to follow PG house rules, maintain a peaceful stay, and pay monthly rent on or before the due date. The security deposit is refundable as per terms upon checkout.
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- Official Signatures -->
+    <div class="signatures-grid">
+      <div class="sig-card">
+        <div class="sig-header">
+          <span>✒️</span>
+          <span>TENANT SIGNATURE</span>
+        </div>
+        <div class="sig-meta">${tenant.name} &nbsp;•&nbsp; Date: _________________</div>
+        <div class="sig-dotted-box"></div>
+      </div>
+      <div class="sig-card">
+        <div class="sig-header">
+          <span>🏛️</span>
+          <span>AUTHORIZED PG SIGNATURE / STAMP</span>
+        </div>
+        <div class="sig-meta">For ${pgName} &nbsp;•&nbsp; Date: <strong>${issueDate}</strong></div>
+        <div class="digital-sig-box">
+          <div class="digital-sig-name">${managerName}</div>
+          <div class="digital-sig-seal">
+            <span style="color:#0284c7;font-weight:900;">✔</span> DIGITALLY VERIFIED &amp; AUTHORIZED · ${issueDate}
+          </div>
+        </div>
+        <div class="digital-sig-note">( This is a digital signature of the PG Manager )</div>
+      </div>
+    </div>
+
+    <!-- Page 1 Footer Watermark with PG-EG logo -->
+    <div class="doc-footer">
+      ${pgegLogoDataUrl
+        ? `<img src="${pgegLogoDataUrl}" alt="PG-EG" class="footer-logo" />`
+        : `<img src="/pg-eg-logo-wide.png" alt="PG-EG" class="footer-logo" />`
+      }
+      <span>Digital Verification Document &nbsp;•&nbsp; Generated via PG-EG &nbsp;•&nbsp; Find PGs & Manage PGs</span>
+    </div>
+
   </div>
 
-  <!-- Official Signatures -->
-  <div class="signatures-grid">
-    <div class="sig-card">
-      <div class="sig-header">
-        <span>✒️</span>
-        <span>TENANT SIGNATURE</span>
-      </div>
-      <div class="sig-meta">${tenant.name} &nbsp;•&nbsp; Date: _________________</div>
-      <div class="sig-dotted-box"></div>
-    </div>
-    <div class="sig-card">
-      <div class="sig-header">
-        <span>🏛️</span>
-        <span>AUTHORIZED PG SIGNATURE / STAMP</span>
-      </div>
-      <div class="sig-meta">For ${pgName} &nbsp;•&nbsp; Date: _________________</div>
-      <div class="sig-dotted-box"></div>
-    </div>
+  <!-- Page Break / Screen Divider -->
+  <div class="page-divider">
+    <span>Attached Govt ID Document (Page 2)</span>
   </div>
 
-  <!-- Footer Watermark -->
-  <div class="doc-footer">
-    Digital Verification Document &nbsp;•&nbsp; Generated via PG-EG &nbsp;•&nbsp; Find PGs & Manage PGs
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- PAGE 2: OFFICIAL ATTACHED GOVT ID PROOF RECORD        -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="doc-page page-2">
+
+    <!-- Page 2 Header Card -->
+    <div class="header-card">
+      <div class="header-left">
+        ${pgThumbDataUrl ? `<img src="${pgThumbDataUrl}" alt="${pgName}" class="pg-thumb" />` : ""}
+        <div class="pg-info">
+          <div class="pg-title">${pgName}</div>
+          <div class="pg-type-badge">🏠 ${pgTypeBadgeText}</div>
+          <div class="pg-meta-line"><span style="color:#ef4444;font-size:11px;margin-right:4px;">📍</span><strong>Address:</strong> ${pgAddress}</div>
+          <div class="pg-meta-line"><span style="color:#ef4444;font-size:11px;margin-right:4px;">📞</span><strong>Contact:</strong> ${pgPhone}</div>
+        </div>
+      </div>
+      <div class="doc-meta">
+        <div class="doc-title">GOVT ID PROOF VERIFICATION</div>
+        <div class="doc-badge">ATTACHED DIGITAL PROOF · PAGE 2 OF 2</div>
+        <div class="doc-id">Tenant: <strong>${tenant.name}</strong> &nbsp;·&nbsp; ID: PG-T-${tenantIdShort}</div>
+        <div class="doc-date">Generated: ${issueDate}, ${issueTime}</div>
+      </div>
+    </div>
+
+    <!-- Page 2 Govt ID Proof Card (Half / Full Page Clearly Visible) -->
+    <div class="id-proof-card">
+      <div class="id-proof-banner">
+        <span>🪪 OFFICIAL GOVT ID PROOF — ${tenant.name.toUpperCase()}</span>
+        <span>VERIFIED TENANT RECORD</span>
+      </div>
+
+      <div class="id-proof-display-area">
+        ${idDataUrl
+          ? `<img src="${idDataUrl}" alt="Govt ID Proof – ${tenant.name}" class="full-size-id-img" />`
+          : `<div class="no-id-placeholder">
+               <span style="font-size:48px;">🪪</span>
+               <p style="font-size:15px;font-weight:800;color:#0f172a;margin-top:12px;">Govt ID Proof Not Uploaded Yet</p>
+               <p style="font-size:11.5px;color:#64748b;margin-top:4px;">Upload Aadhaar, Voter ID, Passport, or Driving License via Edit Profile.</p>
+             </div>`
+        }
+      </div>
+
+      <div class="id-proof-footer-meta">
+        <div class="id-meta-item">
+          <strong>Tenant Name:</strong> ${tenant.name}
+        </div>
+        <div class="id-meta-item">
+          <strong>Primary Mobile:</strong> +91 ${cleanPhone || tenant.phone}
+        </div>
+        <div class="id-meta-item">
+          <strong>Room &amp; Bed:</strong> Floor ${room?.floor ?? "—"}, Room ${room?.roomNumber || "—"}, Bed ${bed?.bedNumber || "—"}
+        </div>
+        <div class="id-meta-item">
+          <strong>Verification Date:</strong> ${issueDate}
+        </div>
+      </div>
+    </div>
+
+    <!-- Page 2 Footer Watermark with PG-EG logo -->
+    <div class="doc-footer">
+      ${pgegLogoDataUrl
+        ? `<img src="${pgegLogoDataUrl}" alt="PG-EG" class="footer-logo" />`
+        : `<img src="/pg-eg-logo-wide.png" alt="PG-EG" class="footer-logo" />`
+      }
+      <span>Digital Verification Document &nbsp;•&nbsp; Generated via PG-EG &nbsp;•&nbsp; Find PGs & Manage PGs</span>
+    </div>
+
   </div>
 
 </div>
