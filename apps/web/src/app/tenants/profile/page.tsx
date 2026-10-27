@@ -1435,6 +1435,27 @@ function TenantProfileInner() {
               </button>
             )}
           </div>
+
+          {/* Profession row directly below 📞 Contact */}
+          <div className={styles.professionRow}>
+            <div className={styles.professionBadge}>
+              <span className={styles.professionLabel}>Profession -</span>
+              <span className={styles.professionValue}>
+                {(() => {
+                  const pType = tenant.profession
+                    ? (tenant.profession === "jobholder"
+                        ? "Jobholder"
+                        : tenant.profession.charAt(0).toUpperCase() + tenant.profession.slice(1))
+                    : "";
+                  const pDetail = tenant.professionDetail ? tenant.professionDetail.trim() : "";
+                  if (pType && pDetail) return `${pType} - ${pDetail}`;
+                  if (pType) return pType;
+                  if (pDetail) return pDetail;
+                  return "—";
+                })()}
+              </span>
+            </div>
+          </div>
           <div className={styles.infoGrid}>
             <div className={styles.infoCard}>
               <span className={styles.infoLabel}>Primary</span>
