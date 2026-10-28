@@ -1951,11 +1951,15 @@ function TenantProfileInner() {
             title="Share Tenant Stay Details"
             id="btn-nav-share"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-              <polyline points="16 6 12 2 8 6" />
-              <line x1="12" y1="2" x2="12" y2="15" />
-            </svg>
+            {generatingPdf ? (
+              <span className={styles.navSpinner} />
+            ) : (
+              <svg className={styles.navBtnIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
+            )}
             <span className={styles.navBtnLabel}>{generatingPdf ? "Exporting..." : "Share"}</span>
           </button>
           <button
@@ -1966,15 +1970,21 @@ function TenantProfileInner() {
             title="Download Tenant Details PDF"
             id="btn-nav-download"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
+            {generatingPdf ? (
+              <span className={styles.navSpinner} />
+            ) : (
+              <svg className={styles.navBtnIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            )}
             <span className={styles.navBtnLabel}>{generatingPdf ? "Exporting..." : "Download"}</span>
           </button>
         </div>
-        <AppLogo size="xs" />
+        <div className={styles.headerLogo}>
+          <AppLogo size="xs" />
+        </div>
       </header>
 
       <div className={styles.content}>
@@ -2013,13 +2023,6 @@ function TenantProfileInner() {
           )}
 
           <div className={styles.heroGradient} />
-
-          {/* Indicator pill showing currently displayed image type */}
-          {tenant.photoUrl && tenant.idPhotoUrl && (
-            <div className={styles.heroTypeIndicator}>
-              {idFlipped ? "🪪 Govt ID Proof" : "📷 Tenant Photo"}
-            </div>
-          )}
 
           <div className={styles.heroName}>
             <h1 className={styles.tenantName}>{tenant.name}</h1>

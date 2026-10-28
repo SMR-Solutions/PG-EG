@@ -60,6 +60,12 @@
 }
 .backBtn:hover { color: rgba(255, 255, 255, 0.85); background: rgba(255, 255, 255, 0.08); }
 
+.headerLogo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .headerNavActions {
   display: flex;
   align-items: center;
@@ -69,8 +75,9 @@
 .navActionBtn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 6px 14px;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
@@ -87,6 +94,24 @@
 .navActionBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.navBtnIcon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.navSpinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .navShareBtn {
@@ -113,22 +138,68 @@
   display: inline-block;
 }
 
-@media (max-width: 480px) {
+/* Small and medium screens: Hide app logo, hide button text, show visible big clear icons */
+@media (max-width: 768px) {
   .header {
-    padding: 6px 10px;
-    gap: 4px;
+    padding: 8px 14px;
+    gap: 8px;
+  }
+  .headerLogo {
+    display: none;
+  }
+  .headerNavActions {
+    gap: 10px;
+  }
+  .navBtnLabel {
+    display: none;
+  }
+  .navActionBtn {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    min-height: 42px;
+    padding: 0;
+    gap: 0;
+    border-radius: 11px;
+    justify-content: center;
+  }
+  .navBtnIcon {
+    width: 22px;
+    height: 22px;
+  }
+  .navSpinner {
+    width: 20px;
+    height: 20px;
+    border-width: 2.5px;
+  }
+}
+
+@media (max-width: 400px) {
+  .header {
+    padding: 7px 10px;
+    gap: 6px;
   }
   .backBtn {
     padding: 6px 6px;
     font-size: 13px;
   }
   .headerNavActions {
-    gap: 6px;
+    gap: 8px;
   }
   .navActionBtn {
-    padding: 5px 8px;
-    font-size: 12px;
-    gap: 4px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    border-radius: 10px;
+  }
+  .navBtnIcon {
+    width: 20px;
+    height: 20px;
+  }
+  .navSpinner {
+    width: 18px;
+    height: 18px;
   }
 }
 
@@ -170,24 +241,7 @@
   z-index: 2;
   border-radius: 16px;
 }
-.heroTypeIndicator {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 3;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: #ffffff;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  letter-spacing: 0.3px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  pointer-events: none;
-}
+
 .heroName {
   position: absolute; bottom: 16px; left: 16px; right: 16px;
   display: flex; align-items: flex-end; justify-content: space-between;
