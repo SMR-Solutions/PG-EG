@@ -159,7 +159,7 @@ export default function PGDetailClient({ pg }: Props) {
   );
 
   return (
-    <main className={`${styles.main} ${pgStyles.main} ${pg.isActive === false ? pgStyles.contentDisabled : ""}`} data-theme={theme}>
+    <main className={`${styles.main} ${pgStyles.main}`} data-theme={theme}>
       <div className={styles.orb1} />
       <div className={styles.orb2} />
 
@@ -169,52 +169,37 @@ export default function PGDetailClient({ pg }: Props) {
           <div className={pgStyles.offCard}>
             <div className={pgStyles.offStatusPill}>
               <span className={pgStyles.offDot} />
-              WEBSITE STATUS: OFF
+              Website Status : OFF
             </div>
             <h1 className={pgStyles.offTitle}>
-              your Website is <span className={pgStyles.offHighlight}>&quot; OFF &quot;</span>
+              This Website is Currently <span className={pgStyles.offHighlight}>OFF</span>
             </h1>
-            <p className={pgStyles.offSub}>
-              Please Contact{" "}
-              <a href="tel:6281975993" className={pgStyles.offPhoneHighlight}>
-                {"{ 6281975993 }"}
-              </a>{" "}
-              , for more information
-            </p>
-            <div className={pgStyles.offActionRow}>
-              <a href="tel:6281975993" className={pgStyles.offCallBtn}>
-                📞 Call 6281975993
-              </a>
-              <a
-                href="https://wa.me/916281975993?text=Hello%20PG-EG%20Admin,%20my%20PG%20website%20is%20OFF"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={pgStyles.offWhatsappBtn}
-              >
-                💬 WhatsApp Support
-              </a>
-            </div>
-            <button
-              type="button"
-              className={pgStyles.offBackBtn}
-              onClick={() => router.push("/find-pg")}
+            <a
+              href="https://pg-eg-web.vercel.app/find-pg"
+              className={pgStyles.offExploreBtn}
+              onClick={(e) => {
+                e.preventDefault();
+                router.push("/find-pg");
+              }}
             >
-              ← Explore Other PGs Near Me
-            </button>
+              Explore Other PGs Near You
+            </a>
           </div>
         </div>
       )}
 
-      {/* ── Navbar: back ← | PG-EG App Logo (Top Centre) | theme toggle ── */}
-      <div className={`${pgStyles.navbar} ${pg.isActive === false ? pgStyles.contentDisabled : ""}`}>
-        <button className={pgStyles.navBtn} onClick={() => router.push("/find-pg")} title="Find PGs">←</button>
-        <div className={pgStyles.navLogoWrap}>
-          <AppLogo size="sm" href="/find-pg" />
+      {/* ── Background Content (blurred & deactivated when PG is inactive) ── */}
+      <div className={pg.isActive === false ? pgStyles.contentDisabled : undefined}>
+        {/* ── Navbar: back ← | PG-EG App Logo (Top Centre) | theme toggle ── */}
+        <div className={pgStyles.navbar}>
+          <button className={pgStyles.navBtn} onClick={() => router.push("/find-pg")} title="Find PGs">←</button>
+          <div className={pgStyles.navLogoWrap}>
+            <AppLogo size="sm" href="/find-pg" />
+          </div>
+          <button className={pgStyles.navBtn} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+            {theme === "dark" ? "☀️" : "🌙"}
+          </button>
         </div>
-        <button className={pgStyles.navBtn} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-          {theme === "dark" ? "☀️" : "🌙"}
-        </button>
-      </div>
 
       {/* Sign-in Banner — left: info | right: Download + Sign In buttons */}
       {showSignInPrompt && (
@@ -451,6 +436,7 @@ export default function PGDetailClient({ pg }: Props) {
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Unified Lightbox with Photos & Live View */}
