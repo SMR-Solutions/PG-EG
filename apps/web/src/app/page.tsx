@@ -87,6 +87,25 @@ export default function HomePage() {
               <span className={styles.chip}>🏢 Near office</span>
               <span className={styles.chip}>🗺️ One-tap directions</span>
             </div>
+
+            <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid rgba(255, 255, 255, 0.08)" }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--brand-green)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                📍 Explore PGs in Bangalore Town:
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                <a href="/bangalore" className={styles.chip} style={{ color: "var(--brand-green)", fontWeight: 700 }}>
+                  All Bangalore PGs →
+                </a>
+                <a href="/bangalore/pg-in-koramangala" className={styles.chip}>Koramangala</a>
+                <a href="/bangalore/pg-in-hsr-layout" className={styles.chip}>HSR Layout</a>
+                <a href="/bangalore/pg-in-bellandur" className={styles.chip}>Bellandur</a>
+                <a href="/bangalore/pg-in-whitefield" className={styles.chip}>Whitefield</a>
+                <a href="/bangalore/pg-in-electronic-city" className={styles.chip}>Electronic City</a>
+                <a href="/bangalore/pg-near-rmz-ecospace" className={styles.chip}>Near RMZ Ecospace</a>
+                <a href="/bangalore/pg-near-manyata-tech-park" className={styles.chip}>Near Manyata</a>
+                <a href="/bangalore/pg-near-christ-university" className={styles.chip}>Near Christ Univ</a>
+              </div>
+            </div>
           </div>
         </div>
 

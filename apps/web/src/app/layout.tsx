@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import OfflineDetector from "@/components/OfflineDetector";
 import Script from "next/script";
+import { APP_URL } from "@/lib/siteConfig";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -19,11 +20,34 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+  metadataBase: new URL(APP_URL),
   title: "PG-EG — Find PGs & Manage Properties Digitally",
   description:
     "Find your perfect PG instantly or manage your PG property digitally with 3D building management, automated rent tracking, and seamless tenant tools. No hassle, just PG-EG.",
-  keywords: ["PG near me", "find PG", "PG accommodation", "paying guest", "PG management app", "tenant management", "rent tracking", "3D building management", "PG software"],
+  keywords: [
+    "PG-EG",
+    "PGEG",
+    "pgeg",
+    "pg-eg",
+    "pg eg",
+    "pg",
+    "PG",
+    "pgs near me",
+    "PGS near me",
+    "PG near me",
+    "find PG",
+    "PGs near my college",
+    "PGs near my office",
+    "PG in Bangalore",
+    "bangalore pgs",
+    "paying guest Bangalore",
+    "ladies pg bangalore",
+    "gents pg bangalore",
+    "zero brokerage pg",
+    "PG management app",
+    "tenant management",
+    "3D building management",
+  ],
   authors: [{ name: "PG-EG" }],
   applicationName: "PG-EG",
   appleWebApp: {
@@ -32,6 +56,9 @@ export const metadata: Metadata = {
     title: "PG-EG",
   },
   formatDetection: { telephone: false },
+  verification: {
+    google: "googleba8369737f622c51",
+  },
   icons: {
     icon: [
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
@@ -59,9 +86,51 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const brandSchema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${APP_URL}/#organization`,
+        "name": "PG-EG",
+        "alternateName": ["PGEG", "pg-eg", "pgeg", "PG EG"],
+        "url": APP_URL,
+        "logo": `${APP_URL}/pg-eg-logo.png`,
+        "description": "Smart PG discovery and 3D digital property management platform in Bangalore, India.",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Bengaluru",
+          "addressRegion": "Karnataka",
+          "addressCountry": "IN",
+        },
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${APP_URL}/#website`,
+        "url": APP_URL,
+        "name": "PG-EG",
+        "alternateName": ["PGEG", "pg-eg", "pgeg"],
+        "publisher": { "@id": `${APP_URL}/#organization` },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": `${APP_URL}/find-pg?q={search_term_string}`,
+          },
+          "query-input": "required name=search_term_string",
+        },
+      },
+    ],
+  };
+
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <body className={inter.className} suppressHydrationWarning>
+        {/* Brand & Organization Structured Data for Google Knowledge Graph & Chrome Sitelinks */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(brandSchema) }}
+        />
         {/* Theme: apply before paint to prevent flash & filter known legacy 3D deprecation noise */}
         <Script id="theme-init" strategy="beforeInteractive">{`
           (function(){
