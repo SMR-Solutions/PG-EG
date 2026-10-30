@@ -170,7 +170,7 @@ function TenantRow({ p, onNavigate }: { p: Payment; onNavigate: (id: string) => 
 // ─── Main Page ────────────────────────────────────────────────────────
 export default function RentsPage() {
   const router = useRouter();
-  const { activePgId, token } = useAuth();
+  const { activePgId, token, owner } = useAuth();
   const pgId = activePgId
     || (typeof window !== "undefined"
         ? (localStorage.getItem("pg_eg_active_pg_id") || localStorage.getItem("pg_eg_pg_id"))
@@ -255,6 +255,8 @@ export default function RentsPage() {
   }
 
   const [printing, setPrinting] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailToast, setEmailToast] = useState<string | null>(null);
   const [showExport, setShowExport] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -498,6 +500,30 @@ ${floorSections}
     } finally { setPrinting(false); }
   }
 
+  // ─── Send Printable Report to Owner Gmail ─────────────────────────────
+  async function handleSendEmailReport() {
+    if (!pgId) return;
+    setSendingEmail(true);
+    setEmailToast(null);
+    try {
+      const res = await fetch(`${API_URL}/api/rent/email-report?pgId=${pgId}&month=${month}`, {
+        method: "POST",
+        headers: authHeader(),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send email");
+      }
+      setEmailToast(`✓ Safety dossier emailed to ${data.email || owner?.email || "your Gmail"}!`);
+      setShowExport(false);
+      setTimeout(() => setEmailToast(null), 6000);
+    } catch (err: any) {
+      alert(err?.message || "Failed to send email report");
+    } finally {
+      setSendingEmail(false);
+    }
+  }
+
 
   return (
     <div className={styles.page}>
@@ -589,7 +615,9 @@ ${floorSections}
               </>
             )}
 
-            {/* ─── Export dropdown ─── */}
+            {/* ─── Export dropdown & Status ─── */}
+            {emailToast && <div className={styles.emailToast}>{emailToast}</div>}
+
             {payments.length > 0 && (
               <div className={styles.exportRow} ref={exportRef}>
                 {showExport && (
@@ -597,26 +625,32 @@ ${floorSections}
                     {/* Download PDF */}
                     <button className={`${styles.exportOption} ${styles.exportDownload}`}
                       onClick={() => { setShowExport(false); handlePrint(); }}
-                      disabled={printing}>
+                      disabled={printing || sendingEmail}>
                       💾 {printing ? "Preparing…" : "Download PDF"}
                     </button>
                     {/* Share via native OS share sheet — attaches the actual file to WA/Telegram */}
                     <button className={styles.exportOption}
                       onClick={() => { setShowExport(false); handleShare(); }}
-                      disabled={printing}>
+                      disabled={printing || sendingEmail}>
                       <svg viewBox="0 0 32 32" width="20" height="20" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
                         <circle cx="16" cy="16" r="16" fill="#25D366"/>
                         <path fill="#fff" d="M23.5 8.5A10.44 10.44 0 0 0 16 5.5C10.2 5.5 5.5 10.2 5.5 16a10.4 10.4 0 0 0 1.4 5.2L5.5 26.5l5.4-1.4a10.5 10.5 0 0 0 5.1 1.3c5.8 0 10.5-4.7 10.5-10.5a10.4 10.4 0 0 0-3-7.4zm-7.5 16.1a8.7 8.7 0 0 1-4.5-1.2l-.3-.2-3.2.8.9-3.1-.2-.3A8.7 8.7 0 0 1 7.3 16a8.7 8.7 0 0 1 8.7-8.7 8.7 8.7 0 0 1 8.7 8.7 8.7 8.7 0 0 1-8.7 8.6zm4.8-6.5c-.3-.1-1.6-.8-1.8-.9s-.4-.1-.6.1-.7.9-.8 1-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7 7 0 0 1-1.3-1.6c-.1-.3 0-.4.1-.6l.4-.5.3-.4v-.4l-.9-2.1c-.2-.5-.5-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8c.1.2 1.5 2.4 3.8 3.3a13 13 0 0 0 1.3.5 3.1 3.1 0 0 0 1.4.1c.4-.1 1.3-.5 1.5-1s.2-1 .1-1a.5.5 0 0 0-.4-.3z"/>
                       </svg>
                       Share via WhatsApp / Telegram
                     </button>
+                    {/* Send Print Copy to Owner Gmail */}
+                    <button className={`${styles.exportOption} ${styles.exportEmail}`}
+                      onClick={() => handleSendEmailReport()}
+                      disabled={printing || sendingEmail}>
+                      📧 {sendingEmail ? "Sending to Gmail…" : `Email to ${owner?.email ? owner.email : "Gmail"}`}
+                    </button>
                   </div>
                 )}
                 <button className={styles.exportBtn}
                   onClick={() => setShowExport(v => !v)}
-                  disabled={printing}
+                  disabled={printing || sendingEmail}
                   id="btn-export">
-                  🖨️ {printing ? "Preparing…" : "Print / Export"} ▴
+                  🖨️ {printing ? "Preparing…" : sendingEmail ? "Sending Email…" : "Print / Export"} ▴
                 </button>
               </div>
             )}

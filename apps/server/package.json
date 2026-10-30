@@ -24,9 +24,16 @@
     "imagekit": "^6.0.0",
     "jose": "^6.2.10",
     "jsonwebtoken": "^9.0.3",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^10.3.0",
+    "pdfkit": "^0.20.2",
+    "resend": "^6.35.0",
     "typescript": "^5.4.5"
   },
   "devDependencies": {
+    "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^8.0.2",
+    "@types/pdfkit": "^0.17.7",
     "drizzle-kit": "^0.31.11",
     "tsx": "^4.15.6"
   }

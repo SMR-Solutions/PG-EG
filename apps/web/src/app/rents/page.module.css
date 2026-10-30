@@ -252,7 +252,7 @@
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0,0,0,0.35);
   z-index: 50;
-  min-width: 180px;
+  min-width: 260px;
   animation: dropUp 0.18s cubic-bezier(0.22,1,0.36,1) both;
 }
 @keyframes dropUp {
@@ -263,13 +263,24 @@
   display: flex; align-items: center; gap: 10px;
   width: 100%; padding: 13px 18px;
   background: none; border: none;
-  color: var(--text-primary); font-size: 14px; font-weight: 600;
+  color: var(--text-primary); font-size: 13.5px; font-weight: 600;
   font-family: inherit; cursor: pointer; text-align: left;
   transition: background 0.12s;
   text-decoration: none;
 }
 .exportOption:hover { background: var(--bg-overlay); }
 .exportDownload { border-bottom: 1px solid var(--border); }
+.exportEmail { border-top: 1px solid var(--border); }
+.exportOption:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.emailToast {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: rgba(16, 185, 129, 0.15); border: 1.5px solid #10b981;
+  color: #10b981; font-weight: 700; font-size: 13px;
+  border-radius: 12px; padding: 10px 18px; margin: 0 auto 16px;
+  max-width: 480px; text-align: center;
+  animation: fadeIn 0.2s ease-in-out;
+}
 .exportShareRow {
   display: flex; gap: 8px; padding: 10px 14px; justify-content: center;
   border-top: 1px solid var(--border);

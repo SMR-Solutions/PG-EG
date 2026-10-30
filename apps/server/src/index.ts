@@ -19,6 +19,7 @@ import expensesRouter from "./routes/expenses";
 import eventsRouter from "./routes/events";
 import leadsRouter from "./routes/leads";
 import adminRouter from "./routes/admin";
+import { initMonthlyReportCron } from "./jobs/monthlyReportCron";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -189,4 +190,7 @@ app.listen(PORT, () => {
   console.log(`🛡️  PG-EG Production-Hardened Server running on port ${PORT}`);
   console.log(`   Environment: ${isProd ? "production" : "development"}`);
   console.log(`   Firebase Project: ${process.env.FIREBASE_PROJECT_ID || "not set"}`);
+
+  // Initialize automated twice-monthly safety backup cron job (15th and last day of month)
+  initMonthlyReportCron();
 });

@@ -58,6 +58,7 @@ coverage/
 
 # ─── Misc ─────────────────────────────────────────────────────────────────────
 .cache/
+temp_reports/
 .parcel-cache/
 .eslintcache
 *.tgz

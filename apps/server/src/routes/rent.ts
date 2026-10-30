@@ -180,4 +180,33 @@ router.get("/:id/transactions", requireAuth, async (req: Request, res: Response)
   }
 });
 
+// POST /api/rent/email-report?pgId=xxx&month=2026-10
+// Sends the monthly tenant roster & rent report to the PG owner's registered Gmail
+router.post("/email-report", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { pgId, month } = req.query as { pgId: string; month?: string };
+    if (!pgId) {
+      res.status(400).json({ error: "pgId is required" });
+      return;
+    }
+
+    const pg = await verifyPgOwnership(pgId, req.owner!.ownerId, res);
+    if (!pg) return;
+
+    const { sendPgMonthlyReportEmail } = await import("../services/reportDataService");
+    const result = await sendPgMonthlyReportEmail(pgId, month);
+
+    res.json({
+      success: true,
+      email: result.email,
+      provider: result.provider,
+      messageId: result.messageId,
+      message: `Tenant report successfully sent to ${result.email}`,
+    });
+  } catch (err: any) {
+    console.error("Email report error:", err);
+    res.status(500).json({ error: err?.message || "Failed to send email report" });
+  }
+});
+
 export default router;
