@@ -125,12 +125,14 @@ export default function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
-      <body className={inter.className} suppressHydrationWarning>
+      <head>
         {/* Brand & Organization Structured Data for Google Knowledge Graph & Chrome Sitelinks */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(brandSchema) }}
         />
+      </head>
+      <body className={inter.className} suppressHydrationWarning>
         {/* Theme: apply before paint to prevent flash & filter known legacy 3D deprecation noise */}
         <Script id="theme-init" strategy="beforeInteractive">{`
           (function(){
