@@ -34,36 +34,58 @@ export default function HomePage() {
       <InstallPwaBanner />
 
       {/* ════════════════════ HERO ════════════════════ */}
-      <div className={styles.hero}>
+      <div className={styles.heroSection}>
+        {/* Soft sky atmospheric backdrop */}
+        <div className={styles.heroBgAtmosphere} />
 
-        {/* Logo */}
-        <div className={`${styles.logoWrap} animate-fade-up`}>
-          <AppLogo size="lg" />
-          <div className={styles.taglineWrap}>
-            <span className={styles.taglinePart1}>Searching PG? 🧐</span>
-            <span className={styles.taglineDash}> — </span>
-            <span className={styles.taglinePart2}>It&apos;s Very Easy 😎.</span>
-          </div>
+        {/* Left: PG building illustration */}
+        <div className={styles.heroBuildingWrap} aria-hidden="true">
+          <img
+            src="/images/hero-building.png"
+            alt=""
+            className={styles.heroBuildingImg}
+          />
         </div>
 
-        {/* ── FIND PG — main CTA ── */}
-        <div className={`${styles.ctaWrap} animate-fade-up delay-1`}>
-          <button
-            className={styles.findBtn}
-            id="btn-find-pg"
-            onClick={() => router.push("/find-pg")}
-          >
-            <span className={styles.findBtnIcon}>🔍</span>
-            <div className={styles.findBtnText}>
-              <span className={styles.findBtnTitle}>Find PG Near Me</span>
-              <span className={styles.findBtnSub}>For students &amp; working professionals</span>
-            </div>
-            <span className={styles.findBtnArrow}>→</span>
-          </button>
+        {/* Right: Boy searching for PGs illustration */}
+        <div className={styles.heroBoyWrap} aria-hidden="true">
+          <img
+            src="/images/hero-boy.png"
+            alt=""
+            className={styles.heroBoyImg}
+          />
+        </div>
 
-          <p className={styles.ctaHint}>
-            📍 Near your college · 🏢 Near your workplace
-          </p>
+        <div className={styles.hero}>
+          {/* Logo */}
+          <div className={`${styles.logoWrap} animate-fade-up`}>
+            <AppLogo size="lg" />
+            <div className={styles.taglineWrap}>
+              <span className={styles.taglinePart1}>Searching PG? 🧐</span>
+              <span className={styles.taglineDash}> — </span>
+              <span className={styles.taglinePart2}>It&apos;s Very Easy 😎.</span>
+            </div>
+          </div>
+
+          {/* ── FIND PG — main CTA ── */}
+          <div className={`${styles.ctaWrap} animate-fade-up delay-1`}>
+            <button
+              className={styles.findBtn}
+              id="btn-find-pg"
+              onClick={() => router.push("/find-pg")}
+            >
+              <span className={styles.findBtnIcon}>🔍</span>
+              <div className={styles.findBtnText}>
+                <span className={styles.findBtnTitle}>Find PG Near Me</span>
+                <span className={styles.findBtnSub}>For students &amp; working professionals</span>
+              </div>
+              <span className={styles.findBtnArrow}>→</span>
+            </button>
+
+            <p className={styles.ctaHint}>
+              📍 Near your college · 🏢 Near your workplace
+            </p>
+          </div>
         </div>
       </div>
 
