@@ -1091,11 +1091,12 @@
 }
 
 :global([data-theme="light"]) .pgName {
-  color: #0f172a !important;
+  color: #ffffff !important;
 }
 :global([data-theme="light"]) .pgAddress {
-  color: #334155 !important;
+  color: #ffffff !important;
   font-weight: 500 !important;
+  opacity: 0.95;
 }
 :global([data-theme="light"]) .sharingChip {
   color: #0f172a !important;
