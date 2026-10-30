@@ -69,18 +69,119 @@
 .installIcon { font-size: 18px; }
 
 /* ═══════════════════════════════════════
-   HERO SECTION
+   HERO SECTION WRAPPER & BACKGROUNDS
 ═══════════════════════════════════════ */
+.heroSection {
+  width: 100%;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  padding: 16px 0 20px;
+  background: linear-gradient(180deg, #dbeafe 0%, #ebf5fa 45%, #f1f8f4 75%, transparent 100%);
+}
+
+:global([data-theme="dark"]) .heroSection {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.75) 45%, rgba(16, 83, 45, 0.25) 75%, transparent 100%);
+}
+
+/* Atmospheric sky backdrop */
+.heroBgAtmosphere {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 95% 75% at 50% 10%, rgba(255, 255, 255, 0.6) 0%, rgba(237, 247, 242, 0.3) 50%, transparent 100%);
+  opacity: 0.95;
+  z-index: 0;
+}
+
+:global([data-theme="dark"]) .heroBgAtmosphere {
+  background: radial-gradient(ellipse 95% 75% at 50% 10%, rgba(30, 58, 138, 0.28) 0%, rgba(16, 83, 45, 0.18) 50%, transparent 100%);
+  opacity: 0.75;
+}
+
+/* ─── Left: PG Building illustration ─── */
+.heroBuildingWrap {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+  animation: heroBuildingFloat 8s ease-in-out infinite;
+  display: flex;
+  align-items: flex-end;
+  width: clamp(240px, 24vw, 440px);
+}
+
+.heroBuildingImg {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: left bottom;
+}
+
+:global([data-theme="dark"]) .heroBuildingImg {
+  filter: brightness(0.92);
+}
+
+@keyframes heroBuildingFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* ─── Right: Boy searching for PGs illustration ─── */
+.heroBoyWrap {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+  animation: heroBoyFloat 7s ease-in-out infinite 0.6s;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  width: clamp(250px, 26vw, 480px);
+}
+
+.heroBoyImg {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: right bottom;
+}
+
+:global([data-theme="dark"]) .heroBoyImg {
+  filter: brightness(0.92);
+}
+
+@keyframes heroBoyFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
 .hero {
   width: 100%;
   max-width: 520px;
-  padding: 60px 24px 40px;
+  padding: 40px 24px 30px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 32px;
+  gap: 28px;
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 /* ─── Logo block ─── */
@@ -392,13 +493,117 @@
 }
 
 /* ─── Responsive ─── */
-@media (max-width: 380px) {
+@media (max-width: 640px) {
+  /* Push install app banner higher and more compact so it never overlaps the logo */
+  .installBanner {
+    top: 8px;
+  }
+  .installBtn {
+    padding: 6px 16px;
+    font-size: 12.5px;
+    gap: 6px;
+  }
+
+  .heroSection {
+    padding: 46px 0 16px;
+  }
+  /* Bring building and boy UP to flank the logo at the top, clear of the install button */
+  .heroBuildingWrap {
+    top: 48px;
+    bottom: auto;
+    left: -4px;
+    width: clamp(96px, 28vw, 130px);
+    align-items: flex-start;
+    animation: heroBuildingFloatMobile 6s ease-in-out infinite;
+  }
+  .heroBoyWrap {
+    top: 46px;
+    bottom: auto;
+    right: -2px;
+    width: clamp(105px, 30vw, 140px);
+    align-items: flex-start;
+    justify-content: flex-end;
+    animation: heroBoyFloatMobile 6s ease-in-out infinite 0.5s;
+  }
   .hero {
-    padding: 40px 14px 28px;
-    gap: 24px;
+    padding: 8px 12px 18px;
+    gap: 16px;
+  }
+  .logoWrap {
+    position: relative;
+    z-index: 3;
+    gap: 8px;
+  }
+  .logoWrap img {
+    max-width: clamp(180px, 48vw, 220px);
+    height: auto;
+  }
+  .taglineWrap {
+    margin-top: 4px;
+    font-size: 14.5px;
+    gap: 4px;
+  }
+  /* The button sits cleanly BELOW the illustrations and logo */
+  .ctaWrap {
+    position: relative;
+    z-index: 4;
+    width: 100%;
+    margin-top: 4px;
+  }
+}
+
+@keyframes heroBuildingFloatMobile {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes heroBoyFloatMobile {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@media (max-width: 380px) {
+  .installBanner {
+    top: 6px;
+  }
+  .installBtn {
+    padding: 5px 14px;
+    font-size: 12px;
+  }
+  .heroSection {
+    padding: 42px 0 16px;
+  }
+  .hero {
+    padding: 6px 10px 16px;
+    gap: 14px;
+  }
+  .heroBuildingWrap {
+    top: 42px;
+    left: -2px;
+    width: 95px;
+  }
+  .heroBoyWrap {
+    top: 40px;
+    right: -2px;
+    width: 102px;
+  }
+  .logoWrap img {
+    max-width: 170px;
+  }
+  .taglineWrap {
+    font-size: 13px;
+    gap: 3px;
   }
   .findBtn {
-    padding: 16px 16px;
+    padding: 16px 14px;
     gap: 12px;
   }
   .findBtnIcon {
@@ -426,7 +631,7 @@
 
 @media (min-width: 640px) {
   .hero {
-    padding: 80px 32px 40px;
+    padding: 50px 32px 35px;
     max-width: 600px;
   }
   .infoFooter {
@@ -441,6 +646,21 @@
   }
   .tagline {
     font-size: 18px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1099px) {
+  .heroBuildingWrap {
+    left: 0;
+    bottom: 0;
+    top: auto;
+    width: clamp(220px, 24vw, 320px);
+  }
+  .heroBoyWrap {
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: clamp(240px, 26vw, 340px);
   }
 }
 
@@ -460,5 +680,24 @@
   }
   .footerBottom {
     grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1100px) {
+  .heroSection {
+    padding: 24px 0 32px;
+  }
+  /* Extend completely to the ends of the screen */
+  .heroBuildingWrap {
+    left: 0;
+    bottom: 0;
+    top: auto;
+    width: clamp(340px, 25vw, 500px);
+  }
+  .heroBoyWrap {
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: clamp(360px, 27vw, 540px);
   }
 }
