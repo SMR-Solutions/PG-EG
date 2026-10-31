@@ -228,6 +228,11 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
   });
   const recipient = process.env.TEST_EMAIL_OVERRIDE || to;
 
+  const isProd =
+    process.env.NODE_ENV === "production" ||
+    process.env.RENDER === "true" ||
+    Boolean(process.env.RENDER_SERVICE_ID);
+
   // 1. Try Resend if RESEND_API_KEY is configured
   if (process.env.RESEND_API_KEY) {
     try {
@@ -256,6 +261,9 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
       return { success: true, provider: "resend", messageId: res.data?.id };
     } catch (err: any) {
       console.error("[Mailer] Resend failed:", err?.message || err);
+      if (isProd && !process.env.SMTP_USER) {
+        throw new Error(`Resend email dispatch failed: ${err?.message || err}`);
+      }
       // Fall through to SMTP
     }
   }
@@ -263,15 +271,32 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
   // 2. Try Nodemailer SMTP if SMTP_USER & SMTP_PASS are configured
   if (process.env.SMTP_USER && process.env.SMTP_PASS) {
     try {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || "smtp.gmail.com",
-        port: Number(process.env.SMTP_PORT) || 465,
-        secure: process.env.SMTP_SECURE !== "false", // true for 465
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
+      const cleanPass = (process.env.SMTP_PASS || "").replace(/\s+/g, "");
+      const isGmail = (process.env.SMTP_USER || "").toLowerCase().includes("@gmail.com") || !process.env.SMTP_HOST;
+
+      const transporter = isGmail
+        ? nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+              user: process.env.SMTP_USER,
+              pass: cleanPass,
+            },
+            connectionTimeout: 15000,
+            greetingTimeout: 15000,
+            socketTimeout: 20000,
+          })
+        : nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: Number(process.env.SMTP_PORT) || 465,
+            secure: process.env.SMTP_SECURE !== "false",
+            auth: {
+              user: process.env.SMTP_USER,
+              pass: cleanPass,
+            },
+            connectionTimeout: 15000,
+            greetingTimeout: 15000,
+            socketTimeout: 20000,
+          });
 
       const info = await transporter.sendMail({
         from: process.env.EMAIL_FROM || `"PG-EG Safety Desk" <${process.env.SMTP_USER}>`,
@@ -291,11 +316,21 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
       return { success: true, provider: "smtp", messageId: info.messageId };
     } catch (err: any) {
       console.error("[Mailer] SMTP error:", err);
-      // Fall through to preview mode
+      if (isProd) {
+        throw new Error(`SMTP email dispatch failed: ${err?.message || err}`);
+      }
+      // In local development, fall through to preview mode
     }
   }
 
-  // 3. Fallback / Test Mode: Save PDF locally and log email details
+  // If in production and no mail provider succeeded or was configured, throw explicit actionable error
+  if (isProd) {
+    throw new Error(
+      "Live email dispatch failed: Neither RESEND_API_KEY nor SMTP_USER & SMTP_PASS are configured in Render Environment Variables. Please add SMTP_USER and SMTP_PASS in the Render Dashboard."
+    );
+  }
+
+  // 3. Fallback / Test Mode (Local Development Only): Save PDF locally and log email details
   const outDir = path.resolve(process.cwd(), "temp_reports");
   if (!fs.existsSync(outDir)) {
     fs.mkdirSync(outDir, { recursive: true });
