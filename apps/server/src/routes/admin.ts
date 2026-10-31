@@ -343,4 +343,31 @@ router.get("/pgs/:id", async (req: Request, res: Response) => {
   }
 });
 
+// ─── POST /api/admin/pgs/:id/send-safety-email ──────────────────────
+// Admin action: Dispatches monthly tenant dossier PDF to the PG owner's registered email
+router.post("/pgs/:id/send-safety-email", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!id || !UUID_RE.test(id)) {
+      res.status(400).json({ error: "Invalid PG ID format" });
+      return;
+    }
+
+    const { month } = req.query as { month?: string };
+    const { sendPgMonthlyReportEmail } = await import("../services/reportDataService");
+    const result = await sendPgMonthlyReportEmail(id, month);
+
+    res.json({
+      success: true,
+      email: result.email,
+      provider: result.provider,
+      messageId: result.messageId,
+      message: `Safety dossier successfully dispatched to ${result.email}`,
+    });
+  } catch (err: any) {
+    console.error("Admin send safety email error:", err);
+    res.status(500).json({ error: err?.message || "Failed to dispatch safety email" });
+  }
+});
+
 export default router;

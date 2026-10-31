@@ -659,6 +659,60 @@
   transform: translateY(-1px);
 }
 
+.btnSendSafetyMail {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btnSendSafetyMail:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #34d399;
+  transform: translateY(-1px);
+}
+
+.btnSendSafetyMail:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.safetyToastSuccess {
+  margin-top: 10px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.safetyToastError {
+  margin-top: 10px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Admin Login Gate Modal */
 .gateBackdrop {
   position: fixed;

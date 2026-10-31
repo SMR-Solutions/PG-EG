@@ -84,6 +84,14 @@ export default function AdminDashboardClient() {
   // Selected PG for inspection modal
   const [selectedPgId, setSelectedPgId] = useState<string | null>(null);
 
+  // Safety Mail Dispatch State
+  const [sendingSafetyMailPgId, setSendingSafetyMailPgId] = useState<string | null>(null);
+  const [safetyMailToast, setSafetyMailToast] = useState<{
+    pgId: string;
+    message: string;
+    isError?: boolean;
+  } | null>(null);
+
   const getHeaders = useCallback(
     (extraKey?: string): Record<string, string> => {
       const h: Record<string, string> = {};
@@ -255,6 +263,42 @@ export default function AdminDashboardClient() {
   function showNotice(msg: string) {
     setActionNotice(msg);
     setTimeout(() => setActionNotice(""), 4000);
+  }
+
+  // Dispatch monthly tenant dossier PDF to PG owner's email
+  async function handleSendSafetyMail(pg: PGItem) {
+    if (sendingSafetyMailPgId) return;
+    setSendingSafetyMailPgId(pg.id);
+    setSafetyMailToast(null);
+
+    try {
+      const res = await fetch(`${API_URL}/api/admin/pgs/${pg.id}/send-safety-email`, {
+        method: "POST",
+        headers: getHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to dispatch safety email");
+      }
+      setSafetyMailToast({
+        pgId: pg.id,
+        message: `✓ Safety report sent to ${data.email || pg.owner.email || "the owner"}!`,
+      });
+      setTimeout(() => {
+        setSafetyMailToast((curr) => (curr?.pgId === pg.id ? null : curr));
+      }, 6000);
+    } catch (err: any) {
+      setSafetyMailToast({
+        pgId: pg.id,
+        message: `❌ ${err?.message || "Failed to send safety mail"}`,
+        isError: true,
+      });
+      setTimeout(() => {
+        setSafetyMailToast((curr) => (curr?.pgId === pg.id ? null : curr));
+      }, 7000);
+    } finally {
+      setSendingSafetyMailPgId(null);
+    }
   }
 
   // Filtered PGs in memory
@@ -914,6 +958,15 @@ export default function AdminDashboardClient() {
                         🔍 Inspect Full Details
                       </button>
 
+                      <button
+                        className={styles.btnSendSafetyMail}
+                        onClick={() => handleSendSafetyMail(pg)}
+                        disabled={sendingSafetyMailPgId === pg.id}
+                        title={`Send monthly tenant dossier PDF to ${pg.owner.email || "the owner"}`}
+                      >
+                        {sendingSafetyMailPgId === pg.id ? "⏳ Sending…" : "📧 Send Safety Mail"}
+                      </button>
+
                       <a
                         href={`/pg/${pg.id}`}
                         target="_blank"
@@ -923,6 +976,19 @@ export default function AdminDashboardClient() {
                         🌐 View Public Site ↗
                       </a>
                     </div>
+
+                    {/* Inline Safety Mail Feedback Toast */}
+                    {safetyMailToast && safetyMailToast.pgId === pg.id && (
+                      <div
+                        className={
+                          safetyMailToast.isError
+                            ? styles.safetyToastError
+                            : styles.safetyToastSuccess
+                        }
+                      >
+                        {safetyMailToast.message}
+                      </div>
+                    )}
                   </div>
                 );
               })}
