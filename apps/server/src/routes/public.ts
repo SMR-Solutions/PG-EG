@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { isNotNull, inArray, eq, and } from "drizzle-orm";
 import { createDb, pgs } from "../db";
 import { resolveMapsLink, haversineKm } from "../utils/maps";
+import { triggerScheduledReportCatchUp } from "../jobs/monthlyReportCron";
 
 const router = Router();
 
@@ -409,6 +410,25 @@ router.get("/pgs/:id", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Single PG fetch error:", err);
     res.status(500).json({ error: "Failed to fetch PG" });
+  }
+});
+
+// ─── GET /api/public/cron/monthly-report ───────────────────
+// PUBLIC / CRON HOOK — Pings Render from external monitor or scheduler (e.g. cron-job.org / UptimeRobot)
+// Wakes server up and automatically dispatches scheduled 1st / 15th reports with catch-up idempotency.
+router.all("/cron/monthly-report", async (req: Request, res: Response) => {
+  try {
+    const isForce = req.query.force === "true" || req.query.force === "1";
+    console.log(`[Cron Route Triggered] method=${req.method} force=${isForce}`);
+    const result = await triggerScheduledReportCatchUp(isForce);
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      ...result,
+    });
+  } catch (err: any) {
+    console.error("[Cron Route Error]", err);
+    res.status(500).json({ error: err?.message || String(err) });
   }
 });
 

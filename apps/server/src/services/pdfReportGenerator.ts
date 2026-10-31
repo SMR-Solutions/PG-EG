@@ -326,7 +326,12 @@ export async function generateTenantReportPDF(data: PgReportData): Promise<Buffe
           doc.fontSize(8.5).font("Helvetica").fillColor("#111111").text(t.altPhone || "—", 264, y + 37);
 
           doc.fontSize(6.5).font("Helvetica-Bold").fillColor("#888888").text("FLOOR · ROOM · BED", 264, y + 49);
-          doc.fontSize(8.5).font("Helvetica-Bold").fillColor("#111111").text(`FL ${t.floor} · ${t.roomNumber} · Bed ${t.bedNumber}`, 264, y + 57);
+          const bedLabel = !t.bedNumber || t.bedNumber === "—"
+            ? "—"
+            : String(t.bedNumber).startsWith("Bed")
+            ? String(t.bedNumber)
+            : `Bed ${t.bedNumber}`;
+          doc.fontSize(8.5).font("Helvetica-Bold").fillColor("#111111").text(`FL ${t.floor} · ${t.roomNumber} · ${bedLabel}`, 264, y + 57);
 
           doc.fontSize(6.5).font("Helvetica-Bold").fillColor("#888888").text("DEPOSIT DEDUCTED", 264, y + 69);
           doc.fontSize(8.5).font("Helvetica-Bold").fillColor("#111111").text(fmtRs(t.depositDeduction), 264, y + 77);
@@ -339,7 +344,12 @@ export async function generateTenantReportPDF(data: PgReportData): Promise<Buffe
           doc.fontSize(8).font("Helvetica").fillColor("#111111").text(emgText, 404, y + 37, { width: 146, ellipsis: true });
 
           doc.fontSize(6.5).font("Helvetica-Bold").fillColor("#888888").text("SHARING TYPE", 404, y + 49);
-          doc.fontSize(8.5).font("Helvetica").fillColor("#111111").text(`${t.sharingType}-sharing`, 404, y + 57);
+          const shareText = !t.sharingType || t.sharingType === "—"
+            ? "—"
+            : String(t.sharingType).includes("sharing")
+            ? String(t.sharingType)
+            : `${t.sharingType}-sharing`;
+          doc.fontSize(8.5).font("Helvetica").fillColor("#111111").text(shareText, 404, y + 57);
 
           doc.fontSize(6.5).font("Helvetica-Bold").fillColor("#888888").text("PROFESSION", 404, y + 69);
           const profText = t.profession

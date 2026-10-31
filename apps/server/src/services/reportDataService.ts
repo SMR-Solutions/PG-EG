@@ -223,7 +223,11 @@ export async function fetchPgReportData(pgId: string, monthStr?: string): Promis
   };
 }
 
-export async function sendPgMonthlyReportEmail(pgId: string, monthStr?: string): Promise<MailerResult & { email: string }> {
+export async function sendPgMonthlyReportEmail(
+  pgId: string,
+  monthStr?: string,
+  maxRetries: number = 3
+): Promise<MailerResult & { email: string }> {
   const result = await fetchPgReportData(pgId, monthStr);
   if (!result) {
     throw new Error("PG or Owner record not found");
@@ -236,18 +240,36 @@ export async function sendPgMonthlyReportEmail(pgId: string, monthStr?: string):
 
   const pdfBuffer = await generateTenantReportPDF(reportData);
 
-  const mailResult = await sendMonthlyTenantReport({
-    to: ownerEmail,
-    ownerName,
-    pgName: reportData.pgName,
-    monthLabel: reportData.monthLabel,
-    reportData,
-    pdfBuffer,
-  });
+  let lastError: any = null;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 1) {
+        console.log(`[Email Dispatch] Retry attempt ${attempt}/${maxRetries} for ${reportData.pgName} -> ${ownerEmail}`);
+      }
+      const mailResult = await sendMonthlyTenantReport({
+        to: ownerEmail,
+        ownerName,
+        pgName: reportData.pgName,
+        monthLabel: reportData.monthLabel,
+        reportData,
+        pdfBuffer,
+      });
 
-  return {
-    ...mailResult,
-    email: ownerEmail,
-  };
+      return {
+        ...mailResult,
+        email: ownerEmail,
+      };
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`[Email Dispatch Warning] Attempt ${attempt}/${maxRetries} failed:`, err?.message || err);
+      if (attempt < maxRetries) {
+        const delayMs = attempt * 2500;
+        console.log(`[Email Dispatch] Waiting ${delayMs}ms before retry...`);
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+    }
+  }
+
+  throw lastError || new Error(`Failed to send report email after ${maxRetries} attempts`);
 }
 

@@ -15,7 +15,7 @@ export interface SendMonthlyReportParams {
 
 export interface MailerResult {
   success: boolean;
-  provider: "resend" | "smtp" | "preview";
+  provider: "resend" | "brevo" | "smtp" | "preview";
   messageId?: string;
   previewUrl?: string;
   savedPath?: string;
@@ -203,7 +203,7 @@ export function buildEmailHTML(params: {
           <a href="https://www.pgeg.in" style="color: #10b981; text-decoration: none; font-weight: 700;">www.pgeg.in</a>
         </p>
         <p style="margin: 0; font-size: 10.5px; color: #94a3b8;">
-          Automated safety record dispatched on the 15th and month-end closing to ensure permanent physical records.
+          Automated safety record dispatched on the 1st and 15th of the month to ensure permanent physical records.
         </p>
       </div>
 
@@ -233,10 +233,56 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
     process.env.RENDER === "true" ||
     Boolean(process.env.RENDER_SERVICE_ID);
 
-  // 1. Try Resend if RESEND_API_KEY is configured
+  // ─── 1. Brevo REST API (HTTPS Port 443 — NEVER Blocked on Render Free Tier) ───
+  // Works with confirmed sender Gmail (e.g. studentstoreforstudents@gmail.com) without custom domain
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "studentstoreforstudents@gmail.com";
+      const fromName = "PG-EG Safety Desk";
+
+      const brevoPayload = {
+        sender: { name: fromName, email: fromEmail },
+        to: [{ email: recipient, name: ownerName }],
+        subject,
+        htmlContent,
+        attachment: [
+          {
+            name: attachmentFileName,
+            content: pdfBuffer.toString("base64"),
+          },
+        ],
+      };
+
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "api-key": process.env.BREVO_API_KEY.trim(),
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(brevoPayload),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.message || JSON.stringify(json));
+      }
+
+      console.log(`[Mailer] Brevo API email dispatched to ${recipient} (MessageId: ${json.messageId})`);
+      return { success: true, provider: "brevo", messageId: json.messageId };
+    } catch (err: any) {
+      console.error("[Mailer] Brevo API error:", err?.message || err);
+      if (isProd && !process.env.RESEND_API_KEY && !process.env.SMTP_USER) {
+        throw new Error(`Brevo API dispatch failed: ${err?.message || err}`);
+      }
+      // Fall through to next provider
+    }
+  }
+
+  // ─── 2. Resend REST API (HTTPS Port 443 — NEVER Blocked on Render Free Tier) ───
   if (process.env.RESEND_API_KEY) {
     try {
-      const resend = new Resend(process.env.RESEND_API_KEY);
+      const resend = new Resend(process.env.RESEND_API_KEY.trim());
       const fromEmail = process.env.EMAIL_FROM || "PG-EG Safety Desk <onboarding@resend.dev>";
 
       const res = await resend.emails.send({
@@ -268,7 +314,7 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
     }
   }
 
-  // 2. Try Nodemailer SMTP if SMTP_USER & SMTP_PASS are configured
+  // ─── 3. Nodemailer SMTP (Note: Render Free Tier blocks outbound SMTP ports 25, 465, 587) ───
   if (process.env.SMTP_USER && process.env.SMTP_PASS) {
     try {
       const cleanPass = (process.env.SMTP_PASS || "").replace(/\s+/g, "");
@@ -281,9 +327,9 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
               user: process.env.SMTP_USER,
               pass: cleanPass,
             },
-            connectionTimeout: 15000,
-            greetingTimeout: 15000,
-            socketTimeout: 20000,
+            connectionTimeout: 8000,
+            greetingTimeout: 8000,
+            socketTimeout: 10000,
           })
         : nodemailer.createTransport({
             host: process.env.SMTP_HOST,
@@ -293,9 +339,9 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
               user: process.env.SMTP_USER,
               pass: cleanPass,
             },
-            connectionTimeout: 15000,
-            greetingTimeout: 15000,
-            socketTimeout: 20000,
+            connectionTimeout: 8000,
+            greetingTimeout: 8000,
+            socketTimeout: 10000,
           });
 
       const info = await transporter.sendMail({
@@ -317,6 +363,14 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
     } catch (err: any) {
       console.error("[Mailer] SMTP error:", err);
       if (isProd) {
+        const isTimeout =
+          err?.code === "ETIMEDOUT" ||
+          String(err?.message || "").toLowerCase().includes("timeout");
+        if (isTimeout) {
+          throw new Error(
+            "SMTP connection timeout. Render Free Tier blocks outbound SMTP ports (25, 465, 587). To send emails reliably from Render over HTTPS (Port 443), please add BREVO_API_KEY (free at brevo.com) or RESEND_API_KEY to your Render Environment Variables."
+          );
+        }
         throw new Error(`SMTP email dispatch failed: ${err?.message || err}`);
       }
       // In local development, fall through to preview mode
@@ -326,11 +380,11 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
   // If in production and no mail provider succeeded or was configured, throw explicit actionable error
   if (isProd) {
     throw new Error(
-      "Live email dispatch failed: Neither RESEND_API_KEY nor SMTP_USER & SMTP_PASS are configured in Render Environment Variables. Please add SMTP_USER and SMTP_PASS in the Render Dashboard."
+      "Live email dispatch failed: No active email service configured. Please add BREVO_API_KEY (recommended for Render Free Tier over HTTPS Port 443) or RESEND_API_KEY in your Render Dashboard Environment tab."
     );
   }
 
-  // 3. Fallback / Test Mode (Local Development Only): Save PDF locally and log email details
+  // 4. Fallback / Test Mode (Local Development Only): Save PDF locally and log email details
   const outDir = path.resolve(process.cwd(), "temp_reports");
   if (!fs.existsSync(outDir)) {
     fs.mkdirSync(outDir, { recursive: true });
@@ -342,7 +396,7 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
   console.log(`📧 [MAILER PREVIEW MODE] Email to: ${to} (${ownerName})`);
   console.log(`   Subject: ${subject}`);
   console.log(`   Attached PDF saved locally at: ${filePath}`);
-  console.log(`   Notice: Configure RESEND_API_KEY or SMTP_USER & SMTP_PASS in apps/server/.env for direct inbox dispatch.`);
+  console.log(`   Notice: Configure BREVO_API_KEY, RESEND_API_KEY, or SMTP_USER & SMTP_PASS in apps/server/.env for direct inbox dispatch.`);
   console.log(`============================================================\n`);
 
   return {
