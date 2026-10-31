@@ -59,6 +59,8 @@ export async function fetchPgReportData(pgId: string, monthStr?: string): Promis
       tenantDepositDeduction: tenants.depositDeduction,
       tenantProfession: tenants.profession,
       tenantProfDetail: tenants.professionDetail,
+      tenantPhoto: tenants.photoUrl,
+      tenantIdPhoto: tenants.idPhotoUrl,
       // room / bed
       roomNumber: rooms.roomNumber,
       floor: rooms.floor,
@@ -89,6 +91,8 @@ export async function fetchPgReportData(pgId: string, monthStr?: string): Promis
       rentAmount: tenants.rentAmount,
       profession: tenants.profession,
       professionDetail: tenants.professionDetail,
+      photoUrl: tenants.photoUrl,
+      idPhotoUrl: tenants.idPhotoUrl,
       bedId: tenants.bedId,
     })
     .from(tenants)
@@ -126,6 +130,8 @@ export async function fetchPgReportData(pgId: string, monthStr?: string): Promis
       depositDeduction: p.tenantDepositDeduction || 0,
       profession: p.tenantProfession || null,
       professionDetail: p.tenantProfDetail || null,
+      photoUrl: p.tenantPhoto || null,
+      idPhotoUrl: p.tenantIdPhoto || null,
     });
   }
 
@@ -177,6 +183,8 @@ export async function fetchPgReportData(pgId: string, monthStr?: string): Promis
       depositDeduction: t.depositDeduction || 0,
       profession: t.profession,
       professionDetail: t.professionDetail,
+      photoUrl: t.photoUrl || null,
+      idPhotoUrl: t.idPhotoUrl || null,
     });
   }
 

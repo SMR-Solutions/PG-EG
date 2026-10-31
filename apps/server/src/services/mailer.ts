@@ -30,26 +30,6 @@ export function buildEmailHTML(params: {
   const { ownerName, pgName, monthLabel, data } = params;
   const fmtRs = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 
-  const rowsHtml = data.tenants
-    .map(
-      (t) => `
-    <tr style="border-bottom: 1px solid #f1f5f9;">
-      <td style="padding: 10px 12px; font-weight: 700; color: #0f172a;">
-        ${t.name}
-        <span style="font-size: 10px; color: ${t.status === "active" ? "#16a34a" : "#dc2626"}; background: ${t.status === "active" ? "#dcfce7" : "#fee2e2"}; padding: 1px 6px; border-radius: 10px; margin-left: 4px;">
-          ${t.status === "active" ? "Active" : "Inactive"}
-        </span>
-      </td>
-      <td style="padding: 10px 12px; color: #475569;">Floor ${t.floor} · Room ${t.roomNumber} · Bed ${t.bedNumber}</td>
-      <td style="padding: 10px 12px; color: #475569;">+91 ${t.phone}</td>
-      <td style="padding: 10px 12px; text-align: right; color: ${t.rentStatus === "paid" ? "#16a34a" : "#dc2626"}; font-weight: 800;">
-        ${t.rentStatus === "paid" ? `${fmtRs(t.paidAmount)} PAID ✓` : `${fmtRs(t.monthlyRent - t.paidAmount)} DUE`}
-      </td>
-    </tr>
-  `
-    )
-    .join("");
-
   return `
 <!DOCTYPE html>
 <html>
@@ -119,26 +99,6 @@ export function buildEmailHTML(params: {
           </td>
         </tr>
       </table>
-
-      <!-- Tenant Roster Snapshot Table -->
-      <div style="margin-top: 20px;">
-        <div style="font-size: 12px; font-weight: 800; color: #0f172a; text-transform: uppercase; margin-bottom: 8px;">
-          Tenant Roster &amp; Payment Summary
-        </div>
-        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-          <thead>
-            <tr style="background: #f1f5f9; text-align: left; color: #475569; font-weight: 700;">
-              <th style="padding: 9px 12px; border-radius: 6px 0 0 6px;">Tenant</th>
-              <th style="padding: 9px 12px;">Room</th>
-              <th style="padding: 9px 12px;">Phone</th>
-              <th style="padding: 9px 12px; text-align: right; border-radius: 0 6px 6px 0;">Rent Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml}
-          </tbody>
-        </table>
-      </div>
 
       <!-- Action Button -->
       <div style="text-align: center; margin: 30px 0 10px;">
