@@ -175,6 +175,7 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
   const attachmentFileName = `${safeName}_Tenants_Report_${safeMonth}.pdf`;
   const subject = `📋 Physical Backup Copy: ${pgName} – Tenants & Rent Record (${monthLabel})`;
   const htmlContent = buildEmailHTML({ ownerName, pgName, monthLabel, data: reportData });
+  const recipient = process.env.TEST_EMAIL_OVERRIDE || to;
 
   // 1. Try Resend if RESEND_API_KEY is configured
   if (process.env.RESEND_API_KEY) {
@@ -185,7 +186,7 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
 
       const res = await resend.emails.send({
         from: fromEmail,
-        to: [to],
+        to: [recipient],
         subject,
         html: htmlContent,
         attachments: [
@@ -201,7 +202,7 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
         throw new Error(res.error.message || "Resend email dispatch error");
       }
 
-      console.log(`[Mailer] Resend email dispatched to ${to} (ID: ${res.data?.id})`);
+      console.log(`[Mailer] Resend email dispatched to ${recipient} (ID: ${res.data?.id})`);
       return { success: true, provider: "resend", messageId: res.data?.id };
     } catch (err: any) {
       console.error("[Mailer] Resend failed:", err?.message || err);
@@ -224,7 +225,7 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
 
       const info = await transporter.sendMail({
         from: process.env.EMAIL_FROM || `"PG-EG Safety Desk" <${process.env.SMTP_USER}>`,
-        to,
+        to: recipient,
         subject,
         html: htmlContent,
         attachments: [
@@ -236,7 +237,7 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
         ],
       });
 
-      console.log(`[Mailer] SMTP email sent to ${to} (MessageId: ${info.messageId})`);
+      console.log(`[Mailer] SMTP email sent to ${recipient} (MessageId: ${info.messageId})`);
       return { success: true, provider: "smtp", messageId: info.messageId };
     } catch (err: any) {
       console.error("[Mailer] SMTP error:", err);
