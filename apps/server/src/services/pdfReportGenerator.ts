@@ -111,9 +111,9 @@ export async function generateTenantReportPDF(data: PgReportData): Promise<Buffe
       });
 
       const buffers: Buffer[] = [];
-      doc.on("data", (chunk) => buffers.push(chunk));
+      doc.on("data", (chunk: any) => buffers.push(chunk));
       doc.on("end", () => resolve(Buffer.concat(buffers)));
-      doc.on("error", (err) => reject(err));
+      doc.on("error", (err: any) => reject(err));
 
       // Currency helper using 'Rs.' to guarantee 100% font compatibility in PDFKit Type 1 Standard Fonts
       const fmtRs = (n: number) => `Rs. ${Number(n || 0).toLocaleString("en-IN")}`;
