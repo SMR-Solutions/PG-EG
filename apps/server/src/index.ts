@@ -19,7 +19,7 @@ import expensesRouter from "./routes/expenses";
 import eventsRouter from "./routes/events";
 import leadsRouter from "./routes/leads";
 import adminRouter from "./routes/admin";
-import { initMonthlyReportCron } from "./jobs/monthlyReportCron";
+import { initMonthlyReportCron } from "./jobs/monthlyReportCron"; // Initialized on 15th & month-end
 
 const app = express();
 const PORT = process.env.PORT || 4000;
