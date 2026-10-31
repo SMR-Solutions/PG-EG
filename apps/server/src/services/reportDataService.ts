@@ -188,6 +188,13 @@ export async function fetchPgReportData(pgId: string, monthStr?: string): Promis
     });
   }
 
+  items.sort((a, b) => {
+    if (a.floor !== b.floor) return a.floor - b.floor;
+    const roomCmp = (a.roomNumber || "").localeCompare(b.roomNumber || "", undefined, { numeric: true });
+    if (roomCmp !== 0) return roomCmp;
+    return String(a.bedNumber || "").localeCompare(String(b.bedNumber || ""), undefined, { numeric: true });
+  });
+
   const totalRent = items.reduce((acc, it) => acc + it.monthlyRent, 0);
   const collected = items.reduce((acc, it) => acc + it.paidAmount, 0);
   const pending = Math.max(0, totalRent - collected);
