@@ -1,4 +1,6 @@
 import PDFDocument from "pdfkit";
+import fs from "fs";
+import path from "path";
 
 export interface TenantReportItem {
   id: string;
@@ -62,6 +64,25 @@ async function fetchImageBuffer(url?: string | null): Promise<Buffer | null> {
   } catch {
     return null;
   }
+}
+
+function getPgEgLogoBuffer(): Buffer | null {
+  const possiblePaths = [
+    path.resolve(__dirname, "../../assets/pg-eg-logo-wide.png"),
+    path.resolve(__dirname, "../assets/pg-eg-logo-wide.png"),
+    path.resolve(process.cwd(), "apps/server/assets/pg-eg-logo-wide.png"),
+    path.resolve(process.cwd(), "assets/pg-eg-logo-wide.png"),
+    path.resolve(process.cwd(), "apps/web/public/pg-eg-logo-wide.png"),
+    path.resolve(process.cwd(), "public/pg-eg-logo-wide.png"),
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      try {
+        return fs.readFileSync(p);
+      } catch {}
+    }
+  }
+  return null;
 }
 
 export async function generateTenantReportPDF(data: PgReportData): Promise<Buffer> {
@@ -372,30 +393,48 @@ export async function generateTenantReportPDF(data: PgReportData): Promise<Buffe
         y += 4;
       });
 
-      // Bottom Sign-off Box
-      if (y > 720) {
+      // Bottom Document Footer Watermark (Clean, centered with PG-EG logo)
+      let footerY = Math.max(y + 20, 788);
+      if (footerY > 806) {
         doc.addPage();
-        y = 36;
-      } else {
-        y = Math.max(y + 10, 715);
+        footerY = 788;
       }
 
-      doc.roundedRect(36, y, 523, 44, 6).lineWidth(1).fillAndStroke("#ffffff", "#cbd5e1");
+      // Subtle dotted separator
+      doc.save();
       doc
-        .fontSize(8)
+        .moveTo(36, footerY - 12)
+        .lineTo(559, footerY - 12)
+        .dash(2, { space: 2 })
+        .lineWidth(0.6)
+        .strokeColor("#cbd5e1")
+        .stroke();
+      doc.restore();
+
+      const logoBuf = getPgEgLogoBuffer();
+      const footerText = "PG-EG Digital Record Security System";
+      doc.fontSize(8.5).font("Helvetica-Bold");
+      const textW = doc.widthOfString(footerText);
+      const dotW = doc.widthOfString("   ·   ");
+      const logoW = logoBuf ? 36 : 0;
+      const logoH = logoBuf ? 18 : 0;
+      const totalFooterW = textW + (logoBuf ? dotW + logoW : 0);
+      const startX = (595.28 - totalFooterW) / 2;
+
+      doc
+        .fontSize(8.5)
         .font("Helvetica-Bold")
         .fillColor("#64748b")
-        .text("PG MANAGER / OWNER SIGNATURE & VERIFICATION STAMP", 48, y + 8);
-      doc
-        .fontSize(7.5)
-        .font("Helvetica")
-        .fillColor("#94a3b8")
-        .text(`Verified by ${data.managerName || "Manager"} · Date: _________________`, 48, y + 26);
-      doc
-        .fontSize(7.5)
-        .font("Helvetica")
-        .fillColor("#94a3b8")
-        .text("PG-EG Digital Record Security System · www.pgeg.in", 340, y + 26, { align: "right", width: 210 });
+        .text(footerText, startX, footerY + 4);
+
+      if (logoBuf) {
+        doc
+          .fontSize(8.5)
+          .font("Helvetica")
+          .fillColor("#94a3b8")
+          .text("   ·   ", startX + textW, footerY + 4);
+        doc.image(logoBuf, startX + textW + dotW, footerY, { width: logoW, height: logoH });
+      }
 
       doc.end();
     } catch (err) {
