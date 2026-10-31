@@ -244,3 +244,4 @@ export async function generateTenantReportPDF(data: PgReportData): Promise<Buffe
     }
   });
 }
+

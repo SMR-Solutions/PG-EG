@@ -180,7 +180,8 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
   if (process.env.RESEND_API_KEY) {
     try {
       const resend = new Resend(process.env.RESEND_API_KEY);
-      const fromEmail = process.env.EMAIL_FROM || "PG-EG Safety Desk <records@pgeg.in>";
+      // For free accounts without custom domain verification, onboarding@resend.dev works out-of-the-box
+      const fromEmail = process.env.EMAIL_FROM || "PG-EG Safety Desk <onboarding@resend.dev>";
 
       const res = await resend.emails.send({
         from: fromEmail,
@@ -195,10 +196,15 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
         ],
       });
 
+      if (res.error) {
+        console.error("[Mailer] Resend API error:", res.error);
+        throw new Error(res.error.message || "Resend email dispatch error");
+      }
+
       console.log(`[Mailer] Resend email dispatched to ${to} (ID: ${res.data?.id})`);
       return { success: true, provider: "resend", messageId: res.data?.id };
     } catch (err: any) {
-      console.error("[Mailer] Resend error:", err);
+      console.error("[Mailer] Resend failed:", err?.message || err);
       // Fall through to SMTP or preview
     }
   }
@@ -259,3 +265,4 @@ export async function sendMonthlyTenantReport(params: SendMonthlyReportParams): 
     savedPath: filePath,
   };
 }
+

@@ -73,3 +73,4 @@ export function initMonthlyReportCron(): void {
 
   console.log("⏱️  Monthly PG Tenant Report Cron Initialized (Active on 15th & Last day of month at 09:00 AM)");
 }
+
