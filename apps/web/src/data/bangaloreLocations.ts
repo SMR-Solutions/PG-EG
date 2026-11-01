@@ -16,6 +16,142 @@ export interface BangaloreLocation {
 
 export const BANGALORE_LOCATIONS: BangaloreLocation[] = [
   // ─────────────────────────────────────────
+  // 0. PRIORITY CAMPUS & WEST BANGALORE CLUSTERS
+  // ─────────────────────────────────────────
+  {
+    slug: "pg-in-srinivasapura",
+    name: "Srinivasapura, Kengeri",
+    shortName: "Srinivasapura",
+    category: "locality",
+    lat: 12.9067,
+    lng: 77.5050,
+    radiusKm: 3.5,
+    targetKeywords: [
+      "pg in srinivasapura",
+      "ladies pg in srinivasapura",
+      "gents pg in srinivasapura bangalore",
+      "pg near srinivasapura kengeri",
+      "student pg srinivasapura",
+      "pg near jss college srinivasapura",
+    ],
+    headline: "Verified PGs & Student Hostels in Srinivasapura, Bangalore",
+    subheadline: "Affordable, safe PGs for students & professionals near JSSATE, RVC, and Kengeri with zero brokerage.",
+    overviewText: "Srinivasapura (near Kengeri and Uttarahalli Main Road) is South-West Bangalore's thriving educational and student residential belt. Surrounding top institutions like JSSATE and close to Mysore Road, it offers quiet study zones, economical rents, and homely food.",
+    highlights: [
+      "Walking distance to JSSATE and nearby colleges",
+      "Fast access to Kengeri Metro Station and Mysore Road",
+      "Affordable student sharing options from ₹5,500/mo",
+      "Homely South & North Indian daily meals with WiFi",
+    ],
+    faqs: [
+      {
+        question: "What is the average PG rent in Srinivasapura, Bangalore?",
+        answer: "PG rent in Srinivasapura generally ranges from ₹5,000 to ₹8,500 for double/triple sharing, and ₹9,000 to ₹14,000 for single occupancy with 3-times daily food.",
+      },
+      {
+        question: "Are there ladies PGs with strict security in Srinivasapura?",
+        answer: "Yes, PG-EG lists verified ladies PGs in Srinivasapura equipped with 24/7 CCTV, resident wardens, and biometric access.",
+      },
+    ],
+  },
+  {
+    slug: "pg-near-jss-college",
+    name: "JSS Academy of Technical Education (JSSATE)",
+    shortName: "JSSATE College",
+    category: "college",
+    lat: 12.9021,
+    lng: 77.5047,
+    radiusKm: 2.5,
+    targetKeywords: [
+      "pg near jss college",
+      "pg near jssate bangalore",
+      "ladies pg near jss college",
+      "boys pg near jssate",
+      "student hostel near jss engineering college",
+      "pg near jss college srinivasapura",
+    ],
+    headline: "Student PGs Near JSS Academy of Technical Education (JSSATE)",
+    subheadline: "Walk to JSSATE campus in Srinivasapura. Safe boys & ladies PGs with hygienic food & high-speed WiFi.",
+    overviewText: "JSS Academy of Technical Education (JSSATE) on Uttarahalli-Kengeri Road is a premier engineering institution. Student accommodations here are tailored with study tables, power backup, and nutritious food to support college schedules.",
+    highlights: [
+      "Under 5-10 minutes walk to JSSATE main campus gate",
+      "Student-friendly budgets with flexible deposit policies",
+      "High-speed fiber WiFi and study-friendly atmosphere",
+      "Nutritious breakfast, lunch, and dinner included",
+    ],
+    faqs: [
+      {
+        question: "How far are the PGs from JSS College campus?",
+        answer: "Most student PGs listed on PG-EG are located between 200m and 1.2km from JSSATE, making walking or cycling straightforward.",
+      },
+    ],
+  },
+  {
+    slug: "pg-near-rvce",
+    name: "RV College of Engineering (RVCE), Mysore Road",
+    shortName: "RVCE Mysore Road",
+    category: "college",
+    lat: 12.9237,
+    lng: 77.4988,
+    radiusKm: 3,
+    targetKeywords: [
+      "pg near rvce",
+      "pg near rv college of engineering",
+      "boys pg near rvce mysore road",
+      "ladies pg near rvce bangalore",
+      "hostel near rvce",
+      "pg near pattanagere metro",
+    ],
+    headline: "Top PGs Near RV College of Engineering (RVCE)",
+    subheadline: "Comfortable, safe student PGs along Mysore Road & Pattanagere Metro near RVCE campus.",
+    overviewText: "RV College of Engineering (RVCE) is one of India's most prestigious engineering universities. Accommodations around Mysore Road, Kengeri, and Pattanagere offer excellent student communities, metro connectivity, and wholesome meals.",
+    highlights: [
+      "Close to RVCE campus and Pattanagere Purple Line Metro",
+      "High security: Biometric verification and CCTV",
+      "Unlimited high-speed WiFi for academic assignments",
+      "Direct transit to Central Bangalore via Purple Line",
+    ],
+    faqs: [
+      {
+        question: "What is the average rent for a PG near RVCE?",
+        answer: "Double and triple sharing rooms near RVCE generally cost between ₹6,500 and ₹11,000 per month including food, WiFi, and electricity.",
+      },
+    ],
+  },
+  {
+    slug: "pg-in-kengeri",
+    name: "Kengeri Satellite Town & Colleges",
+    shortName: "Kengeri",
+    category: "locality",
+    lat: 12.9150,
+    lng: 77.4830,
+    radiusKm: 4,
+    targetKeywords: [
+      "pg in kengeri",
+      "pg near kengeri metro",
+      "pg near bangalore university kengeri",
+      "ladies pg in kengeri",
+      "cheap pg in kengeri satellite town",
+      "pg near surana college kengeri",
+    ],
+    headline: "Affordable PGs in Kengeri Satellite Town, Bangalore",
+    subheadline: "Stay near Kengeri Metro, Bangalore University, Arts & Science colleges with easy Mysore Road transit.",
+    overviewText: "Kengeri is West Bangalore's major educational and transit nexus, featuring Bangalore University, Surana College, and prominent arts & law institutions. With terminal metro access, living here is both economical and well-connected.",
+    highlights: [
+      "Near Kengeri Bus Terminal and Purple Line Metro",
+      "Proximity to Bangalore University and Arts colleges",
+      "Pocket-friendly rents starting from ₹5,000/month",
+      "Quiet residential enclaves with parks and markets",
+    ],
+    faqs: [
+      {
+        question: "Is Kengeri well connected for college students?",
+        answer: "Yes, Kengeri has extensive BMTC bus connectivity and the Purple Line Metro, allowing fast transit to Majestic, Indiranagar, and Whitefield.",
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────
   // 1. POPULAR LOCALITIES
   // ─────────────────────────────────────────
   {
