@@ -21,15 +21,25 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
-  title: "PG-EG — Find PGs & Manage Properties Digitally",
+  title: "PG-EG (PGEG) — Find PGs & Hostels | EG-PG App Bangalore",
   description:
-    "Find your perfect PG instantly or manage your PG property digitally with 3D building management, automated rent tracking, and seamless tenant tools. No hassle, just PG-EG.",
+    "PG-EG (also known as PGEG, PG EG, or EG-PG) is Bangalore's smartest PG finder and digital property management web app. Find verified gents & ladies PGs with zero brokerage, 3D room tours, and direct manager contact.",
   keywords: [
     "PG-EG",
     "PGEG",
     "pgeg",
     "pg-eg",
     "pg eg",
+    "pgeg app",
+    "pgegapp",
+    "pg-eg app",
+    "pg-egapp",
+    "egpg",
+    "eg-pg",
+    "eg pg",
+    "egpg app",
+    "egpgapp",
+    "eg-pg app",
     "pg",
     "PG",
     "pgs near me",
@@ -49,7 +59,7 @@ export const metadata: Metadata = {
     "3D building management",
   ],
   authors: [{ name: "PG-EG" }],
-  applicationName: "PG-EG",
+  applicationName: "PG-EG (PGEG)",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -61,8 +71,8 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
       { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
       { url: "/icon-192x192.png",  sizes: "192x192", type: "image/png" },
       { url: "/icon-512x512.png",  sizes: "512x512", type: "image/png" },
@@ -74,10 +84,19 @@ export const metadata: Metadata = {
   },
   manifest: "/site.webmanifest",
   openGraph: {
-    title: "PG-EG — Making PG Maintenance Easy",
-    description: "Manage your PG effortlessly with PG-EG.",
+    title: "PG-EG (PGEG) — Find PGs & Manage Properties Digitally",
+    description: "Search verified PGs in Bangalore or manage your PG property digitally with 3D floor tools. No hassle, just PG-EG (PGEG / EG-PG).",
     type: "website",
-    images: [{ url: "/pg-eg-logo.png", width: 512, height: 512, alt: "PG-EG Logo" }],
+    url: APP_URL,
+    siteName: "PG-EG (PGEG)",
+    images: [{ url: `${APP_URL}/pg-eg-logo.png`, width: 512, height: 512, alt: "PG-EG PGEG Logo" }],
+    locale: "en_IN",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PG-EG (PGEG) — Find PGs Easily | EG-PG App Bangalore",
+    description: "Find verified PGs in Bangalore with zero brokerage. 3D building view, rent tracker, and direct manager contact.",
+    images: [`${APP_URL}/pg-eg-logo.png`],
   },
 };
 

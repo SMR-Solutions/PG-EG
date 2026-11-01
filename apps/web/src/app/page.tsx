@@ -65,6 +65,9 @@ export default function HomePage() {
               <span className={styles.taglineDash}> — </span>
               <span className={styles.taglinePart2}>It&apos;s Very Easy 😎.</span>
             </div>
+            <h1 className={styles.heroH1}>
+              PG-EG (PGEG / EG-PG) — Smart PG Discovery &amp; Management App
+            </h1>
           </div>
 
           {/* ── FIND PG — main CTA ── */}
@@ -154,6 +157,27 @@ export default function HomePage() {
               <span className={styles.chip}>📊 Financial Reports</span>
               <span className={styles.chip}>🔒 Secure Data Vault</span>
               <span className={styles.chip}>📱 WhatsApp Integration</span>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.footerDivider} />
+
+        {/* ── Brand Knowledge / Disambiguation Section for Search Engines ── */}
+        <div className={`${styles.footerSection} animate-fade-up delay-4`} style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
+          <div className={styles.footerIcon}>⚡</div>
+          <div className={styles.footerBody}>
+            <h2 className={styles.footerTitle} style={{ fontSize: "1.1rem" }}>
+              <span className={styles.highlight}>About PG-EG (PGEG / EG-PG App)</span>
+            </h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", lineHeight: "1.6", margin: "8px 0 12px" }}>
+              <strong>PG-EG</strong> (also widely known and searched as <strong>PGEG</strong>, <strong>pgeg app</strong>, <strong>pg eg</strong>, <strong>eg-pg</strong>, or <strong>EGPG</strong>) is Bangalore&apos;s dedicated paying guest (PG) discovery and digital property management web application. Designed for college students, IT professionals, and PG owners, the PG-EG platform eliminates broker fees and provides transparent room rents, authentic photos, and direct owner contacts across Koramangala, HSR Layout, Bellandur, Whitefield, and Electronic City.
+            </p>
+            <div className={styles.footerChips}>
+              <span className={styles.chip}>📱 Web App: PG-EG / PGEG</span>
+              <span className={styles.chip}>🔍 Zero-Brokerage PG Finder</span>
+              <span className={styles.chip}>🏢 Bangalore Town Localities</span>
+              <span className={styles.chip}>⚡ Direct WhatsApp &amp; Calling</span>
             </div>
           </div>
         </div>
