@@ -1701,7 +1701,32 @@ function TenantProfileInner() {
         reader.readAsDataURL(file);
       });
 
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      // Derive the best extension from:
+      // 1. The file's MIME type (most reliable for camera captures where name may lack extension)
+      // 2. The file name's extension as fallback
+      // Camera captures on Android often have names like "capture" or "image" with no extension.
+      // iOS HEIC files are converted to JPEG data by the browser before FileReader, so mime is image/jpeg.
+      const MIME_TO_EXT: Record<string, string> = {
+        "image/jpeg": "jpg",
+        "image/jpg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+        "image/heic": "jpg", // iOS HEIC — browser converts to JPEG bytes
+        "image/heif": "jpg",
+        "image/bmp": "jpg",
+        "image/gif": "png",
+        "image/tiff": "jpg",
+      };
+      const VALID_IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "webp"]);
+      const rawNameExt = file.name.includes(".")
+        ? file.name.split(".").pop()?.toLowerCase() || ""
+        : "";
+      const mimeExt = MIME_TO_EXT[file.type?.toLowerCase()] || null;
+      // Prefer MIME-derived ext (most reliable). Use name ext only if it's a known valid image ext.
+      const ext =
+        mimeExt ||
+        (rawNameExt && VALID_IMAGE_EXTS.has(rawNameExt) ? rawNameExt : "jpg");
+
       const folder = field === "selfie" ? "pg-eg/tenants/selfies" : "pg-eg/tenants/ids";
       const fileName = `tenant-${field}-${tenantId || Date.now()}-${Date.now()}.${ext}`;
 
