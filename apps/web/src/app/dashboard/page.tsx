@@ -471,53 +471,21 @@ export default function DashboardPage() {
           <div className={styles.offCard}>
             <div className={styles.offStatusPill}>
               <span className={styles.offDot} />
-              LISTING STATUS: OFF
+              Website Status : OFF
             </div>
             <h1 className={styles.offTitle}>
-              Your listing / Website is <span className={styles.offHighlight}>&quot; OFF &quot;</span>
+              This Website is Currently <span className={styles.offHighlight}>OFF</span>
             </h1>
-            <p className={styles.offSub}>
-              please Contact{" "}
-              <a href="tel:6281975993" className={styles.offPhoneHighlight}>
-                {"{ 6281975993 }"}
-              </a>{" "}
-              , for more information
-            </p>
-            <div className={styles.offActionRow}>
-              <a href="tel:6281975993" className={styles.offCallBtn}>
-                📞 Call 6281975993
-              </a>
-              <a
-                href="https://wa.me/916281975993?text=Hello%20PG-EG%20Admin,%20my%20PG%20listing%20is%20OFF"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.offWhatsappBtn}
-              >
-                💬 WhatsApp Support
-              </a>
-            </div>
-
-            <div className={styles.offFooterActions}>
-              {allPgs && allPgs.length > 1 && (
-                <button
-                  type="button"
-                  className={styles.offSwitchBtn}
-                  onClick={() => router.push("/select-pg")}
-                >
-                  🔄 Switch Property ({allPgs.length} Listed)
-                </button>
-              )}
-              <button
-                type="button"
-                className={styles.offSignOutBtn}
-                onClick={() => {
-                  signOut();
-                  window.location.href = "/sign-in";
-                }}
-              >
-                🚪 Sign Out
-              </button>
-            </div>
+            <a
+              href="https://pg-eg-web.vercel.app/find-pg"
+              className={styles.offExploreBtn}
+              onClick={(e) => {
+                e.preventDefault();
+                router.push("/find-pg");
+              }}
+            >
+              Explore Other PGs Near You
+            </a>
           </div>
         </div>
       )}
