@@ -474,18 +474,27 @@ export default function DashboardPage() {
               Website Status : OFF
             </div>
             <h1 className={styles.offTitle}>
-              This Website is Currently <span className={styles.offHighlight}>OFF</span>
+              Your Website is Currently <span className={styles.offHighlight}>OFF</span>
             </h1>
-            <a
-              href="https://pg-eg-web.vercel.app/find-pg"
-              className={styles.offExploreBtn}
-              onClick={(e) => {
-                e.preventDefault();
-                router.push("/find-pg");
+            <button
+              type="button"
+              className={styles.offSignOutBtn}
+              onClick={() => {
+                signOut();
+                router.replace("/sign-in");
               }}
             >
-              Explore Other PGs Near You
-            </a>
+              Sign Out
+            </button>
+            {allPgs && allPgs.length > 1 && (
+              <button
+                type="button"
+                className={styles.offSwitchBtn}
+                onClick={() => router.push("/select-pg")}
+              >
+                🔄 Switch Property ({allPgs.length} Listed)
+              </button>
+            )}
           </div>
         </div>
       )}

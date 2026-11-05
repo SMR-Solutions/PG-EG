@@ -2421,6 +2421,68 @@
   font-weight: 900;
 }
 
+.offSignOutBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 380px;
+  padding: 14px 24px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  color: #ffffff !important;
+  font-size: 15.5px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
+  transition: all 0.2s ease;
+  margin-top: 4px;
+  box-sizing: border-box;
+}
+
+.offSignOutBtn:hover {
+  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(239, 68, 68, 0.45);
+  color: #ffffff !important;
+}
+
+.offSignOutBtn:active {
+  transform: translateY(0);
+}
+
+.offSwitchBtn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 10px;
+  transition: all 0.2s;
+  margin-top: 4px;
+}
+
+.offSwitchBtn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+:global([data-theme="light"]) .offSwitchBtn {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+:global([data-theme="light"]) .offSwitchBtn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
 .offExploreBtn {
   display: inline-flex;
   align-items: center;
@@ -2462,6 +2524,7 @@
   .offTitle {
     font-size: 19px;
   }
+  .offSignOutBtn,
   .offExploreBtn {
     font-size: 14.5px;
     padding: 13px 18px;
